@@ -17,7 +17,7 @@ kartsFolder.Name = "PlayerKarts"
 kartsFolder.Parent = Workspace
 
 local activeKarts = {}
-local brakeStates = {}
+local driverInputs = {}
 local mapBuilt = false
 
 local function makePart(parent, name, size, cframe, color, material)
@@ -185,7 +185,7 @@ local function spawnPlayerKart(player)
 	end
 	local kart = createKart(player, player:GetAttribute("KartSpawnIndex") or 1)
 	activeKarts[player] = kart
-	brakeStates[player] = false
+	driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 	player:SetAttribute("KartOwnerUserId", player.UserId)
 
 	local function seatCharacter(character)
@@ -207,13 +207,20 @@ local function spawnPlayerKart(player)
 	end
 end
 
-remote.OnServerEvent:Connect(function(player, isBraking)
-	if typeof(isBraking) ~= "boolean" then
+remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
+	if typeof(throttle) ~= "number" or typeof(steering) ~= "number" or typeof(braking) ~= "boolean" then
 		return
 	end
 	local kart = activeKarts[player]
 	if kart and kart.seat.Occupant and kart.seat.Occupant.Parent == player.Character then
-		brakeStates[player] = isBraking
+		if throttle ~= throttle or steering ~= steering then
+			return
+		end
+		driverInputs[player] = {
+			throttle = math.clamp(throttle, -1, 1),
+			steering = math.clamp(steering, -1, 1),
+			braking = braking,
+		}
 	end
 end)
 
@@ -224,15 +231,17 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		end
 		local seat = kart.seat
 		local driver = seat.Occupant
-		local throttle = driver and seat.ThrottleFloat or 0
-		local steering = driver and seat.SteerFloat or 0
+		local input = driverInputs[player]
+		local isAuthorizedDriver = driver and driver.Parent == player.Character
+		local throttle = isAuthorizedDriver and input and input.throttle or 0
+		local steering = isAuthorizedDriver and input and input.steering or 0
 		local chassis = kart.chassis
 		local velocity = chassis.AssemblyLinearVelocity
 		local forward = chassis.CFrame.LookVector
 		local right = chassis.CFrame.RightVector
 		local forwardSpeed = velocity:Dot(forward)
 		local lateralSpeed = velocity:Dot(right)
-		local braking = brakeStates[player] == true
+		local braking = isAuthorizedDriver and input and input.braking == true
 
 		if math.abs(forwardSpeed) > KartConfig.MinimumSteeringSpeed then
 			local directionFactor = forwardSpeed >= 0 and 1 or -1
@@ -272,6 +281,9 @@ RunService.Heartbeat:Connect(function(deltaTime)
 				kart.networkOwner = desiredOwner
 			end
 		end
+		if not isAuthorizedDriver and input and (input.throttle ~= 0 or input.steering ~= 0 or input.braking) then
+			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+		end
 	end
 end)
 
@@ -292,7 +304,7 @@ Players.PlayerRemoving:Connect(function(player)
 		kart.model:Destroy()
 	end
 	activeKarts[player] = nil
-	brakeStates[player] = nil
+	driverInputs[player] = nil
 end)
 
 buildTestCourse()

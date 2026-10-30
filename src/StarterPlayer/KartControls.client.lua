@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
@@ -9,8 +9,23 @@ local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 local controlRemote = ReplicatedStorage:WaitForChild("KartControl")
 local camera = Workspace.CurrentCamera
 local currentSeat
-local braking = false
 local cameraConnection
+local held = { forward = false, reverse = false, left = false, right = false, brake = false }
+local driveActionName = "BLOXYKartDriveControls"
+local driveKeys = {
+	Enum.KeyCode.W, Enum.KeyCode.Up,
+	Enum.KeyCode.S, Enum.KeyCode.Down,
+	Enum.KeyCode.A, Enum.KeyCode.Left,
+	Enum.KeyCode.D, Enum.KeyCode.Right,
+	Enum.KeyCode.Space,
+}
+local keyToControl = {
+	[Enum.KeyCode.W] = "forward", [Enum.KeyCode.Up] = "forward",
+	[Enum.KeyCode.S] = "reverse", [Enum.KeyCode.Down] = "reverse",
+	[Enum.KeyCode.A] = "left", [Enum.KeyCode.Left] = "left",
+	[Enum.KeyCode.D] = "right", [Enum.KeyCode.Right] = "right",
+	[Enum.KeyCode.Space] = "brake",
+}
 
 local function getKartFromSeat(seat)
 	local model = seat and seat:FindFirstAncestorOfClass("Model")
@@ -55,41 +70,68 @@ local function startDrivingCamera(kart)
 	end)
 end
 
-local function setBraking(value)
-	if braking == value then
+local function sendDriveInput()
+	if not currentSeat then
 		return
 	end
-	braking = value
-	controlRemote:FireServer(value)
+	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
+	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+	controlRemote:FireServer(throttle, steering, held.brake)
 end
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then
-		return
+local function onDriveAction(_, inputState, inputObject)
+	local control = keyToControl[inputObject.KeyCode]
+	if control then
+		if inputState == Enum.UserInputState.Begin then
+			held[control] = true
+		elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+			held[control] = false
+		end
+		sendDriveInput()
 	end
-	if input.KeyCode == Enum.KeyCode.Space and currentSeat then
-		setBraking(true)
-	end
-end)
+	return Enum.ContextActionResult.Sink
+end
 
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space then
-		setBraking(false)
+local function clearDriveInput()
+	for key in pairs(held) do
+		held[key] = false
 	end
-end)
+	if currentSeat then
+		controlRemote:FireServer(0, 0, false)
+	end
+	ContextActionService:UnbindAction(driveActionName)
+end
 
 local function bindCharacter(character)
 	local humanoid = character:WaitForChild("Humanoid")
-	humanoid.Seated:Connect(function(active, seat)
-		if active and seat and seat:IsA("VehicleSeat") and getKartFromSeat(seat) then
+	local function updateDrivingState()
+		local seat = humanoid.SeatPart
+		local kart = getKartFromSeat(seat)
+		if seat and seat:IsA("VehicleSeat") and kart then
+			if currentSeat == seat then
+				return
+			end
+			clearDriveInput()
 			currentSeat = seat
-			startDrivingCamera(getKartFromSeat(seat))
+			ContextActionService:BindActionAtPriority(
+				driveActionName,
+				onDriveAction,
+				false,
+				Enum.ContextActionPriority.High.Value,
+				table.unpack(driveKeys)
+			)
+			sendDriveInput()
+			startDrivingCamera(kart)
 		else
+			clearDriveInput()
 			currentSeat = nil
-			setBraking(false)
 			stopDrivingCamera()
 		end
-	end)
+	end
+
+	humanoid.Seated:Connect(updateDrivingState)
+	humanoid:GetPropertyChangedSignal("SeatPart"):Connect(updateDrivingState)
+	task.defer(updateDrivingState)
 end
 
 player.CharacterAdded:Connect(bindCharacter)
