@@ -21,7 +21,7 @@ This project is being developed with Roblox Studio, Visual Studio Code, Git and 
 
 Prototype: kart driving
 
-The first playable prototype builds a blocky kart and a simple test course at runtime. Each player receives an individual server-created kart. The server owns the driving rules and validates brake input; the client handles the follow camera and keyboard brake input. The prototype intentionally does not include drifting, boost, weapons, coins, shops, matchmaking, or a lobby.
+The first playable prototype builds a blocky kart and a simple test course at runtime. Each player receives an individual server-created kart. The server validates driver input and assigns network ownership to the seated driver; that client simulates the kart's physical assembly while the server observes its movement. The prototype intentionally does not include drifting, boost, weapons, coins, shops, matchmaking, or a lobby.
 
 Controls
 
@@ -39,4 +39,4 @@ Testing in Roblox Studio
 4. Use Test > Start with at least one player. The server creates the test course and a kart for each player.
 5. Drive on the asphalt pad and test the boundary walls and block obstacles.
 
-The server scripts and shared configuration live under `src/ServerScriptService` and `src/ReplicatedStorage`; the local camera and brake controller lives under `src/StarterPlayer` (mapped to `StarterPlayerScripts` by Rojo).
+The server scripts and shared configuration live under `src/ServerScriptService` and `src/ReplicatedStorage`; the local camera, keyboard controls, and physical simulation live under `src/StarterPlayer` (mapped to `StarterPlayerScripts` by Rojo).

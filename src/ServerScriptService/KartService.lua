@@ -5,7 +5,6 @@ local Workspace = game:GetService("Workspace")
 
 local DIAGNOSTICS_ENABLED = true
 local DIAGNOSTIC_INTERVAL = 2
-local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 
 local remote = ReplicatedStorage:FindFirstChild("KartControl")
 if remote and not remote:IsA("RemoteEvent") then
@@ -163,16 +162,48 @@ local function createKart(player, spawnIndex)
 		end
 	end)
 
-	return {
+	local kart = {
 		model = model,
 		chassis = chassis,
 		seat = seat,
 		driveForce = driveForce,
 		spawnCFrame = spawnCFrame,
-		networkOwner = false,
+		networkOwner = "auto",
 		nextDiagnosticAt = 0,
 		lastDiagnosticPosition = spawnCFrame.Position,
 	}
+
+	local function updateNetworkOwner()
+		local occupant = seat.Occupant
+		local driver = occupant and Players:GetPlayerFromCharacter(occupant.Parent)
+		local networkRoot = chassis.AssemblyRootPart or chassis
+		local success, ownershipError = pcall(function()
+			if driver then
+				networkRoot:SetNetworkOwner(driver)
+			else
+				networkRoot:SetNetworkOwnershipAuto()
+			end
+		end)
+		if success then
+			kart.networkOwner = driver or "auto"
+			model:SetAttribute("NetworkOwnerUserId", driver and driver.UserId or 0)
+			local ownerOk, actualOwner = pcall(function()
+				return networkRoot:GetNetworkOwner()
+			end)
+			print(("[BLOXY-KART][SERVER][NETWORK-OWNER] kart=%s driver=%s requested=%s actual=%s root=%s rootAnchored=%s"):format(
+				model.Name, driver and driver.Name or "nil", driver and driver.Name or "automatic",
+				ownerOk and actualOwner and actualOwner.Name or (ownerOk and "server/nil" or "unavailable"),
+				networkRoot:GetFullName(), tostring(networkRoot.Anchored)
+			))
+		else
+			warn(("[BLOXY-KART][SERVER][NETWORK-OWNER-FAILED] kart=%s driver=%s error=%s"):format(
+				model.Name, driver and driver.Name or "nil", tostring(ownershipError)
+			))
+		end
+	end
+	seat:GetPropertyChangedSignal("Occupant"):Connect(updateNetworkOwner)
+	task.defer(updateNetworkOwner)
+	return kart
 end
 
 local function spawnPlayerKart(player)
@@ -251,67 +282,6 @@ RunService.Heartbeat:Connect(function()
 		local steering = isAuthorizedDriver and input and input.steering or 0
 		local chassis = kart.chassis
 		local velocity = chassis.AssemblyLinearVelocity
-		local lookVector = chassis.CFrame.LookVector
-		local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
-		if forward.Magnitude > 0.001 then
-			forward = forward.Unit
-		else
-			forward = Vector3.new(0, 0, -1)
-		end
-		local rightVector = chassis.CFrame.RightVector
-		local right = Vector3.new(rightVector.X, 0, rightVector.Z)
-		if right.Magnitude > 0.001 then
-			right = right.Unit
-		else
-			right = Vector3.new(1, 0, 0)
-		end
-		local forwardSpeed = velocity:Dot(forward)
-		local lateralSpeed = velocity:Dot(right)
-		local braking = isAuthorizedDriver and input and input.braking == true
-
-		local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
-		local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
-		local travelDirection = forwardSpeed >= 0 and 1 or -1
-		local yawRate = steering * KartConfig.SteeringRate * steeringFactor * travelDirection
-		chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
-
-		local acceleration = 0
-		if braking then
-			acceleration = -math.sign(forwardSpeed) * KartConfig.BrakeDeceleration
-		elseif throttle > 0 then
-			acceleration = KartConfig.ForwardAcceleration
-		elseif throttle < 0 then
-			if forwardSpeed > 2 then
-				acceleration = -KartConfig.BrakeDeceleration * 0.65
-			else
-				acceleration = -KartConfig.ReverseAcceleration
-			end
-		end
-
-		local drag = -forwardSpeed * KartConfig.CoastDrag
-		local lateralForce = -lateralSpeed * KartConfig.LateralGrip
-		kart.driveForce.Force = forward * ((acceleration + drag) * chassis.AssemblyMass) + right * (lateralForce * chassis.AssemblyMass)
-
-		local maxSpeed = (throttle < 0 and forwardSpeed <= 2) and KartConfig.MaxReverseSpeed or KartConfig.MaxForwardSpeed
-		if math.abs(forwardSpeed) > maxSpeed then
-			local clamped = math.sign(forwardSpeed) * maxSpeed
-			chassis.AssemblyLinearVelocity = forward * clamped + right * lateralSpeed + Vector3.new(0, velocity.Y, 0)
-		end
-
-		if kart.networkOwner ~= "server" then
-			local success, ownershipError = pcall(function()
-				chassis:SetNetworkOwner(nil)
-			end)
-			if success then
-				kart.networkOwner = "server"
-				print(("[BLOXY-KART][SERVER][NETWORK-OWNER] kart=%s owner=server root=%s rootAnchored=%s"):format(
-					kart.model.Name, chassis.AssemblyRootPart and chassis.AssemblyRootPart:GetFullName() or "nil",
-					tostring(chassis.AssemblyRootPart and chassis.AssemblyRootPart.Anchored)
-				))
-			else
-				warn(("[BLOXY-KART][SERVER][NETWORK-OWNER-FAILED] kart=%s error=%s"):format(kart.model.Name, tostring(ownershipError)))
-			end
-		end
 		if not isAuthorizedDriver and input and (input.throttle ~= 0 or input.steering ~= 0 or input.braking) then
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 		end
@@ -332,16 +302,19 @@ RunService.Heartbeat:Connect(function()
 			if ownerOk then
 				ownerName = owner and owner.Name or "server/nil"
 			end
-			local force = kart.driveForce.Force
 			local positionDelta = chassis.Position - kart.lastDiagnosticPosition
 			kart.lastDiagnosticPosition = chassis.Position
-			print(("[BLOXY-KART][SERVER][PHYSICS] player=%s occupant=%s authorized=%s input=(%.0f,%.0f,%s) chassisAnchored=%s root=%s rootAnchored=%s anchoredAssemblyParts=%s mass=%.2f speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f) forward=(%.2f,%.2f,%.2f) force=(%.1f,%.1f,%.1f) forceMagnitude=%.1f forceEnabled=%s forceAttachment=%s applyAtCenter=%s owner=%s"):format(
+			local characterRoot = driver and driver.Parent:FindFirstChild("HumanoidRootPart")
+			local seatWeld = seat:FindFirstChild("SeatWeld")
+			local sharesAssembly = characterRoot ~= nil and characterRoot.AssemblyRootPart == assemblyRoot
+			print(("[BLOXY-KART][SERVER][PHYSICS] player=%s occupant=%s authorized=%s input=(%.0f,%.0f,%s) chassisAnchored=%s root=%s rootAnchored=%s characterRoot=%s sharesAssembly=%s seatWeld=%s anchoredAssemblyParts=%s mass=%.2f speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f) forceTarget=%s forceEnabled=%s forceAttachment=%s applyAtCenter=%s owner=%s"):format(
 				player.Name, driver and driver.Parent.Name or "nil", tostring(isAuthorizedDriver), throttle, steering, tostring(braking),
 				tostring(chassis.Anchored), assemblyRoot:GetFullName(), tostring(assemblyRoot.Anchored),
+				characterRoot and characterRoot:GetFullName() or "nil", tostring(sharesAssembly), tostring(seatWeld ~= nil),
 				#anchoredParts > 0 and table.concat(anchoredParts, ",") or "none", chassis.AssemblyMass,
 				velocity.Magnitude, positionDelta.Magnitude, chassis.AssemblyAngularVelocity.X,
 				chassis.AssemblyAngularVelocity.Y, chassis.AssemblyAngularVelocity.Z,
-				forward.X, forward.Y, forward.Z, force.X, force.Y, force.Z, force.Magnitude,
+				kart.driveForce.Parent and kart.driveForce.Parent:GetFullName() or "nil",
 				tostring(kart.driveForce.Enabled), kart.driveForce.Attachment0 and kart.driveForce.Attachment0:GetFullName() or "nil",
 				tostring(kart.driveForce.ApplyAtCenterOfMass), ownerName
 			))

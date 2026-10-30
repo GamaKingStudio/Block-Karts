@@ -96,6 +96,109 @@ local function sendDriveInput()
 	controlRemote:FireServer(throttle, steering, held.brake)
 end
 
+local physicsDiagnosticNext = 0
+local lastPhysicsPosition = {}
+local function simulateOwnedKart()
+	if not currentSeat then
+		return
+	end
+	local kart = getKartFromSeat(currentSeat)
+	if not kart or kart:GetAttribute("NetworkOwnerUserId") ~= player.UserId then
+		return
+	end
+	local chassis = kart and kart.PrimaryPart
+	local driveForce = chassis and chassis:FindFirstChild("ArcadeDriveForce")
+	if not chassis or not driveForce or not driveForce:IsA("VectorForce") then
+		warn(("[BLOXY-KART][CLIENT][PHYSICS-MISSING] seat=%s kart=%s chassis=%s force=%s"):format(
+			currentSeat:GetFullName(), kart and kart:GetFullName() or "nil",
+			chassis and chassis:GetFullName() or "nil", driveForce and driveForce:GetFullName() or "nil"
+		))
+		return
+	end
+	if not driveForce.Attachment0 then
+		warn(("[BLOXY-KART][CLIENT][FORCE-ATTACHMENT-MISSING] force=%s"):format(driveForce:GetFullName()))
+		return
+	end
+
+	local velocity = chassis.AssemblyLinearVelocity
+	local lookVector = chassis.CFrame.LookVector
+	local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
+	if forward.Magnitude > 0.001 then
+		forward = forward.Unit
+	else
+		forward = Vector3.new(0, 0, -1)
+	end
+	local rightVector = chassis.CFrame.RightVector
+	local right = Vector3.new(rightVector.X, 0, rightVector.Z)
+	if right.Magnitude > 0.001 then
+		right = right.Unit
+	else
+		right = Vector3.new(1, 0, 0)
+	end
+	local forwardSpeed = velocity:Dot(forward)
+	local lateralSpeed = velocity:Dot(right)
+	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
+	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
+	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
+	local travelDirection = forwardSpeed >= 0 and 1 or -1
+	local yawRate = steering * KartConfig.SteeringRate * steeringFactor * travelDirection
+	chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
+
+	local acceleration = 0
+	if held.brake then
+		acceleration = -math.sign(forwardSpeed) * KartConfig.BrakeDeceleration
+	elseif throttle > 0 then
+		acceleration = KartConfig.ForwardAcceleration
+	elseif throttle < 0 then
+		if forwardSpeed > 2 then
+			acceleration = -KartConfig.BrakeDeceleration * 0.65
+		else
+			acceleration = -KartConfig.ReverseAcceleration
+		end
+	end
+
+	local drag = -forwardSpeed * KartConfig.CoastDrag
+	local lateralForce = -lateralSpeed * KartConfig.LateralGrip
+	driveForce.Force = forward * ((acceleration + drag) * chassis.AssemblyMass)
+		+ right * (lateralForce * chassis.AssemblyMass)
+
+	local maxSpeed = (throttle < 0 and forwardSpeed <= 2) and KartConfig.MaxReverseSpeed or KartConfig.MaxForwardSpeed
+	if math.abs(forwardSpeed) > maxSpeed then
+		local clamped = math.sign(forwardSpeed) * maxSpeed
+		chassis.AssemblyLinearVelocity = forward * clamped + right * lateralSpeed + Vector3.new(0, velocity.Y, 0)
+	end
+
+	if os.clock() >= physicsDiagnosticNext then
+		physicsDiagnosticNext = os.clock() + 2
+		local root = chassis.AssemblyRootPart or chassis
+		local characterRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local sharesAssembly = characterRoot ~= nil and characterRoot.AssemblyRootPart == root
+		local seatWeld = currentSeat:FindFirstChild("SeatWeld")
+		local previousPosition = lastPhysicsPosition[kart] or chassis.Position
+		local distance = (chassis.Position - previousPosition).Magnitude
+		lastPhysicsPosition[kart] = chassis.Position
+		local anchoredParts = {}
+		for _, part in ipairs(kart:GetDescendants()) do
+			if part:IsA("BasePart") and part.AssemblyRootPart == root and part.Anchored then
+				table.insert(anchoredParts, part.Name)
+			end
+		end
+		print(("[BLOXY-KART][CLIENT][PHYSICS] input=(%.0f,%.0f,%s) chassis=%s chassisAnchored=%s root=%s rootAnchored=%s characterRoot=%s sharesAssembly=%s seatWeld=%s anchoredAssemblyParts=%s mass=%.2f forward=(%.2f,%.2f,%.2f) force=(%.1f,%.1f,%.1f) forceMagnitude=%.1f forceEnabled=%s attachment=%s applyAtCenter=%s speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f)"):format(
+			throttle, steering, tostring(held.brake), chassis:GetFullName(), tostring(chassis.Anchored),
+			root:GetFullName(), tostring(root.Anchored), characterRoot and characterRoot:GetFullName() or "nil",
+			tostring(sharesAssembly), tostring(seatWeld ~= nil), #anchoredParts > 0 and table.concat(anchoredParts, ",") or "none",
+			chassis.AssemblyMass, forward.X, forward.Y, forward.Z, driveForce.Force.X, driveForce.Force.Y,
+			driveForce.Force.Z, driveForce.Force.Magnitude, tostring(driveForce.Enabled),
+			driveForce.Attachment0:GetFullName(), tostring(driveForce.ApplyAtCenterOfMass),
+			chassis.AssemblyLinearVelocity.Magnitude, distance, chassis.AssemblyAngularVelocity.X,
+			chassis.AssemblyAngularVelocity.Y, chassis.AssemblyAngularVelocity.Z
+		))
+	end
+end
+
+RunService.Heartbeat:Connect(simulateOwnedKart)
+
 local function onDriveAction(_, inputState, inputObject)
 	local control = keyToControl[inputObject.KeyCode]
 	print(("[BLOXY-KART][CLIENT][ACTION] key=%s state=%s mapped=%s seated=%s"):format(
