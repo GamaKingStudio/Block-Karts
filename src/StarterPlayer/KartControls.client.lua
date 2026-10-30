@@ -176,10 +176,10 @@ local function simulateOwnedKart()
 	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
 	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
 	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
-		local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
-		local travelDirection = forwardSpeed >= 0 and 1 or -1
-		local yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection
-		chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
+	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
+	local travelDirection = forwardSpeed >= 0 and 1 or -1
+	local yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection
+	chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
 
 	local acceleration = 0
 	if held.brake then
