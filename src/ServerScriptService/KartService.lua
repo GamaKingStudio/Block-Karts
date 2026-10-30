@@ -3,14 +3,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local DIAGNOSTICS_ENABLED = true
+local DIAGNOSTIC_INTERVAL = 2
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 
 local remote = ReplicatedStorage:FindFirstChild("KartControl")
+if remote and not remote:IsA("RemoteEvent") then
+	error(("[BLOXY-KART][SERVER][REMOTE-WRONG-CLASS] ReplicatedStorage.KartControl is %s, expected RemoteEvent."):format(remote.ClassName))
+end
 if not remote then
 	remote = Instance.new("RemoteEvent")
 	remote.Name = "KartControl"
 	remote.Parent = ReplicatedStorage
 end
+print(("[BLOXY-KART][SERVER][START] module=%s remote=%s class=%s"):format(
+	script:GetFullName(), remote:GetFullName(), remote.ClassName
+))
 
 local kartsFolder = Workspace:FindFirstChild("PlayerKarts") or Instance.new("Folder")
 kartsFolder.Name = "PlayerKarts"
@@ -162,6 +170,8 @@ local function createKart(player, spawnIndex)
 		driveForce = driveForce,
 		spawnCFrame = spawnCFrame,
 		networkOwner = false,
+		nextDiagnosticAt = 0,
+		lastDiagnosticPosition = spawnCFrame.Position,
 	}
 end
 
@@ -174,6 +184,9 @@ local function spawnPlayerKart(player)
 	activeKarts[player] = kart
 	driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 	player:SetAttribute("KartOwnerUserId", player.UserId)
+	print(("[BLOXY-KART][SERVER][KART-CREATED] player=%s model=%s chassis=%s chassisAnchored=%s seat=%s"):format(
+		player.Name, kart.model:GetFullName(), kart.chassis:GetFullName(), tostring(kart.chassis.Anchored), kart.seat:GetFullName()
+	))
 
 	local function seatCharacter(character)
 		local humanoid = character:WaitForChild("Humanoid", 10)
@@ -196,19 +209,33 @@ end
 
 remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
 	if typeof(throttle) ~= "number" or typeof(steering) ~= "number" or typeof(braking) ~= "boolean" then
+		warn(("[BLOXY-KART][SERVER][REMOTE-INVALID] player=%s throttleType=%s steeringType=%s brakeType=%s"):format(
+			player.Name, typeof(throttle), typeof(steering), typeof(braking)
+		))
 		return
 	end
 	local kart = activeKarts[player]
-	if kart and kart.seat.Occupant and kart.seat.Occupant.Parent == player.Character then
-		if throttle ~= throttle or steering ~= steering then
-			return
-		end
-		driverInputs[player] = {
-			throttle = math.clamp(throttle, -1, 1),
-			steering = math.clamp(steering, -1, 1),
-			braking = braking,
-		}
+	local occupant = kart and kart.seat.Occupant
+	local isAuthorizedDriver = occupant ~= nil and occupant.Parent == player.Character
+	print(("[BLOXY-KART][SERVER][REMOTE-RECV] player=%s remote=%s throttle=%s steering=%s brake=%s kartFound=%s occupant=%s authorized=%s"):format(
+		player.Name, remote:GetFullName(), tostring(throttle), tostring(steering), tostring(braking),
+		tostring(kart ~= nil), occupant and occupant.Parent.Name or "nil", tostring(isAuthorizedDriver)
+	))
+	if throttle ~= throttle or steering ~= steering then
+		warn(("[BLOXY-KART][SERVER][REMOTE-NAN] player=%s input discarded"):format(player.Name))
+		return
 	end
+	if not isAuthorizedDriver then
+		warn(("[BLOXY-KART][SERVER][DRIVER-REJECTED] player=%s seatOccupant=%s character=%s"):format(
+			player.Name, occupant and occupant.Parent:GetFullName() or "nil", player.Character and player.Character:GetFullName() or "nil"
+		))
+		return
+	end
+	driverInputs[player] = {
+		throttle = math.clamp(throttle, -1, 1),
+		steering = math.clamp(steering, -1, 1),
+		braking = braking,
+	}
 end)
 
 RunService.Heartbeat:Connect(function()
@@ -272,15 +299,52 @@ RunService.Heartbeat:Connect(function()
 		end
 
 		if kart.networkOwner ~= "server" then
-			local success = pcall(function()
+			local success, ownershipError = pcall(function()
 				chassis:SetNetworkOwner(nil)
 			end)
 			if success then
 				kart.networkOwner = "server"
+				print(("[BLOXY-KART][SERVER][NETWORK-OWNER] kart=%s owner=server root=%s rootAnchored=%s"):format(
+					kart.model.Name, chassis.AssemblyRootPart and chassis.AssemblyRootPart:GetFullName() or "nil",
+					tostring(chassis.AssemblyRootPart and chassis.AssemblyRootPart.Anchored)
+				))
+			else
+				warn(("[BLOXY-KART][SERVER][NETWORK-OWNER-FAILED] kart=%s error=%s"):format(kart.model.Name, tostring(ownershipError)))
 			end
 		end
 		if not isAuthorizedDriver and input and (input.throttle ~= 0 or input.steering ~= 0 or input.braking) then
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+		end
+
+		if DIAGNOSTICS_ENABLED and os.clock() >= kart.nextDiagnosticAt then
+			kart.nextDiagnosticAt = os.clock() + DIAGNOSTIC_INTERVAL
+			local assemblyRoot = chassis.AssemblyRootPart or chassis
+			local anchoredParts = {}
+			for _, part in ipairs(kart.model:GetDescendants()) do
+				if part:IsA("BasePart") and part.AssemblyRootPart == assemblyRoot and part.Anchored then
+					table.insert(anchoredParts, part.Name)
+				end
+			end
+			local ownerName = "unknown"
+			local ownerOk, owner = pcall(function()
+				return chassis:GetNetworkOwner()
+			end)
+			if ownerOk then
+				ownerName = owner and owner.Name or "server/nil"
+			end
+			local force = kart.driveForce.Force
+			local positionDelta = chassis.Position - kart.lastDiagnosticPosition
+			kart.lastDiagnosticPosition = chassis.Position
+			print(("[BLOXY-KART][SERVER][PHYSICS] player=%s occupant=%s authorized=%s input=(%.0f,%.0f,%s) chassisAnchored=%s root=%s rootAnchored=%s anchoredAssemblyParts=%s mass=%.2f speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f) forward=(%.2f,%.2f,%.2f) force=(%.1f,%.1f,%.1f) forceMagnitude=%.1f forceEnabled=%s forceAttachment=%s applyAtCenter=%s owner=%s"):format(
+				player.Name, driver and driver.Parent.Name or "nil", tostring(isAuthorizedDriver), throttle, steering, tostring(braking),
+				tostring(chassis.Anchored), assemblyRoot:GetFullName(), tostring(assemblyRoot.Anchored),
+				#anchoredParts > 0 and table.concat(anchoredParts, ",") or "none", chassis.AssemblyMass,
+				velocity.Magnitude, positionDelta.Magnitude, chassis.AssemblyAngularVelocity.X,
+				chassis.AssemblyAngularVelocity.Y, chassis.AssemblyAngularVelocity.Z,
+				forward.X, forward.Y, forward.Z, force.X, force.Y, force.Z, force.Magnitude,
+				tostring(kart.driveForce.Enabled), kart.driveForce.Attachment0 and kart.driveForce.Attachment0:GetFullName() or "nil",
+				tostring(kart.driveForce.ApplyAtCenterOfMass), ownerName
+			))
 		end
 	end
 end)
