@@ -84,7 +84,7 @@ local function createKart(player, spawnIndex)
 
 	local startX = ((spawnIndex - 1) % 6 - 2.5) * KartConfig.SpawnSpacing
 	local startZ = -34 + math.floor((spawnIndex - 1) / 6) * 16
-	local spawnCFrame = CFrame.new(startX, 3, startZ)
+	local spawnCFrame = CFrame.new(startX, 3, startZ) * CFrame.Angles(0, math.pi, 0)
 
 	local chassis = makePart(model, "Chassis", Vector3.new(5.2, 1, 7), spawnCFrame, Color3.fromRGB(37, 142, 224), Enum.Material.Metal)
 	chassis.Anchored = false
@@ -136,17 +136,6 @@ local function createKart(player, spawnIndex)
 	driveForce.ApplyAtCenterOfMass = true
 	driveForce.Parent = chassis
 
-	local upright = Instance.new("AlignOrientation")
-	upright.Name = "UprightStabilizer"
-	upright.Mode = Enum.OrientationAlignmentMode.OneAttachment
-	upright.Attachment0 = attachment
-	upright.RigidityEnabled = false
-	upright.Responsiveness = 18
-	upright.MaxTorque = 80000
-	upright.MaxAngularVelocity = 8
-	upright.CFrame = CFrame.Angles(0, math.rad(180), 0)
-	upright.Parent = chassis
-
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "EnterKartPrompt"
 	prompt.ActionText = "Conducir"
@@ -171,9 +160,7 @@ local function createKart(player, spawnIndex)
 		chassis = chassis,
 		seat = seat,
 		driveForce = driveForce,
-		upright = upright,
 		spawnCFrame = spawnCFrame,
-		yaw = math.pi,
 		networkOwner = false,
 	}
 end
@@ -224,7 +211,7 @@ remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
 	end
 end)
 
-RunService.Heartbeat:Connect(function(deltaTime)
+RunService.Heartbeat:Connect(function()
 	for player, kart in pairs(activeKarts) do
 		if not kart.chassis.Parent then
 			continue
@@ -237,17 +224,29 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		local steering = isAuthorizedDriver and input and input.steering or 0
 		local chassis = kart.chassis
 		local velocity = chassis.AssemblyLinearVelocity
-		local forward = chassis.CFrame.LookVector
-		local right = chassis.CFrame.RightVector
+		local lookVector = chassis.CFrame.LookVector
+		local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
+		if forward.Magnitude > 0.001 then
+			forward = forward.Unit
+		else
+			forward = Vector3.new(0, 0, -1)
+		end
+		local rightVector = chassis.CFrame.RightVector
+		local right = Vector3.new(rightVector.X, 0, rightVector.Z)
+		if right.Magnitude > 0.001 then
+			right = right.Unit
+		else
+			right = Vector3.new(1, 0, 0)
+		end
 		local forwardSpeed = velocity:Dot(forward)
 		local lateralSpeed = velocity:Dot(right)
 		local braking = isAuthorizedDriver and input and input.braking == true
 
-		if math.abs(forwardSpeed) > KartConfig.MinimumSteeringSpeed then
-			local directionFactor = forwardSpeed >= 0 and 1 or -1
-			kart.yaw += -steering * KartConfig.SteeringRate * directionFactor * deltaTime
-		end
-		kart.upright.CFrame = CFrame.Angles(0, kart.yaw, 0)
+		local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
+		local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
+		local travelDirection = forwardSpeed >= 0 and 1 or -1
+		local yawRate = steering * KartConfig.SteeringRate * steeringFactor * travelDirection
+		chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
 
 		local acceleration = 0
 		if braking then
@@ -272,13 +271,12 @@ RunService.Heartbeat:Connect(function(deltaTime)
 			chassis.AssemblyLinearVelocity = forward * clamped + right * lateralSpeed + Vector3.new(0, velocity.Y, 0)
 		end
 
-		local desiredOwner = driver and driver.Parent == player.Character and player or nil
-		if kart.networkOwner ~= desiredOwner then
+		if kart.networkOwner ~= "server" then
 			local success = pcall(function()
-				chassis:SetNetworkOwner(desiredOwner)
+				chassis:SetNetworkOwner(nil)
 			end)
 			if success then
-				kart.networkOwner = desiredOwner
+				kart.networkOwner = "server"
 			end
 		end
 		if not isAuthorizedDriver and input and (input.throttle ~= 0 or input.steering ~= 0 or input.braking) then
