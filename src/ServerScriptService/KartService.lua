@@ -24,6 +24,13 @@ print(("[BLOXY-KART][SERVER][START] module=%s remote=%s class=%s"):format(
 local kartsFolder = Workspace:FindFirstChild("PlayerKarts") or Instance.new("Folder")
 kartsFolder.Name = "PlayerKarts"
 kartsFolder.Parent = Workspace
+-- Remove only stale models matching the exact name/owner signature created by this service.
+for _, child in ipairs(kartsFolder:GetChildren()) do
+	local ownerUserId = child:GetAttribute("OwnerUserId")
+	if child:IsA("Model") and typeof(ownerUserId) == "number" and child.Name == "Kart_" .. tostring(ownerUserId) then
+		child:Destroy()
+	end
+end
 
 local activeKarts = {}
 local driverInputs = {}
@@ -39,6 +46,7 @@ local function makePart(parent, name, size, cframe, color, material)
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.Anchored = true
+	part.CanCollide = true
 	part.Parent = parent
 	return part
 end
@@ -52,6 +60,18 @@ local function buildTestCourse()
 	local course = Workspace:FindFirstChild("KartTestCourse") or Instance.new("Folder")
 	course.Name = "KartTestCourse"
 	course.Parent = Workspace
+	-- Reconcile only names owned by this generator, including legacy parts; preserve unknown user content.
+	local generatedCoursePartNames = {
+		TrackFloor = true, TrackFloorWest = true, TrackFloorEast = true,
+		TrackFloorNorth = true, TrackFloorSouth = true, DrivingPad = true,
+		LaneMarker = true, NorthBarrier = true, SouthBarrier = true,
+		WestBarrier = true, EastBarrier = true,
+	}
+	for _, child in ipairs(course:GetChildren()) do
+		if child:IsA("BasePart") and (generatedCoursePartNames[child.Name] or child.Name:match("^BlockObstacle%d+$")) then
+			child:Destroy()
+		end
+	end
 
 	local courseSurfaceY = COURSE_SURFACE_Y
 	local courseWidth, courseDepth = 260, 180
@@ -71,15 +91,17 @@ local function buildTestCourse()
 
 	local lineColor = Color3.fromRGB(236, 228, 190)
 	for x = -84, 84, 24 do
-		makePart(course, "LaneMarker", Vector3.new(10, 0.12, 0.45), CFrame.new(x, courseSurfaceY + 0.07, 0), lineColor, Enum.Material.Neon)
+		local marker = makePart(course, "LaneMarker", Vector3.new(10, 0.12, 0.45), CFrame.new(x, courseSurfaceY + 0.07, 0), lineColor, Enum.Material.Neon)
+		marker.CanCollide = false
+		marker.CanTouch = false
 	end
 
 	local wallColor = Color3.fromRGB(232, 107, 67)
 	local barrierCenterY = courseSurfaceY + 2.5
 	makePart(course, "NorthBarrier", Vector3.new(212, 5, 2), CFrame.new(0, barrierCenterY, -49), wallColor)
 	makePart(course, "SouthBarrier", Vector3.new(212, 5, 2), CFrame.new(0, barrierCenterY, 49), wallColor)
-	makePart(course, "WestBarrier", Vector3.new(2, 5, 100), CFrame.new(-105, barrierCenterY, 0), wallColor)
-	makePart(course, "EastBarrier", Vector3.new(2, 5, 100), CFrame.new(105, barrierCenterY, 0), wallColor)
+	makePart(course, "WestBarrier", Vector3.new(2, 5, 100), CFrame.new(-106, barrierCenterY, 0), wallColor)
+	makePart(course, "EastBarrier", Vector3.new(2, 5, 100), CFrame.new(106, barrierCenterY, 0), wallColor)
 
 	local obstaclePositions = {
 		Vector3.new(-42, courseSurfaceY + 2, -22), Vector3.new(2, courseSurfaceY + 2, 22),
@@ -111,10 +133,10 @@ local function makeVisualPart(model, chassis, name, size, cframe, color, materia
 	return part
 end
 
-local function makeVisualRod(model, chassis, name, startOffset, endOffset, thickness, color, material)
+local function makeVisualRod(model, chassis, name, startOffset, endOffset, thickness, color, material, baseCFrame)
 	local length = (endOffset - startOffset).Magnitude
 	local center = (startOffset + endOffset) / 2
-	local rodCFrame = CFrame.lookAt(center, endOffset)
+	local rodCFrame = baseCFrame * CFrame.lookAt(center, endOffset)
 	return makeVisualPart(model, chassis, name, Vector3.new(thickness, thickness, length), rodCFrame, color, material)
 end
 
@@ -145,7 +167,7 @@ local function createKart(player, spawnIndex)
 		return makeVisualPart(model, chassis, name, size, spawnCFrame * offset, color, material, shape)
 	end
 	local function visualRod(name, startOffset, endOffset, thickness, color, material)
-		return makeVisualRod(model, chassis, name, startOffset, endOffset, thickness, color, material)
+		return makeVisualRod(model, chassis, name, startOffset, endOffset, thickness, color, material, spawnCFrame)
 	end
 
 	-- Keep the body low and leave the seat opening unobstructed for the real R15 avatar.
