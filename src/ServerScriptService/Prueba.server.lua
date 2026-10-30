@@ -1,0 +1,1 @@
+print("BLOXY KARTS - Rojo conectado correctamente!")
