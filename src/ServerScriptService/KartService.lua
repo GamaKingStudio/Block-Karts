@@ -101,7 +101,8 @@ local function createKart(player, spawnIndex)
 	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 	model.PrimaryPart = chassis
 
-	local body = makePart(model, "Body", Vector3.new(4.6, 1.25, 3.1), spawnCFrame * CFrame.new(0, 1, 0.4), Color3.fromRGB(30, 112, 193))
+	-- Keep this opaque, non-colliding panel below the seat so it cannot cover the seated avatar.
+	local body = makePart(model, "Body", Vector3.new(4.6, 0.8, 3.1), spawnCFrame * CFrame.new(0, 0.4, 0.4), Color3.fromRGB(30, 112, 193))
 	body.CanCollide = false
 	weldTo(chassis, body)
 	local nose = makePart(model, "Nose", Vector3.new(3.6, 0.65, 1.6), spawnCFrame * CFrame.new(0, 1.15, -2.15), Color3.fromRGB(255, 204, 64))
