@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 
 local DIAGNOSTICS_ENABLED = true
 local DIAGNOSTIC_INTERVAL = 2
+local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 
 local remote = ReplicatedStorage:FindFirstChild("KartControl")
 if remote and not remote:IsA("RemoteEvent") then
