@@ -50,25 +50,43 @@ local function getKartFromSeat(seat)
 end
 
 local function stopDrivingCamera()
+	local wasDrivingCamera = cameraConnection ~= nil or (camera and camera.CameraType == Enum.CameraType.Scriptable)
 	if cameraConnection then
 		cameraConnection:Disconnect()
 		cameraConnection = nil
 	end
-	if camera then
-		camera.CameraType = Enum.CameraType.Custom
+	local activeCamera = Workspace.CurrentCamera
+	if activeCamera then
+		camera = activeCamera
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
-			camera.CameraSubject = humanoid
+			activeCamera.CameraSubject = humanoid
+		end
+		activeCamera.CameraType = Enum.CameraType.Custom
+		if wasDrivingCamera then
+			print(("[BLOXY-KART][CLIENT][CAMERA-RESTORE] type=%s subject=%s"):format(
+				activeCamera.CameraType.Name, activeCamera.CameraSubject and activeCamera.CameraSubject:GetFullName() or "nil"
+			))
 		end
 	end
 end
 
 local function startDrivingCamera(kart)
-	stopDrivingCamera()
+	if cameraConnection then
+		cameraConnection:Disconnect()
+		cameraConnection = nil
+	end
 	camera = Workspace.CurrentCamera
+	if not camera then
+		warn("[BLOXY-KART][CLIENT][CAMERA-MISSING] Workspace.CurrentCamera no está disponible.")
+		return
+	end
 	camera.CameraType = Enum.CameraType.Scriptable
-	local smoothedCFrame
+	local smoothedCFrame = camera.CFrame
+	print(("[BLOXY-KART][CLIENT][CAMERA-DRIVE] type=%s offset=%s lookAhead=%.1f"):format(
+		camera.CameraType.Name, tostring(KartConfig.CameraOffset), KartConfig.CameraLookAhead
+	))
 	cameraConnection = RunService.RenderStepped:Connect(function(deltaTime)
 		if not kart.Parent or not kart.PrimaryPart then
 			stopDrivingCamera()
@@ -78,10 +96,28 @@ local function startDrivingCamera(kart)
 		local focus = chassis.Position + chassis.CFrame.LookVector * KartConfig.CameraLookAhead + Vector3.new(0, 1.5, 0)
 		local desiredPosition = (chassis.CFrame * CFrame.new(KartConfig.CameraOffset)).Position
 		local desiredCFrame = CFrame.lookAt(desiredPosition, focus)
-		local alpha = 1 - math.exp(-5 * deltaTime)
-		smoothedCFrame = smoothedCFrame and smoothedCFrame:Lerp(desiredCFrame, alpha) or desiredCFrame
+		local alpha = 1 - math.exp(-6 * deltaTime)
+		smoothedCFrame = smoothedCFrame:Lerp(desiredCFrame, alpha)
 		camera.CFrame = smoothedCFrame
+		camera.Focus = CFrame.new(focus)
 	end)
+end
+
+local function logSeatedAvatar(humanoid, seat)
+	local character = humanoid.Parent
+	local visibleParts = 0
+	local accessoryCount = 0
+	for _, descendant in ipairs(character:GetDescendants()) do
+		if descendant:IsA("Accessory") then
+			accessoryCount = accessoryCount + 1
+		elseif descendant:IsA("BasePart") and descendant.Transparency < 1 and descendant.LocalTransparencyModifier < 1 then
+			visibleParts = visibleParts + 1
+		end
+	end
+	local seatWeld = seat:FindFirstChild("SeatWeld")
+	print(("[BLOXY-KART][CLIENT][AVATAR-SEATED] humanoidSit=%s seatOccupant=%s seatWeld=%s visibleParts=%d accessories=%d"):format(
+		tostring(humanoid.Sit), tostring(seat.Occupant == humanoid), tostring(seatWeld ~= nil), visibleParts, accessoryCount
+	))
 end
 
 local function sendDriveInput()
@@ -277,12 +313,13 @@ local function bindCharacter(character)
 			if currentSeat == seat then
 				return
 			end
-			print(("[BLOXY-KART][CLIENT][SEAT] seated=true seat=%s kart=%s ownerAttribute=%s"):format(
-				seat:GetFullName(), kart:GetFullName(), tostring(kart:GetAttribute("OwnerUserId"))
-			))
-			clearDriveInput()
-			currentSeat = seat
-			ContextActionService:BindActionAtPriority(
+				print(("[BLOXY-KART][CLIENT][SEAT] seated=true seat=%s kart=%s ownerAttribute=%s"):format(
+					seat:GetFullName(), kart:GetFullName(), tostring(kart:GetAttribute("OwnerUserId"))
+				))
+				clearDriveInput()
+				currentSeat = seat
+				logSeatedAvatar(humanoid, seat)
+				ContextActionService:BindActionAtPriority(
 				driveActionName,
 				onDriveAction,
 				false,
