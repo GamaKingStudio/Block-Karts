@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ContextActionService = game:GetService("ContextActionService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
@@ -24,6 +25,8 @@ print(("[BLOXY-KART][CLIENT][START] script=%s parent=%s remote=%s class=%s"):for
 local camera = Workspace.CurrentCamera
 local currentSeat
 local cameraConnection
+local shownEnterPrompt
+local enterPromptBillboard
 local held = { forward = false, reverse = false, left = false, right = false, brake = false }
 local driveActionName = "BLOXYKartDriveControls"
 local driveKeys = {
@@ -48,6 +51,84 @@ local function getKartFromSeat(seat)
 	end
 	return nil
 end
+
+local function hideEnterPrompt(prompt)
+	if prompt and shownEnterPrompt ~= prompt then
+		return
+	end
+	if enterPromptBillboard then
+		enterPromptBillboard:Destroy()
+		enterPromptBillboard = nil
+	end
+	shownEnterPrompt = nil
+end
+
+local function showEnterPrompt(prompt)
+	if not prompt:IsA("ProximityPrompt") or prompt.Name ~= "EnterKartPrompt" or currentSeat then
+		return
+	end
+	local seat = prompt.Parent
+	if not seat or not seat:IsA("VehicleSeat") or seat.Occupant or not getKartFromSeat(seat) then
+		return
+	end
+	hideEnterPrompt()
+	shownEnterPrompt = prompt
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "BLOXYKartEnterHint"
+	billboard.Adornee = seat
+	billboard.Size = UDim2.fromOffset(132, 36)
+	billboard.StudsOffset = Vector3.new(0, 2.4, 0)
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = prompt.MaxActivationDistance
+	local frame = Instance.new("Frame")
+	frame.Name = "Pill"
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.BackgroundColor3 = Color3.fromRGB(25, 29, 36)
+	frame.BackgroundTransparency = 0.12
+	frame.Parent = billboard
+	local frameCorner = Instance.new("UICorner")
+	frameCorner.CornerRadius = UDim.new(0, 8)
+	frameCorner.Parent = frame
+	local frameStroke = Instance.new("UIStroke")
+	frameStroke.Color = Color3.fromRGB(255, 197, 72)
+	frameStroke.Thickness = 1
+	frameStroke.Transparency = 0.2
+	frameStroke.Parent = frame
+
+	local keyBadge = Instance.new("TextLabel")
+	keyBadge.Name = "Key"
+	keyBadge.Position = UDim2.fromOffset(5, 5)
+	keyBadge.Size = UDim2.fromOffset(27, 26)
+	keyBadge.BackgroundColor3 = Color3.fromRGB(255, 197, 72)
+	keyBadge.Text = "E"
+	keyBadge.TextColor3 = Color3.fromRGB(28, 30, 34)
+	keyBadge.TextSize = 16
+	keyBadge.Font = Enum.Font.GothamBold
+	keyBadge.Parent = frame
+	local keyCorner = Instance.new("UICorner")
+	keyCorner.CornerRadius = UDim.new(0, 5)
+	keyCorner.Parent = keyBadge
+
+	local actionLabel = Instance.new("TextLabel")
+	actionLabel.Name = "Action"
+	actionLabel.Position = UDim2.fromOffset(40, 0)
+	actionLabel.Size = UDim2.new(1, -44, 1, 0)
+	actionLabel.BackgroundTransparency = 1
+	actionLabel.Text = "Conducir"
+	actionLabel.TextColor3 = Color3.fromRGB(245, 246, 248)
+	actionLabel.TextSize = 14
+	actionLabel.TextXAlignment = Enum.TextXAlignment.Left
+	actionLabel.Font = Enum.Font.GothamMedium
+	actionLabel.Parent = frame
+
+	billboard.Parent = player:WaitForChild("PlayerGui")
+	enterPromptBillboard = billboard
+end
+
+ProximityPromptService.PromptShown:Connect(showEnterPrompt)
+ProximityPromptService.PromptHidden:Connect(hideEnterPrompt)
 
 local function stopDrivingCamera()
 	local wasDrivingCamera = cameraConnection ~= nil or (camera and camera.CameraType == Enum.CameraType.Scriptable)
@@ -103,20 +184,80 @@ local function startDrivingCamera(kart)
 	end)
 end
 
+local function formatVector(vector)
+	if not vector then
+		return "nil"
+	end
+	return string.format("(%.2f,%.2f,%.2f)", vector.X, vector.Y, vector.Z)
+end
+
+local function describePartVisibility(part)
+	if not part then
+		return "missing"
+	end
+	return string.format("%s(t=%.2f,ltm=%.2f)", part.Name, part.Transparency, part.LocalTransparencyModifier)
+end
+
 local function logSeatedAvatar(humanoid, seat)
 	local character = humanoid.Parent
+	if not character then
+		return
+	end
+	local kart = getKartFromSeat(seat)
+	local chassis = kart and kart.PrimaryPart
+	local root = character:FindFirstChild("HumanoidRootPart")
+	local head = character:FindFirstChild("Head")
+	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
 	local visibleParts = 0
+	local totalParts = 0
 	local accessoryCount = 0
+	local hiddenParts = {}
 	for _, descendant in ipairs(character:GetDescendants()) do
 		if descendant:IsA("Accessory") then
 			accessoryCount = accessoryCount + 1
-		elseif descendant:IsA("BasePart") and descendant.Transparency < 1 and descendant.LocalTransparencyModifier < 1 then
-			visibleParts = visibleParts + 1
+		elseif descendant:IsA("BasePart") and descendant.Name ~= "HumanoidRootPart" then
+			totalParts = totalParts + 1
+			if descendant.Transparency < 1 and descendant.LocalTransparencyModifier < 1 then
+				visibleParts = visibleParts + 1
+			elseif #hiddenParts < 8 then
+				table.insert(hiddenParts, string.format("%s(t=%.2f,ltm=%.2f)", descendant.Name, descendant.Transparency, descendant.LocalTransparencyModifier))
+			end
 		end
 	end
 	local seatWeld = seat:FindFirstChild("SeatWeld")
-	print(("[BLOXY-KART][CLIENT][AVATAR-SEATED] humanoidSit=%s seatOccupant=%s seatWeld=%s visibleParts=%d accessories=%d"):format(
-		tostring(humanoid.Sit), tostring(seat.Occupant == humanoid), tostring(seatWeld ~= nil), visibleParts, accessoryCount
+	local rootSeatOffset = root and seat.CFrame:PointToObjectSpace(root.Position)
+	local rootChassisOffset = root and chassis and chassis.CFrame:PointToObjectSpace(root.Position)
+	local seatChassisOffset = chassis and chassis.CFrame:PointToObjectSpace(seat.Position)
+	local facingDot = chassis and seat.CFrame.LookVector:Dot(chassis.CFrame.LookVector) or 0
+	local occupant = seat.Occupant
+	local camera = Workspace.CurrentCamera
+	local function getCameraBlocker(targetPart)
+		if not camera or not targetPart then
+			return "unavailable", false
+		end
+		local direction = targetPart.Position - camera.CFrame.Position
+		if direction.Magnitude < 0.001 then
+			return "camera-at-target", false
+		end
+		local raycastParams = RaycastParams.new()
+		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+		raycastParams.FilterDescendantsInstances = { character }
+		local result = Workspace:Raycast(camera.CFrame.Position, direction, raycastParams)
+		if result then
+			return result.Instance:GetFullName(), kart ~= nil and result.Instance:IsDescendantOf(kart)
+		end
+		return "none", false
+	end
+	local headBlocker, headBlockedByKart = getCameraBlocker(head)
+	local torsoBlocker, torsoBlockedByKart = getCameraBlocker(torso)
+	local headVisible = head ~= nil and head.Transparency < 1 and head.LocalTransparencyModifier < 1
+	local torsoVisible = torso ~= nil and torso.Transparency < 1 and torso.LocalTransparencyModifier < 1
+	print(("[BLOXY-KART][CLIENT][AVATAR-SEATED] humanoidSit=%s occupant=%s seatWeld=%s seatKartOffset=%s facingDot=%.2f rootSeatOffset=%s rootChassisOffset=%s root=%s head=%s headVisible=%s torso=%s torsoVisible=%s visibleParts=%d/%d accessories=%d hiddenParts=%s headBlocker=%s headBlockedByKart=%s torsoBlocker=%s torsoBlockedByKart=%s"):format(
+		tostring(humanoid.Sit), occupant and occupant.Parent and occupant.Parent.Name or "nil", tostring(seatWeld ~= nil),
+		formatVector(seatChassisOffset), facingDot, formatVector(rootSeatOffset), formatVector(rootChassisOffset),
+		describePartVisibility(root), describePartVisibility(head), tostring(headVisible), describePartVisibility(torso), tostring(torsoVisible),
+		visibleParts, totalParts, accessoryCount, #hiddenParts == 0 and "none" or table.concat(hiddenParts, ";"),
+		headBlocker, tostring(headBlockedByKart), torsoBlocker, tostring(torsoBlockedByKart)
 	))
 end
 
@@ -313,13 +454,13 @@ local function bindCharacter(character)
 			if currentSeat == seat then
 				return
 			end
-				print(("[BLOXY-KART][CLIENT][SEAT] seated=true seat=%s kart=%s ownerAttribute=%s"):format(
-					seat:GetFullName(), kart:GetFullName(), tostring(kart:GetAttribute("OwnerUserId"))
-				))
-				clearDriveInput()
-				currentSeat = seat
-				logSeatedAvatar(humanoid, seat)
-				ContextActionService:BindActionAtPriority(
+			print(("[BLOXY-KART][CLIENT][SEAT] seated=true seat=%s kart=%s ownerAttribute=%s"):format(
+				seat:GetFullName(), kart:GetFullName(), tostring(kart:GetAttribute("OwnerUserId"))
+			))
+			hideEnterPrompt()
+			clearDriveInput()
+			currentSeat = seat
+			ContextActionService:BindActionAtPriority(
 				driveActionName,
 				onDriveAction,
 				false,
@@ -329,6 +470,11 @@ local function bindCharacter(character)
 			print(("[BLOXY-KART][CLIENT][BIND] action=%s keys=W,A,S,D,Up,Down,Left,Right,Space"):format(driveActionName))
 			sendDriveInput()
 			startDrivingCamera(kart)
+			task.delay(0.4, function()
+				if currentSeat == seat and humanoid.Parent == character then
+					logSeatedAvatar(humanoid, seat)
+				end
+			end)
 		else
 			print(("[BLOXY-KART][CLIENT][SEAT] seated=false seatPart=%s"):format(
 				humanoid.SeatPart and humanoid.SeatPart:GetFullName() or "nil"

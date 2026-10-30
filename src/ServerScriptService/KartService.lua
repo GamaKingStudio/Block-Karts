@@ -101,7 +101,7 @@ local function createKart(player, spawnIndex)
 	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 	model.PrimaryPart = chassis
 
-	-- Keep this opaque, non-colliding panel below the seat so it cannot cover the seated avatar.
+	-- Keep the non-colliding body panel low so the driver-seat area stays open.
 	local body = makePart(model, "Body", Vector3.new(4.6, 0.8, 3.1), spawnCFrame * CFrame.new(0, 0.4, 0.4), Color3.fromRGB(30, 112, 193))
 	body.CanCollide = false
 	weldTo(chassis, body)
@@ -149,6 +149,7 @@ local function createKart(player, spawnIndex)
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "EnterKartPrompt"
+	prompt.Style = Enum.ProximityPromptStyle.Custom
 	prompt.ActionText = "Conducir"
 	prompt.ObjectText = "Kart"
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
@@ -177,9 +178,10 @@ local function createKart(player, spawnIndex)
 		lastDiagnosticPosition = spawnCFrame.Position,
 	}
 
-	local function updateNetworkOwner()
-		local occupant = seat.Occupant
-		local driver = occupant and Players:GetPlayerFromCharacter(occupant.Parent)
+		local function updateNetworkOwner()
+			local occupant = seat.Occupant
+			prompt.Enabled = occupant == nil
+			local driver = occupant and Players:GetPlayerFromCharacter(occupant.Parent)
 		if not model:IsDescendantOf(Workspace) or not chassis:IsDescendantOf(Workspace) then
 			kart.networkOwner = "auto"
 			if model.Parent then
