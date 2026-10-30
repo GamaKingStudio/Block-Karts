@@ -18,3 +18,25 @@ Initial goals
 Development
 
 This project is being developed with Roblox Studio, Visual Studio Code, Git and GitHub.
+
+Prototype: kart driving
+
+The first playable prototype builds a blocky kart and a simple test course at runtime. Each player receives an individual server-created kart. The server owns the driving rules and validates brake input; the client handles the follow camera and keyboard brake input. The prototype intentionally does not include drifting, boost, weapons, coins, shops, matchmaking, or a lobby.
+
+Controls
+
+- W / Up: accelerate.
+- S / Down: brake while moving forward, then reverse.
+- A / Left and D / Right: steer.
+- Space: brake.
+- E: enter the kart when standing next to it.
+
+Testing in Roblox Studio
+
+1. Install the project tools with Rokit (`rokit install`) so the pinned Rojo 7.7.1 version is used.
+2. Open the project in Roblox Studio and connect Rojo from the project directory with `rojo serve`.
+3. Synchronize `default.project.json` into the Studio place.
+4. Use Test > Start with at least one player. The server creates the test course and a kart for each player.
+5. Drive on the asphalt pad and test the boundary walls and block obstacles.
+
+The server scripts and shared configuration live under `src/ServerScriptService` and `src/ReplicatedStorage`; the local camera and brake controller lives under `src/StarterPlayer` (mapped to `StarterPlayerScripts` by Rojo).
