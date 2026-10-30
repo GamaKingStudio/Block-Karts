@@ -198,6 +198,28 @@ local function describePartVisibility(part)
 	return string.format("%s(t=%.2f,ltm=%.2f)", part.Name, part.Transparency, part.LocalTransparencyModifier)
 end
 
+local function describePartGeometry(part)
+	if not part then
+		return "missing"
+	end
+	if part:IsA("MeshPart") then
+		return string.format("MeshPart(mesh=%s,texture=%s)", part.MeshId, part.TextureID)
+	end
+	local mesh = part:FindFirstChildOfClass("SpecialMesh")
+	if mesh then
+		return string.format("%s/SpecialMesh(mesh=%s,texture=%s)", part.ClassName, mesh.MeshId, mesh.TextureId)
+	end
+	return part.ClassName
+end
+
+local function describeViewportPoint(camera, part)
+	if not camera or not part then
+		return "unavailable"
+	end
+	local point, insideViewport = camera:WorldToViewportPoint(part.Position)
+	return string.format("inside=%s(x=%.0f,y=%.0f,z=%.2f)", tostring(insideViewport), point.X, point.Y, point.Z)
+end
+
 local function logSeatedAvatar(humanoid, seat)
 	local character = humanoid.Parent
 	if not character then
@@ -258,6 +280,19 @@ local function logSeatedAvatar(humanoid, seat)
 		describePartVisibility(root), describePartVisibility(head), tostring(headVisible), describePartVisibility(torso), tostring(torsoVisible),
 		visibleParts, totalParts, accessoryCount, #hiddenParts == 0 and "none" or table.concat(hiddenParts, ";"),
 		headBlocker, tostring(headBlockedByKart), torsoBlocker, tostring(torsoBlockedByKart)
+	))
+	local characterParent = character.Parent
+	local cameraSubject = camera and camera.CameraSubject
+	print(("[BLOXY-KART][CLIENT][AVATAR-RENDER] character=%s parent=%s characterInWorkspace=%s isLocalCharacter=%s rootInWorkspace=%s headInWorkspace=%s torsoInWorkspace=%s rig=%s state=%s health=%.1f platformStand=%s cameraType=%s cameraSubject=%s cameraPos=%s cameraLook=%s cameraFocus=%s viewport=(%.0f,%.0f) fov=%.1f headWorld=%s headScreen=%s headGeometry=%s torsoWorld=%s torsoScreen=%s torsoGeometry=%s"):format(
+		character:GetFullName(), characterParent and characterParent:GetFullName() or "nil", tostring(character:IsDescendantOf(Workspace)),
+		tostring(player.Character == character), tostring(root ~= nil and root:IsDescendantOf(Workspace)),
+		tostring(head ~= nil and head:IsDescendantOf(Workspace)), tostring(torso ~= nil and torso:IsDescendantOf(Workspace)),
+		humanoid.RigType.Name, humanoid:GetState().Name, humanoid.Health, tostring(humanoid.PlatformStand),
+		camera and camera.CameraType.Name or "missing", cameraSubject and cameraSubject:GetFullName() or "nil",
+		formatVector(camera and camera.CFrame.Position), formatVector(camera and camera.CFrame.LookVector),
+		formatVector(camera and camera.Focus.Position), camera and camera.ViewportSize.X or 0, camera and camera.ViewportSize.Y or 0,
+		camera and camera.FieldOfView or 0, formatVector(head and head.Position), describeViewportPoint(camera, head), describePartGeometry(head),
+		formatVector(torso and torso.Position), describeViewportPoint(camera, torso), describePartGeometry(torso)
 	))
 end
 
