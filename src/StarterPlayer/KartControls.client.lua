@@ -175,6 +175,23 @@ local function simulateOwnedKart()
 		local characterRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		local sharesAssembly = characterRoot ~= nil and characterRoot.AssemblyRootPart == root
 		local seatWeld = currentSeat:FindFirstChild("SeatWeld")
+		local chassisProperties = chassis.CurrentPhysicalProperties
+		local raycastParams = RaycastParams.new()
+		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+		raycastParams.FilterDescendantsInstances = { kart, player.Character }
+		local groundHit = Workspace:Raycast(chassis.Position, Vector3.new(0, -(chassis.Size.Y * 0.5 + 2), 0), raycastParams)
+		local ground = groundHit and groundHit.Instance
+		local groundProperties = ground and ground:IsA("BasePart") and ground.CurrentPhysicalProperties or nil
+		local combinedFriction = -1
+		if groundProperties then
+			local totalFrictionWeight = chassisProperties.FrictionWeight + groundProperties.FrictionWeight
+			if totalFrictionWeight > 0 then
+				combinedFriction = (chassisProperties.Friction * chassisProperties.FrictionWeight
+					+ groundProperties.Friction * groundProperties.FrictionWeight) / totalFrictionWeight
+			end
+		end
+		local estimatedFrictionAccelerationLimit = combinedFriction >= 0 and combinedFriction * Workspace.Gravity or -1
+		local forwardAcceleration = driveForce.Force:Dot(forward) / math.max(chassis.AssemblyMass, 0.001)
 		local previousPosition = lastPhysicsPosition[kart] or chassis.Position
 		local distance = (chassis.Position - previousPosition).Magnitude
 		lastPhysicsPosition[kart] = chassis.Position
@@ -184,14 +201,20 @@ local function simulateOwnedKart()
 				table.insert(anchoredParts, part.Name)
 			end
 		end
-		print(("[BLOXY-KART][CLIENT][PHYSICS] input=(%.0f,%.0f,%s) chassis=%s chassisAnchored=%s root=%s rootAnchored=%s characterRoot=%s sharesAssembly=%s seatWeld=%s anchoredAssemblyParts=%s mass=%.2f forward=(%.2f,%.2f,%.2f) force=(%.1f,%.1f,%.1f) forceMagnitude=%.1f forceEnabled=%s attachment=%s applyAtCenter=%s speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f)"):format(
+		print(("[BLOXY-KART][CLIENT][PHYSICS] input=(%.0f,%.0f,%s) chassis=%s chassisAnchored=%s root=%s rootAnchored=%s characterRoot=%s sharesAssembly=%s seatWeld=%s anchoredAssemblyParts=%s mass=%.2f forward=(%.2f,%.2f,%.2f) forwardSpeed=%.2f force=(%.1f,%.1f,%.1f) forceMagnitude=%.1f forwardAcceleration=%.2f forceEnabled=%s attachment=%s applyAtCenter=%s chassisFriction=%.3f chassisFrictionWeight=%.2f ground=%s groundMaterial=%s groundFriction=%.3f groundFrictionWeight=%.2f estimatedFrictionAccelerationLimit=%.2f gravity=%.1f speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f)"):format(
 			throttle, steering, tostring(held.brake), chassis:GetFullName(), tostring(chassis.Anchored),
 			root:GetFullName(), tostring(root.Anchored), characterRoot and characterRoot:GetFullName() or "nil",
 			tostring(sharesAssembly), tostring(seatWeld ~= nil), #anchoredParts > 0 and table.concat(anchoredParts, ",") or "none",
-			chassis.AssemblyMass, forward.X, forward.Y, forward.Z, driveForce.Force.X, driveForce.Force.Y,
-			driveForce.Force.Z, driveForce.Force.Magnitude, tostring(driveForce.Enabled),
+			chassis.AssemblyMass, forward.X, forward.Y, forward.Z, forwardSpeed,
+			driveForce.Force.X, driveForce.Force.Y, driveForce.Force.Z, driveForce.Force.Magnitude,
+			forwardAcceleration, tostring(driveForce.Enabled),
 			driveForce.Attachment0:GetFullName(), tostring(driveForce.ApplyAtCenterOfMass),
-			chassis.AssemblyLinearVelocity.Magnitude, distance, chassis.AssemblyAngularVelocity.X,
+			chassisProperties.Friction, chassisProperties.FrictionWeight,
+			ground and ground:GetFullName() or "none", groundHit and groundHit.Material.Name or "none",
+			groundProperties and groundProperties.Friction or -1,
+			groundProperties and groundProperties.FrictionWeight or -1,
+			estimatedFrictionAccelerationLimit, Workspace.Gravity, chassis.AssemblyLinearVelocity.Magnitude, distance,
+			chassis.AssemblyAngularVelocity.X,
 			chassis.AssemblyAngularVelocity.Y, chassis.AssemblyAngularVelocity.Z
 		))
 	end

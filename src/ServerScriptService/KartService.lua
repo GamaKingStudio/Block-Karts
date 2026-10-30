@@ -96,7 +96,9 @@ local function createKart(player, spawnIndex)
 
 	local chassis = makePart(model, "Chassis", Vector3.new(5.2, 1, 7), spawnCFrame, Color3.fromRGB(37, 142, 224), Enum.Material.Metal)
 	chassis.Anchored = false
-	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.65, 0.05, 1, 1)
+	-- The non-colliding wheels make the chassis the actual floor-contact surface.
+	-- Keep that contact low-friction; lateral grip is handled by the arcade force below.
+	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 	model.PrimaryPart = chassis
 
 	local body = makePart(model, "Body", Vector3.new(4.6, 1.25, 3.1), spawnCFrame * CFrame.new(0, 1, 0.4), Color3.fromRGB(30, 112, 193))
@@ -177,6 +179,14 @@ local function createKart(player, spawnIndex)
 	local function updateNetworkOwner()
 		local occupant = seat.Occupant
 		local driver = occupant and Players:GetPlayerFromCharacter(occupant.Parent)
+		if not model:IsDescendantOf(Workspace) or not chassis:IsDescendantOf(Workspace) then
+			kart.networkOwner = "auto"
+			if model.Parent then
+				model:SetAttribute("NetworkOwnerUserId", 0)
+			end
+			print(("[BLOXY-KART][SERVER][NETWORK-OWNER-SKIP] kart=%s reason=outside-workspace"):format(model.Name))
+			return
+		end
 		local networkRoot = chassis.AssemblyRootPart or chassis
 		local success, ownershipError = pcall(function()
 			if driver then
