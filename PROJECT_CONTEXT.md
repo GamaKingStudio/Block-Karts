@@ -1,566 +1,227 @@
-# BLOXY KARTS --- Debrief de proyecto para Gemini
+BLOXY KARTS - Project Context
 
-**Documento de contexto maestro**\
-**Fecha de actualización:** 30 de octubre de 2026\
-**Estudio:** GamaKingStudio\
-**Repositorio:** https://github.com/GamaKingStudio/Block-Karts\
-**Rama de trabajo:** `feature/kart-prototype`\
-**Rama protegida:** `main`
+Última actualización: Noviembre de 2026
 
-------------------------------------------------------------------------
+Motor: Roblox Studio (Luau)
 
-## 1. Para qué sirve este documento
+Género: Arcade Kart Racing
 
-Este documento transfiere a Gemini el contexto del desarrollo de **BLOXY
-KARTS** para que pueda colaborar en el análisis técnico, la
-planificación y la preparación de instrucciones para Manus.
+Estudio: GamaKingStudio
 
-Gemini debe leerlo como contexto del proyecto, no como una orden para
-modificar código inmediatamente.
+Repositorio: https://github.com/GamaKingStudio/Block-Karts
 
-### Regla principal de colaboración
-
--   **Gemini:** copiloto técnico cotidiano. Analiza código, propone
-    soluciones, revisa decisiones y redacta instrucciones precisas para
-    Manus.
--   **ChatGPT:** apoyo para mantener la visión global, priorizar el
-    desarrollo, revisar decisiones y resolver problemas complejos.
--   **Manus:** desarrollador que modifica el repositorio, implementa
-    cambios y publica commits en GitHub.
--   **Usuario:** director del proyecto y tester en Roblox Studio. Tiene
-    poca experiencia programando y necesita instrucciones claras,
-    graduales y sin asumir conocimientos técnicos.
-
-No deben generarse instrucciones contradictorias. Antes de pedir un
-cambio a Manus, hay que revisar el estado actual del repositorio y el
-historial de tareas.
-
-------------------------------------------------------------------------
-
-## 2. Visión del juego
-
-BLOXY KARTS es un juego de carreras arcade para Roblox, con estética
-blocky/low-poly inspirada en el lenguaje visual de Roblox y Minecraft,
-pero con identidad y recursos originales.
-
-La intención es crear un producto de estudio, no solamente un prototipo
-personal. El proyecto pertenece a la futura marca de videojuegos
-**GamaKingStudio**.
-
-### Pilares de diseño
-
--   Fácil de aprender, difícil de dominar.
--   Conducción arcade divertida y accesible.
--   Carreras con contacto y colisiones entre jugadores.
--   Derrapes y turbo como mecánicas importantes.
--   Circuitos coloridos, reconocibles y con personalidad.
--   Progresión y desbloqueos sin ventajas de pago injustas.
--   Estética blocky, geométrica, atractiva y consistente.
-
-### Modos previstos
-
--   Carreras públicas y privadas.
--   Hasta 8 jugadores.
--   Carreras de 3 vueltas.
--   Contrarreloj.
--   Eliminación.
--   Batalla.
--   Campeonato.
-
-Estos modos son parte de la visión futura; no todos están implementados.
-
-### Karts iniciales previstos
+Rama de trabajo: feature/kart-prototype
 
--   Starter Kart.
--   Mini Buggy.
--   Monster Kart.
--   Rocket Kart.
+Rama protegida: main
 
-### Mundos/circuitos previstos
+1. Para qué sirve este documento
 
-1.  Blocky Jungle --- primer circuito.
-2.  Lava Rush.
-3.  Neon City.
-4.  Frozen Peak.
-5.  Candy World.
+Este documento transfiere a Gemini el contexto del desarrollo de BLOXY KARTS para que pueda colaborar en el análisis técnico, la planificación y la preparación de instrucciones para Manus.
 
-### Progresión futura
+Gemini debe leerlo como contexto del proyecto, no como una orden para modificar código inmediatamente.
 
--   Monedas y XP.
--   Desbloqueo de karts.
--   Cosméticos.
--   Desafíos.
--   Garaje y tienda.
--   Resultados de carrera.
+Regla principal de colaboración
 
-**No implementar monetización ni sistemas de progresión complejos antes
-de validar que conducir y competir sea divertido.** Evitar pay-to-win.
+Gemini: Copiloto técnico cotidiano. Analiza código, propone soluciones, revisa decisiones y redacta instrucciones (o código directo) para el usuario.
 
-------------------------------------------------------------------------
+ChatGPT: Apoyo para mantener la visión global, priorizar el desarrollo, revisar decisiones y resolver problemas complejos.
 
-## 3. Principios técnicos y de desarrollo
+Manus: Desarrollador que modifica el repositorio, implementa cambios y publica commits en GitHub (si aplica).
 
-### Arquitectura deseada
+Usuario: Director del proyecto y tester en Roblox Studio. Requiere instrucciones claras y graduales para la implementación de código en el entorno de desarrollo local.
 
--   El servidor valida carreras, checkpoints, vueltas, recompensas,
-    objetos y compras.
--   El cliente gestiona entrada del jugador, cámara, interfaz, efectos
-    visuales y sonido.
--   Usar predicción del cliente cuando sea apropiado, sin confiar al
-    cliente la validación de recompensas o resultados.
--   Mantener un único sistema de conducción y evitar duplicar asientos,
-    fuerzas o controladores.
--   Priorizar rendimiento y geometría sencilla en Roblox.
+2. Visión del juego
 
-### Reglas de trabajo
+BLOXY KARTS es un juego de carreras arcade para Roblox, con estética low-poly inspirada en el lenguaje visual de Roblox y Minecraft, con identidad y recursos originales. El proyecto busca establecerse como un producto comercial del estudio GamaKingStudio.
 
-1.  Trabajar sobre el proyecto existente; no reescribirlo desde cero.
-2.  Todas las implementaciones de Manus deben ir a
-    `feature/kart-prototype`.
-3.  No modificar `main` salvo autorización explícita.
-4.  Mantener compatibilidad con Rojo 7.7.1.
-5.  Antes de modificar, inspeccionar los scripts y entender las
-    dependencias.
-6.  Cambiar el menor número de archivos posible.
-7.  No cambiar física, cámara o controles cuando la tarea no lo
-    requiera.
-8.  No declarar un problema solucionado si no se ha probado en Roblox
-    Studio.
-9.  Diferenciar claramente entre validación estática y prueba funcional
-    real.
-10. Evitar tareas exploratorias amplias y prompts repetidos: los
-    créditos de Manus son limitados.
-
-### Situación del usuario
-
-El usuario tiene poca experiencia programando y quiere que Manus haga
-prácticamente todo el trabajo de código. No pedirle que edite Lua
-manualmente. Guiarlo paso a paso y explicar exactamente qué terminal
-usar cuando corresponda.
-
-------------------------------------------------------------------------
-
-## 4. Herramientas y entorno
+Pilares de diseño
 
-### Servicios y herramientas
+Conducción arcade accesible pero con curva de aprendizaje técnica.
 
--   Roblox Studio.
--   VS Code.
--   Git y GitHub.
--   Rojo CLI 7.7.1.
--   Plugin de Rojo instalado en Roblox Studio.
--   Manus con conector de GitHub.
--   Gemini Pro disponible para el usuario por su trabajo.
--   ChatGPT como apoyo de planificación y revisión.
+Carreras con contacto y colisiones físicas entre jugadores.
 
-### Rutas y repositorio
+Mecánicas de derrape (drifting) y turbo integradas en el core loop.
 
--   Repositorio GitHub: `https://github.com/GamaKingStudio/Block-Karts`
--   Carpeta local: `C:\Users\l_kan\Block Karts`
--   Rama principal: `main`
--   Rama activa: `feature/kart-prototype`
+Circuitos con identidad visual y legibilidad geométrica.
 
-### Mapeo Rojo
+Progresión basada en juego (evitar mecánicas pay-to-win).
 
-El archivo `default.project.json` mapea:
+Estética low-poly geométrica y consistente.
 
--   `src/ReplicatedStorage` → `ReplicatedStorage`
--   `src/ServerScriptService` → `ServerScriptService`
--   `src/StarterPlayer` → `StarterPlayerScripts`
+Modos previstos
 
-`rokit.toml` fija Rojo 7.7.1.
+Carreras públicas y privadas (hasta 8 jugadores, 3 vueltas).
 
-`.gitignore` ignora `prueba.rbxl` y `*.rbxlx`.
+Contrarreloj.
 
-Existe una copia del Baseplate original llamada
-`BLOXY_KARTS_Baseplate.rbxl`; debe preservarse.
+Modos en evaluación (Eliminación, Batalla, Campeonato).
 
-### Flujo de trabajo local
+Karts iniciales previstos
 
-Hay dos terminales y no deben confundirse:
+Starter Kart.
 
-**Terminal 1 --- Rojo** - Se ejecuta `rojo serve` desde la carpeta del
-proyecto. - Usa localhost, puerto `34872`. - Debe permanecer abierta
-mientras se prueba en Studio. - No iniciar otro servidor Rojo en el
-mismo puerto. - Si se cambia de rama, detener Rojo con `Ctrl+C` y volver
-a ejecutar `rojo serve`.
+Mini Buggy.
 
-**Terminal 2 --- Git** - Se usa para descargar cambios publicados por
-Manus. - Desde la carpeta del proyecto:
-`bash   git pull origin feature/kart-prototype`
+Monster Kart.
 
-Rojo sincroniza los archivos locales con Roblox Studio. Git
-descarga/publica los cambios entre la carpeta local y GitHub. Son
-herramientas distintas.
+Rocket Kart.
 
-------------------------------------------------------------------------
+Mundos/circuitos previstos
 
-## 5. Estado del prototipo
+Beach Resort (Implementado en rama de prototipo).
 
-El proyecto ya tiene un prototipo de kart funcional, con conducción y
-cámara implementadas. No es todavía una experiencia completa de
-carreras.
+Blocky Jungle.
 
-### Archivos principales conocidos
+Lava Rush.
 
--   `src/ServerScriptService/KartService.lua`
--   `src/ServerScriptService/KartBootstrap.server.lua`
--   `src/ReplicatedStorage/KartConfig.lua`
--   `src/StarterPlayer/KartControls.client.lua`
--   `Readme.md`
--   `default.project.json`
--   `rokit.toml`
+Neon City.
 
-También se mencionó `Prueba.server.lua`, que únicamente imprime un
-mensaje.
+Frozen Peak.
 
-### Sistemas existentes
+Candy World.
 
--   Creación del kart en el servidor.
--   Un `VehicleSeat` de conducción.
--   Controles del cliente mediante `ContextActionService`.
--   Controles: W acelera, S frena/reversa, A/D giran, espacio frena.
--   Cámara de seguimiento en tercera persona.
--   Prompt personalizado para entrar al kart: `E · Conducir`.
--   Detección de asiento/ocupante.
--   Sistema de fuerza y movimiento del kart.
--   Asignación de network ownership al conductor.
--   Pista de pruebas básica.
--   Diagnósticos de avatar y cámara.
+Progresión futura
 
-El usuario confirmó que el kart se mueve, la cámara funciona desde atrás
-y el prompt personalizado aparece correctamente.
+Monedas y experiencia (XP).
 
-### Problema de sensación de conducción
+Desbloqueo de chasis y cosméticos.
 
-El usuario evaluó la conducción como **muy rígida**. Sin embargo, la
-prioridad inmediata pasó a ser el diseño de la pista y del vehículo. No
-modificar la física hasta tener una tarea específica y poder comparar el
-comportamiento en una pista adecuada.
+Restricción: No implementar monetización ni sistemas de progresión antes de validar las mecánicas de conducción.
 
-------------------------------------------------------------------------
+3. Principios técnicos y de desarrollo
 
-## 6. Historial técnico relevante
+Arquitectura deseada
 
-Los siguientes commits fueron publicados en `feature/kart-prototype`
-según las respuestas de Manus y las pruebas del usuario:
+Servidor: Validaciones de lógica de juego (carreras, checkpoints, vueltas, recompensas). Construcción procedural de geometría (circuitos).
 
-  -----------------------------------------------------------------------
-  Commit                              Cambio reportado
-  ----------------------------------- -----------------------------------
-  `b342586`                           Prototipo inicial de kart.
+Cliente: Gestión de input local, cámara, interfaz de usuario (HUD), efectos visuales (VFX) y sonido (SFX). Cálculo de físicas locales mediante asignación de Network Ownership.
 
-  `527d870`                           Captura de W/S/A/D/espacio mediante
-                                      ContextActionService y detección
-                                      del asiento.
+Control: Unificar la lógica de conducción en un único sistema. Evitar instanciación de controladores redundantes.
 
-  `6201552`                           Ajustes físicos, intento de network
-                                      ownership, límite de giro y
-                                      velocidad angular.
+Rendimiento: Priorizar un recuento poligonal bajo y el uso eficiente de primitivas en Roblox.
 
-  `2d3ad6b`                           Diagnósticos de cliente y servidor.
+Reglas de trabajo
 
-  `c18ce45`                           Cambio de enfoque de network
-                                      ownership: servidor asigna al
-                                      conductor y cliente aplica
-                                      movimiento.
+Extender el proyecto existente; evitar reescrituras completas de módulos funcionales.
 
-  `03fef7b`                           Restauración del `require` de
-                                      `KartConfig` que faltaba y que
-                                      impedía crear el kart.
+Todo nuevo desarrollo debe integrarse en la rama feature/kart-prototype.
 
-  `3245485`                           Corrección de fricción y manejo
-                                      seguro del network ownership.
+No realizar merges ni modificaciones en la rama main sin autorización explícita.
 
-  `cdf3017`                           Corrección de cámara: offset de
-                                      seguimiento y restauración de
-                                      cámara al salir.
+Mantener estricta compatibilidad con la herramienta Rojo (versión 7.7.1).
 
-  `4d71e23`                           Inversión del sentido de giro A/D y
-                                      ajuste del panel de carrocería para
-                                      despejar el asiento.
+Limitar las tareas exploratorias autónomas para optimizar el consumo de créditos de la API de Manus.
 
-  `4390589`                           Ajuste menor de indentación.
+4. Herramientas y entorno
 
-  `7ebf8fc`                           Prompt personalizado `E · Conducir`
-                                      y diagnóstico ampliado del avatar.
+Servicios: Roblox Studio, VS Code, Git/GitHub, Rojo CLI 7.7.1.
 
-  `1b59b86`                           Diagnóstico `[AVATAR-RENDER]` de
-                                      posición, viewport, jerarquía y
-                                      mallas del avatar.
+Terminal 1 (Rojo): Ejecución de rojo serve en localhost (puerto 34872) para sincronización en tiempo real.
 
-  `ea4402a`                           Rediseño visual del kart y
-                                      corrección geométrica de
-                                      pista/terreno.
-  -----------------------------------------------------------------------
+Terminal 2 (Git): Gestión de control de versiones (pull/push) en la rama feature/kart-prototype.
 
-El estado actual de la rama debe verificarse en GitHub antes de
-trabajar; no asumir que la lista está completa o que no hay commits
-posteriores.
+Regla de Entorno: Limpiar instancias como Baseplate o SpawnLocation genéricos de Roblox Studio antes de la generación del mapa para prevenir conflictos de físicas y superposición de mallas (Z-Fighting).
 
-------------------------------------------------------------------------
+5. Estado del prototipo y Funcionalidades Vigentes
 
-## 7. Problema del avatar invisible: resuelto por una causa externa
+El proyecto se encuentra en fase de prototipo jugable, con un circuito base y un sistema de físicas de karts funcional.
 
-Durante varias iteraciones el avatar parecía invisible al sentarse en el
-kart.
+Archivos principales en uso
 
-Se hicieron diagnósticos: - `humanoidSit=true`. - `seatWeld=true`. -
-Partes del avatar con transparencia cero. - Cabeza y torso dentro del
-viewport. - Personaje en `Workspace`. - Cámara en modo `Scriptable`.
+src/ServerScriptService/KartService.lua: Controlador del servidor. Gestiona la generación del entorno, spawn de jugadores y ensamblaje de los karts.
 
-El registro mostró que las mallas de cabeza y torso daban HTTP 403: -
-Cabeza: asset `123480233606534`. - Torso: asset `7430071038`.
+src/ServerScriptService/KartBootstrap.server.lua: Punto de entrada del servidor.
 
-Finalmente el usuario descubrió que **Roblox había restringido/bloqueado
-su cuenta por "actividad sospechosa"**. Tras recuperar el acceso, el
-avatar volvió a funcionar correctamente.
+src/ReplicatedStorage/KartConfig.lua: Módulo de datos (parámetros físicos, multiplicadores, configuración de cámara).
 
-Conclusión importante: no volver a investigar o modificar cámara,
-asiento, transparencia o mallas sin comprobar primero si
-Roblox/cuenta/servicios están funcionando. Los diagnósticos anteriores
-consumieron créditos de Manus por un problema externo.
+src/StarterPlayer/KartControls.client.lua: Lógica del cliente. Captura de inputs y aplicación de fuerzas físicas.
 
-------------------------------------------------------------------------
+Sistemas Implementados
 
-## 8. Diseño visual del kart: referencia del usuario
+Ensamblaje del Kart: Generación por código a través de KartService. Utiliza un bloque central (Chassis) para los cálculos de colisión y física. Las mallas decorativas (incluyendo las ruedas) tienen la propiedad CanCollide = false.
 
-El usuario compartió un script Lua llamado `LowPolyKart_Medio`, que
-define una estética concreta. Este script fue compartido en el chat, no
-necesariamente guardado como archivo del repositorio.
+Física Custom: El desplazamiento se logra aplicando un VectorForce sobre el Chassis.
 
-### Características del diseño de referencia
+Controles (Cliente): Input digital para Aceleración/Reversa (W/S), Dirección (A/D), Freno (Espacio) y Derrape (Shift).
 
--   Chasis oscuro.
--   Carrocería roja.
--   Laterales azules.
--   Detalles amarillos.
--   Nariz frontal inclinada tipo WedgePart.
--   Parachoques delantero.
--   Faros cúbicos luminosos.
--   Motor trasero compacto.
--   Alerón posterior rojo con soportes azules.
--   Asiento oscuro con respaldo.
--   Cuatro ruedas cilíndricas negras.
--   Rines amarillos.
--   Geometría low-poly, blocky, arcade.
+Cámara Scriptable: Sistema de interpolación de cámara posicionado detrás del kart, con look-ahead calculado en base a la velocidad lineal.
 
-El usuario quiere que el personaje parezca estar conduciendo y no
-simplemente sentado encima de unos cubos. El script original no tenía
-volante, por lo que se pidió añadir: - Volante visible frente al
-avatar. - Columna de dirección. - Tablero. - Asiento definido e
-integrado.
+Network Ownership: El servidor delega la autoridad de cálculo físico del kart al cliente respectivo en el instante en que el Humanoid ocupa el VehicleSeat.
 
-### Adaptación de Manus en `ea4402a`
+Sistema de Derrape (Drift Mode):
 
-Manus reportó haber implementado: - Carrocería roja. - Laterales
-azules. - Detalles amarillos. - Chasis oscuro. - Ruedas cilíndricas
-negras con rines amarillos. - Nariz inclinada. - Parachoques. - Faros. -
-Motor trasero. - Alerón. - Volante octogonal. - Columna. - Tablero. -
-Respaldo.
+Condición de activación: Tecla Shift presionada y velocidad mayor a 8 studs/seg.
 
-Las piezas decorativas están soldadas al chasis, sin colisión ni eventos
-de contacto y con masa despreciable. Se conserva el único `VehicleSeat`,
-la fuerza de conducción y el sistema de controles. El asiento no se
-movió.
+Comportamiento: El parámetro de agarre lateral se reduce a un factor de 0.25. El límite angular (yaw rate) aumenta a 1.6x.
 
-**Feedback del usuario:** "me gusta más pero no es lo que busco. no se
-parece a lo que tengo pensado". Por lo tanto, el modelo actual es solo
-una referencia temporal; no se debe seguir rediseñando a ciegas. Hay que
-pedir referencias visuales o aclarar la silueta deseada antes de otro
-rediseño importante.
+Mini-Turbo: Tras 0.8 segundos de derrape continuo, al liberar el input se aplica un impulso longitudinal temporal (duración: 0.75s, multiplicador de aceleración: 1.45x, aumento de velocidad máxima: 1.25x).
 
-------------------------------------------------------------------------
+Manejo de Spawn: Prevención de physics fling teletransportando al personaje a un offset vertical relativo al asiento (Y = +4 studs) y forzando el estado Sit.
 
-## 9. Problema de pista y terreno
+Control de Errores de Instanciación: Lógica de abstracción en la función makePart para traducir literales de forma (ej. "Cylinder", "Ball") al enumerador Enum.PartType correspondiente, evitando llamadas inválidas a Instance.new().
 
-En una iteración anterior, el usuario observó que la pista se superponía
-visualmente al terreno al desplazarse, como si hubiera superficies
-atravesadas o capas solapadas.
+6. Diseño del Circuito (Beach Resort)
 
-Manus reportó en `ea4402a`: - Piezas estáticas del mapa sin `Anchored`
-asignado explícitamente. - La cara superior del asfalto estaba en
-`Y=0.5`, coincidiendo con el plano superior de una Baseplate estándar si
-permanecía presente. - Ancló las piezas del mapa. - Dividió el suelo
-verde alrededor del asfalto para evitar solapamiento de superficies. -
-Alineó suelo y pista en `Y=0.6`. - Elevó ligeramente las marcas sobre la
-superficie. - Ajustó barreras, obstáculos y aparición para mantener
-alturas relativas al piso.
+El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a través del servidor.
 
-No se pudo hacer prueba visual en Studio desde Manus. El usuario todavía
-debe validar el resultado en Roblox Studio.
+Arquitectura de Geometría
 
-------------------------------------------------------------------------
+Capa Física Unificada: Terreno definido por un bloque estático (IslandSand) con coordenada Y fijada en 1.0. Las partes visuales de la pista carecen de propiedades de colisión geométrica.
 
-## 10. Problemas más recientes reportados por el usuario
+Trazado de Asfalto: Nodos de trayectoria conectados mediante partes rectangulares, utilizando partes cilíndricas sin colisión en los vértices para redondear las esquinas y evitar superposición de texturas y geometría intersecante.
 
-Después de descargar y probar el commit `ea4402a`, el usuario indicó:
+Mitigación de Z-Fighting: Escalado micrométrico en el eje Y (Deltas de ~0.02 studs) para separar arena, asfalto, marcas viales y límites de pista.
 
-1.  El diseño del kart le gusta más que el anterior, pero sigue sin
-    parecerse a lo que tiene pensado.
-2.  Al intentar doblar, el kart "choca" con algo invisible.
-3.  Se ve una pequeña cosa a lo lejos, descrita como una "mosquita".
+Elementos Estructurales
 
-Todavía no se tienen capturas ni datos de posición/colisión porque el
-usuario está temporalmente sin acceso a su PC.
+Pit Lane (Calle de Boxes): Carril paralelo al sur de la recta principal. Incluye muro divisor físico, cajones de detención, un WedgePart para sellar la geometría en la entrada, y un carril de incorporación fluida a la vía principal.
 
-### Hipótesis a investigar, no asumir como hechos
+Arco de Meta (Gantry): Estructura en voladizo soportada por pilares exteriores (X=0), ubicada inmediatamente después de la reincorporación de la calle de boxes, impidiendo bloqueos del carril.
 
-Para el choque invisible: - Barreras laterales mal ubicadas. -
-Obstáculos con colisión. - Piezas antiguas de pista. - Partes
-duplicadas. - Geometría del terreno invadiendo el recorrido. - Piezas
-invisibles con `CanCollide=true`. - Barreras que quedaron fuera del
-trazado esperado.
+Atrezo (Props): Generación procedural de Kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
 
-Para la "mosquita": - Pieza residual del prototipo. - Marcador/punto de
-referencia. - Objeto decorativo mal ubicado. - Pieza duplicada o
-minúscula. - Objeto relacionado con spawn.
+Vegetación: Modelos de palmeras compuestos por primitivas, ubicados a un radio mínimo de exclusión de 20 studs respecto a la pista para evitar interferencias de oclusión visual con la cámara de seguimiento.
 
-No borrar piezas legítimas por conjeturas. Identificar nombre, posición,
-tamaño, parent y propiedades antes de cambiar.
+7. Historial de Problemas Críticos Resueltos
 
-### Última tarea propuesta al usuario
+Colisión invisible al reentrar a la pista: Solucionado al separar la lógica visual de la física. El asfalto se configuró como CanCollide = false sobre el plano de arena continuo.
 
-Se preparó una instrucción para Manus que pide: - Investigar el choque
-invisible. - Identificar el objeto lejano. - No hacer todavía otro
-rediseño del kart. - Documentar dimensiones, asiento, volante,
-carrocería y ruedas. - No cambiar física, dirección, controles o
-cámara. - No reescribir `KartService`. - Corregir solo lo que tenga
-causa técnica justificada. - Publicar en `feature/kart-prototype`. -
-Informar qué no pudo probarse en Studio.
+Desaparición del Kart por Race Conditions (Fling): Mitigado mediante la eliminación de SpawnLocation de Roblox y la implementación de un bucle de confirmación para el evento de sentar al Humanoid.
 
-**No está confirmado si el usuario ya envió esta tarea a Manus ni si
-Manus ya respondió.** Antes de avanzar, preguntarle o revisar el estado
-actual del repositorio y conversación.
+Z-Fighting en Superficies: Resuelto con deltas verticales controlados.
 
-------------------------------------------------------------------------
+Crash del Servidor (Cannot Destroy() Terrain): Controlado al introducir una condicional explícita que impide llamadas de recolección de basura sobre el objeto Workspace.Terrain.
 
-## 11. Limitación importante: créditos de Manus
+Crash por Instanciación Inválida (Instance.new("Cylinder")): Corregido mediante el mapeo del string al Enum.PartType en el bloque de utilidades.
 
-El usuario indicó que le quedaban aproximadamente **1.000 créditos de
-Manus**, con una recarga diaria de 300 cuando se agoten (según la
-información que compartió en ese momento).
+Invasión del Carril por Props: Las palmeras, tablas de surf y antorchas Tiki fueron reasignadas a coordenadas perimetrales absolutas. La calcomanía del SpawnLocation base se eliminó sistemáticamente.
 
-Por lo tanto: - Evitar prompts exploratorios y auditorías amplias
-innecesarias. - No dividir una tarea sencilla en muchas llamadas. -
-Recopilar evidencia con pruebas del usuario antes de pedir otro
-cambio. - Agrupar correcciones relacionadas cuando estén justificadas. -
-No pedir a Manus que implemente sistemas nuevos mientras haya errores
-básicos sin resolver. - El usuario quiere conservar créditos y recibir
-instrucciones concretas.
+8. Próximos Pasos (Roadmap Técnico)
 
-El saldo actual debe confirmarse; el dato de 1.000 créditos puede estar
-desactualizado.
+Fase Actual (HUD y Sistemas de Lógica de Carrera)
 
-------------------------------------------------------------------------
+Implementación de la Interfaz de Usuario (HUD): Desarrollo de cronómetro, contador de vueltas y telemetría local (velocímetro).
 
-## 12. Estrategia de desarrollo recomendada
+Sistema de Checkpoints (Backend): Zonas de validación vectoriales (invisibles) para certificar vueltas válidas, control de sentido de giro y puntos de reaparición (respawn).
 
-Orden de trabajo propuesto:
+Fase Futura
 
-### Fase A --- Estabilizar el prototipo
+VFX (Sistemas de Partículas): Emisores de partículas para desgaste de neumáticos, colisiones, estelas de arena y efectos de carga/liberación del Mini-Turbo.
 
-1.  Resolver colisiones invisibles.
-2.  Identificar/eliminar la "mosquita" si es un objeto residual.
-3.  Confirmar que la pista y el terreno no se superponen.
-4.  Verificar que el kart se puede conducir por todo el circuito.
+Audio (SFX/BGM): Implementación de modulación de Pitch/Volume del motor vinculada a la AssemblyLinearVelocity y triggers de audio para eventos (derrape, meta, choque).
 
-### Fase B --- Definir y cerrar el diseño del kart
+Metajuego y Sesión: Sistema de Lobby de espera, persistencia de datos de usuario (selección de karts, inventario) y lógica de emparejamiento (Matchmaking).
 
-1.  Conseguir una referencia visual clara del usuario.
-2.  Acordar silueta, proporciones, ruedas, asiento, volante y
-    carrocería.
-3.  Adaptar el modelo sin tocar el sistema de conducción.
-4.  Probar que el avatar queda correctamente integrado.
+9. Directrices de Respuesta (LLM / Gemini)
 
-### Fase C --- Validar conducción arcade
+Al redactar instrucciones o entregar bloques de código al usuario, se deben aplicar los siguientes criterios:
 
-1.  Probar aceleración y velocidad.
-2.  Probar frenado y reversa.
-3.  Probar giros y respuesta.
-4.  Evaluar derrape y sensación de velocidad.
-5.  Ajustar física en una tarea separada y controlada.
+Precisión: Instrucciones acotadas, modulares y limitadas al requerimiento en curso.
 
-El usuario describió la conducción actual como "muy rígida", pero no
-debe modificarse a la vez que se cambia geometría de pista o vehículo.
+Código Formateado: Los bloques de código deben ser provistos de forma íntegra y listos para sustituir archivos existentes. No utilizar fragmentos inconexos.
 
-### Fase D --- Circuito Blocky Jungle
+Gestión de Entorno: Exigir siempre la verificación de la rama activa (feature/kart-prototype). Proteger la integridad del branch main.
 
-Después de estabilizar la geometría: - Circuito cerrado. - Curvas
-amplias y cerradas. - Variaciones moderadas de altura. - Puente y
-túnel. - Vegetación, rocas, agua y ambientación. - Barreras colocadas de
-forma coherente. - Espacio suficiente para adelantar y colisionar.
+Accesibilidad: Documentar los cambios en el código sin abusar de tecnicismos innecesarios; mantener un tono directo.
 
-No desarrollar la pista definitiva hasta tener una referencia de estilo
-y una base funcional estable.
-
-### Fase E --- Sistema de carreras
-
-Solo cuando la conducción y la pista sean divertidas: - Salida y cuenta
-regresiva. - Checkpoints. - 3 vueltas. - Posiciones. - Cronómetro. -
-Meta. - Resultados.
-
-### Fase F --- Lobby, garaje y progresión
-
--   Lobby.
--   Selección de kart.
--   Garaje y tienda.
--   Monedas, XP y desbloqueos.
--   Matchmaking.
--   Modos adicionales.
--   Monetización equilibrada, sin pay-to-win.
-
-------------------------------------------------------------------------
-
-## 13. Cómo debe ayudar Gemini
-
-Gemini debe actuar como copiloto técnico y colaborar con el usuario de
-manera práctica.
-
-### Al recibir una respuesta de Manus
-
-1.  Extraer el commit y archivos modificados.
-2.  Identificar qué dice Manus que hizo.
-3.  Separar validaciones estáticas de pruebas reales en Studio.
-4.  Comparar los cambios con las restricciones del proyecto.
-5.  Explicar al usuario qué debe hacer, paso a paso.
-6.  No declarar éxito hasta que el usuario confirme el resultado en
-    Studio.
-
-### Al redactar prompts para Manus
-
-Los prompts deben: - Ser concretos y acotados. - Identificar el problema
-y el resultado esperado. - Decir qué archivos o sistemas revisar si se
-conocen. - Enumerar explícitamente qué no debe modificarse. - Exigir
-trabajar en `feature/kart-prototype`. - Proteger `main`. - Pedir
-explicación de causa raíz, archivos modificados y pruebas. - Exigir que
-se indiquen las pruebas pendientes de Studio.
-
-### Estilo de comunicación con el usuario
-
--   Español informal y claro.
--   Una etapa por vez.
--   Evitar jerga sin explicación.
--   No pedirle editar scripts manualmente.
--   Dar comandos completos y decir en qué terminal ejecutarlos.
--   No abrumar con demasiadas decisiones simultáneas.
--   Ser transparente sobre lo que no se ha probado.
-
-------------------------------------------------------------------------
-
-## 14. Primera instrucción para Gemini
-
-Al recibir este documento, Gemini debería:
-
-1.  Confirmar que entiende el proyecto y sus restricciones.
-2.  No proponer todavía una reescritura ni una gran lista de funciones.
-3.  Preguntar si el usuario ya envió a Manus la última tarea de
-    diagnóstico de la colisión invisible y la "mosquita".
-4.  Si Manus ya respondió, revisar esa respuesta y proponer el siguiente
-    paso más económico en créditos.
-5.  Mantener la prioridad: estabilizar el prototipo antes de agregar
-    sistemas de carreras.
-
-**Meta general:** convertir el prototipo actual en un juego de carreras
-arcade blocky atractivo, divertido y técnicamente estable, construyendo
-de forma incremental y preservando el trabajo existente.
+Transparencia: Si una implementación conlleva riesgos o requiere QA manual intensivo en Studio, debe ser advertido explícitamente antes de proceder.

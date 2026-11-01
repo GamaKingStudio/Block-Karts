@@ -1,11 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
 local DIAGNOSTICS_ENABLED = true
 local DIAGNOSTIC_INTERVAL = 2
-local COURSE_SURFACE_Y = 0.6
+local COURSE_SURFACE_Y = 1.0
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 
 local remote = ReplicatedStorage:FindFirstChild("KartControl")
@@ -17,14 +18,10 @@ if not remote then
 	remote.Name = "KartControl"
 	remote.Parent = ReplicatedStorage
 end
-print(("[BLOXY-KART][SERVER][START] module=%s remote=%s class=%s"):format(
-	script:GetFullName(), remote:GetFullName(), remote.ClassName
-))
 
 local kartsFolder = Workspace:FindFirstChild("PlayerKarts") or Instance.new("Folder")
 kartsFolder.Name = "PlayerKarts"
 kartsFolder.Parent = Workspace
--- Remove only stale models matching the exact name/owner signature created by this service.
 for _, child in ipairs(kartsFolder:GetChildren()) do
 	local ownerUserId = child:GetAttribute("OwnerUserId")
 	if child:IsA("Model") and typeof(ownerUserId) == "number" and child.Name == "Kart_" .. tostring(ownerUserId) then
@@ -36,13 +33,29 @@ local activeKarts = {}
 local driverInputs = {}
 local mapBuilt = false
 
-local function makePart(parent, name, size, cframe, color, material)
-	local part = Instance.new("Part")
+local function makePart(parent, name, size, cframe, color, material, shapeOrClass)
+	local className = "Part"
+	local targetShape = nil
+
+	if shapeOrClass == "WedgePart" or shapeOrClass == "CornerWedgePart" then
+		className = shapeOrClass
+	elseif shapeOrClass == "Cylinder" or shapeOrClass == Enum.PartType.Cylinder then
+		targetShape = Enum.PartType.Cylinder
+	elseif shapeOrClass == "Ball" or shapeOrClass == Enum.PartType.Ball then
+		targetShape = Enum.PartType.Ball
+	elseif typeof(shapeOrClass) == "EnumItem" then
+		targetShape = shapeOrClass
+	end
+
+	local part = Instance.new(className)
 	part.Name = name
 	part.Size = size
 	part.CFrame = cframe
 	part.Color = color
 	part.Material = material or Enum.Material.SmoothPlastic
+	if targetShape then
+		part.Shape = targetShape
+	end
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.Anchored = true
@@ -51,68 +64,396 @@ local function makePart(parent, name, size, cframe, color, material)
 	return part
 end
 
+-- ==========================================================
+-- 1. PISTA Y ENTORNO BEACH RESORT
+-- ==========================================================
 local function buildTestCourse()
-	if mapBuilt then
-		return
-	end
+	if mapBuilt then return end
 	mapBuilt = true
+
+	Lighting.ClockTime = 15.0
+	Lighting.Brightness = 2.4
+	Lighting.OutdoorAmbient = Color3.fromRGB(120, 140, 160)
+	Lighting.GeographicLatitude = 18
+	Lighting.ShadowSoftness = 0.2
+
+	-- Eliminar Baseplate y SpawnLocation residuales de Studio
+	for _, obj in ipairs(Workspace:GetChildren()) do
+		if obj:IsA("SpawnLocation") then
+			pcall(function() obj:Destroy() end)
+		elseif obj:IsA("BasePart") and not obj:IsA("Terrain") then
+			local lowerName = obj.Name:lower()
+			if lowerName:find("baseplate") or lowerName:find("spawn") then
+				pcall(function() obj:Destroy() end)
+			end
+		end
+	end
 
 	local course = Workspace:FindFirstChild("KartTestCourse") or Instance.new("Folder")
 	course.Name = "KartTestCourse"
 	course.Parent = Workspace
-	-- Reconcile only names owned by this generator, including legacy parts; preserve unknown user content.
-	local generatedCoursePartNames = {
-		TrackFloor = true, TrackFloorWest = true, TrackFloorEast = true,
-		TrackFloorNorth = true, TrackFloorSouth = true, DrivingPad = true,
-		LaneMarker = true, NorthBarrier = true, SouthBarrier = true,
-		WestBarrier = true, EastBarrier = true,
+	course:ClearAllChildren()
+
+	local yGround = COURSE_SURFACE_Y
+	local yWaterShallow = 0.35
+	local yWaterDeep = 0.20
+
+	local C_SAND = Color3.fromRGB(240, 218, 158)
+	local C_WATER_SHALLOW = Color3.fromRGB(55, 205, 230)
+	local C_WATER_DEEP = Color3.fromRGB(28, 125, 205)
+	local C_FOAM = Color3.fromRGB(245, 252, 255)
+	local C_WOOD = Color3.fromRGB(145, 98, 52)
+	local C_WOOD_LIGHT = Color3.fromRGB(175, 125, 75)
+	local C_DARKWOOD = Color3.fromRGB(95, 62, 34)
+	local C_THATCH = Color3.fromRGB(210, 185, 120)
+	local C_LEAVES = Color3.fromRGB(45, 165, 40)
+	local C_LEAVES_DARK = Color3.fromRGB(35, 135, 32)
+	local C_ASPHALT = Color3.fromRGB(66, 70, 76)
+	local C_WHITE = Color3.fromRGB(248, 248, 250)
+	local C_BLACK = Color3.fromRGB(30, 32, 36)
+	local C_RED = Color3.fromRGB(220, 40, 40)
+	local C_BLUE = Color3.fromRGB(35, 120, 230)
+	local C_YELLOW = Color3.fromRGB(250, 205, 30)
+	local C_ORANGE = Color3.fromRGB(245, 125, 30)
+	local C_TEAL = Color3.fromRGB(30, 185, 160)
+
+	-- Base de arena continua y uniforme
+	local sandFloor = makePart(course, "IslandSand", Vector3.new(650, 4, 650), CFrame.new(50, yGround - 2, 0), C_SAND, Enum.Material.Sand)
+	sandFloor.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
+
+	-- Océano
+	makePart(course, "OceanShallow", Vector3.new(120, 4, 1800), CFrame.new(-200, yWaterShallow - 2, 0), C_WATER_SHALLOW, Enum.Material.Glass)
+	makePart(course, "OceanDeep", Vector3.new(1500, 4, 1800), CFrame.new(-1000, yWaterDeep - 2, 0), C_WATER_DEEP, Enum.Material.Glass)
+	local foam = makePart(course, "ShoreFoam", Vector3.new(4, 0.05, 600), CFrame.new(-140, yWaterShallow + 0.02, 0), C_FOAM, Enum.Material.SmoothPlastic)
+	foam.CanCollide = false
+	foam.Transparency = 0.25
+
+	for _, bz in ipairs({ -120, -50, 20, 90, 160 }) do
+		makePart(course, "Buoy", Vector3.new(2.4, 2.4, 2.4), CFrame.new(-175, yWaterShallow + 1.2, bz), C_ORANGE, Enum.Material.Plastic, "Ball")
+	end
+
+	-- Muelle de madera y botes
+	makePart(course, "PierDeck", Vector3.new(24, 1.2, 75), CFrame.new(-150, yGround + 0.5, 70), C_WOOD, Enum.Material.WoodPlanks)
+	for pz = 35, 105, 14 do
+		makePart(course, "PierPostL", Vector3.new(1.6, 5.5, 1.6), CFrame.new(-161, yGround - 1.5, pz), C_DARKWOOD, Enum.Material.Wood)
+		makePart(course, "PierPostR", Vector3.new(1.6, 5.5, 1.6), CFrame.new(-139, yGround - 1.5, pz), C_DARKWOOD, Enum.Material.Wood)
+	end
+	makePart(course, "BoatRed", Vector3.new(8, 2.2, 16), CFrame.new(-172, yWaterDeep + 0.8, 55) * CFrame.Angles(0, math.rad(18), 0), C_RED)
+	makePart(course, "BoatBlue", Vector3.new(8, 2.2, 16), CFrame.new(-172, yWaterDeep + 0.8, 85) * CFrame.Angles(0, math.rad(-12), 0), C_BLUE)
+
+	-- Barandilla costera
+	for bz = -45, 35, 10 do
+		makePart(course, "FencePost_" .. bz, Vector3.new(0.8, 3.2, 0.8), CFrame.new(-138, yGround + 1.6, bz), C_WOOD, Enum.Material.Wood)
+		makePart(course, "FenceRailTop_" .. bz, Vector3.new(0.4, 0.4, 10), CFrame.new(-138, yGround + 2.8, bz + 5), C_WOOD_LIGHT, Enum.Material.Wood)
+		makePart(course, "FenceRailMid_" .. bz, Vector3.new(0.4, 0.4, 10), CFrame.new(-138, yGround + 1.6, bz + 5), C_WOOD_LIGHT, Enum.Material.Wood)
+	end
+
+	-- Pasarelas de madera
+	makePart(course, "BoardwalkNorth", Vector3.new(8, 0.15, 110), CFrame.new(-144, yGround + 0.08, -15), C_WOOD_LIGHT, Enum.Material.WoodPlanks)
+	makePart(course, "BoardwalkEast", Vector3.new(125, 0.15, 8), CFrame.new(-75, yGround + 0.08, -145), C_WOOD_LIGHT, Enum.Material.WoodPlanks)
+
+	-- Kioskos playeros
+	local function spawnBeachKiosk(x, z, canopyColor)
+		local cf = CFrame.new(x, yGround, z)
+		makePart(course, "KioskFloor", Vector3.new(12, 0.4, 10), cf * CFrame.new(0, 0.2, 0), C_WOOD_LIGHT, Enum.Material.WoodPlanks)
+		for _, px in ipairs({ -5.2, 5.2 }) do
+			for _, pz in ipairs({ -4.2, 4.2 }) do
+				makePart(course, "KioskPost", Vector3.new(0.8, 7.5, 0.8), cf * CFrame.new(px, 3.95, pz), C_DARKWOOD, Enum.Material.Wood)
+			end
+		end
+		makePart(course, "KioskCounter", Vector3.new(10.5, 3.4, 2.2), cf * CFrame.new(0, 1.7, 3.2), C_WOOD, Enum.Material.WoodPlanks)
+		makePart(course, "KioskCounterTop", Vector3.new(11.2, 0.3, 2.8), cf * CFrame.new(0, 3.5, 3.2), C_DARKWOOD, Enum.Material.Wood)
+		local roofCF = cf * CFrame.new(0, 8.0, 0) * CFrame.Angles(math.rad(8), 0, 0)
+		makePart(course, "KioskRoof", Vector3.new(13.5, 0.6, 11.5), roofCF, canopyColor, Enum.Material.Fabric)
+		makePart(course, "KioskValance", Vector3.new(13.5, 1.2, 0.3), roofCF * CFrame.new(0, -0.6, 5.75), C_WHITE, Enum.Material.Fabric)
+		local lantern = makePart(course, "KioskLamp", Vector3.new(0.8, 0.8, 0.8), cf * CFrame.new(0, 6.8, 0), Color3.fromRGB(255, 210, 120), Enum.Material.Neon)
+		lantern.CanCollide = false
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 200, 110)
+		light.Range = 14
+		light.Brightness = 1.4
+		light.Parent = lantern
+	end
+
+	local kioskData = {
+		{ x = 35,  z = -140, c = C_BLUE },
+		{ x = 55,  z = -140, c = C_RED },
+		{ x = 75,  z = -140, c = C_YELLOW },
+		{ x = 95,  z = -140, c = C_ORANGE },
+		{ x = 115, z = -140, c = C_TEAL },
 	}
-	for _, child in ipairs(course:GetChildren()) do
-		if child:IsA("BasePart") and (generatedCoursePartNames[child.Name] or child.Name:match("^BlockObstacle%d+$")) then
-			child:Destroy()
+	for _, k in ipairs(kioskData) do
+		spawnBeachKiosk(k.x, k.z, k.c)
+	end
+
+	-- Cabañas de descanso
+	local function spawnCabana(x, z, rot)
+		local baseCF = CFrame.new(x, yGround, z) * CFrame.Angles(0, math.rad(rot or 0), 0)
+		makePart(course, "HutFloor", Vector3.new(14, 0.6, 14), baseCF * CFrame.new(0, 0.3, 0), C_WOOD, Enum.Material.WoodPlanks)
+		for _, cx in ipairs({ -5.5, 5.5 }) do
+			for _, cz in ipairs({ -5.5, 5.5 }) do
+				makePart(course, "HutPillar", Vector3.new(1.2, 8, 1.2), baseCF * CFrame.new(cx, 4.3, cz), C_DARKWOOD, Enum.Material.Wood)
+			end
+		end
+		makePart(course, "HutRoof", Vector3.new(18, 4, 18), baseCF * CFrame.new(0, 9.5, 0), C_THATCH, Enum.Material.Fabric)
+	end
+	spawnCabana(-85, -145, 10)
+	spawnCabana(-55, -145, -5)
+	spawnCabana(-25, -145, 0)
+
+	-- Graderías de público
+	for tier = 1, 3 do
+		local benchZ = 52 - (tier - 1) * 3.5
+		local benchY = yGround + tier * 1.0
+		makePart(course, "GrandstandStep_" .. tier, Vector3.new(50, 0.8, 3.2), CFrame.new(35, benchY, benchZ), C_WOOD, Enum.Material.Wood)
+		local seatColors = { C_BLUE, C_RED, C_YELLOW, C_TEAL }
+		for sx = 14, 56, 4 do
+			local c = seatColors[((sx + tier) % #seatColors) + 1]
+			makePart(course, "Seat_" .. tier .. "_" .. sx, Vector3.new(2.8, 0.3, 2.2), CFrame.new(sx, benchY + 0.5, benchZ), c)
 		end
 	end
 
-	local courseSurfaceY = COURSE_SURFACE_Y
-	local courseWidth, courseDepth = 260, 180
-	local roadWidth, roadDepth = 210, 96
-	local floorThickness = 2
-	local floorCenterY = courseSurfaceY - floorThickness / 2
-	local grassColor = Color3.fromRGB(73, 119, 78)
-	local grassMaterial = Enum.Material.Grass
-	local sideWidth = (courseWidth - roadWidth) / 2
-	local endDepth = (courseDepth - roadDepth) / 2
-	makePart(course, "TrackFloorWest", Vector3.new(sideWidth, floorThickness, courseDepth), CFrame.new(-roadWidth / 2 - sideWidth / 2, floorCenterY, 0), grassColor, grassMaterial)
-	makePart(course, "TrackFloorEast", Vector3.new(sideWidth, floorThickness, courseDepth), CFrame.new(roadWidth / 2 + sideWidth / 2, floorCenterY, 0), grassColor, grassMaterial)
-	makePart(course, "TrackFloorNorth", Vector3.new(roadWidth, floorThickness, endDepth), CFrame.new(0, floorCenterY, -roadDepth / 2 - endDepth / 2), grassColor, grassMaterial)
-	makePart(course, "TrackFloorSouth", Vector3.new(roadWidth, floorThickness, endDepth), CFrame.new(0, floorCenterY, roadDepth / 2 + endDepth / 2), grassColor, grassMaterial)
-	-- Road and surrounding grass meet at one height; the top also clears the default Studio baseplate plane.
-	makePart(course, "DrivingPad", Vector3.new(roadWidth, 1, roadDepth), CFrame.new(0, courseSurfaceY - 0.5, 0), Color3.fromRGB(72, 75, 82), Enum.Material.Asphalt)
+	-- ==========================================================
+	-- CALLE DE PITS: BIFURCACIÓN, HUECO SELLADO Y SALIDA FLUIDA
+	-- ==========================================================
+	local pitRoadZ = 96
+	local pitRoadWidth = 22
 
-	local lineColor = Color3.fromRGB(236, 228, 190)
-	for x = -84, 84, 24 do
-		local marker = makePart(course, "LaneMarker", Vector3.new(10, 0.12, 0.45), CFrame.new(x, courseSurfaceY + 0.07, 0), lineColor, Enum.Material.Neon)
-		marker.CanCollide = false
-		marker.CanTouch = false
+	-- 1. Calzada principal de boxes
+	makePart(course, "PitLanePad", Vector3.new(75, 0.04, pitRoadWidth), CFrame.new(80, yGround + 0.02, pitRoadZ), C_ASPHALT, Enum.Material.Asphalt)
+
+	-- 2. Entrada / bifurcación a pits (diagonal suave desde la curva final)
+	local entryStart = Vector3.new(118, yGround + 0.02, 60)
+	local entryEnd = Vector3.new(95, yGround + 0.02, pitRoadZ)
+	local entryDiff = entryEnd - entryStart
+	local entryLen = entryDiff.Magnitude
+	local entryMid = (entryStart + entryEnd) / 2
+	local entryCF = CFrame.lookAt(entryMid, entryEnd)
+	local pitEntry = makePart(course, "PitEntryLane", Vector3.new(16, 0.04, entryLen), entryCF, C_ASPHALT, Enum.Material.Asphalt)
+	pitEntry.CanCollide = false
+
+	-- Cuña triangular que rellena el ángulo abierto de asfalto en la bifurcación
+	local wedgeCF = CFrame.new(103, yGround + 0.02, 78) * CFrame.Angles(0, math.rad(-145), 0)
+	local transitionWedge = makePart(course, "PitEntryGapFiller", Vector3.new(12, 0.04, 18), wedgeCF, C_ASPHALT, Enum.Material.Asphalt, "WedgePart")
+	transitionWedge.CanCollide = false
+
+	-- 3. Salida de pits incorporándose a la recta antes de la meta
+	local exitStart = Vector3.new(45, yGround + 0.02, pitRoadZ)
+	local exitEnd = Vector3.new(15, yGround + 0.02, 70)
+	local exitDiff = exitEnd - exitStart
+	local exitLen = exitDiff.Magnitude
+	local exitMid = (exitStart + exitEnd) / 2
+	local exitCF = CFrame.lookAt(exitMid, exitEnd)
+	local pitExit = makePart(course, "PitExitLane", Vector3.new(16, 0.04, exitLen), exitCF, C_ASPHALT, Enum.Material.Asphalt)
+	pitExit.CanCollide = false
+
+	local exitLine = makePart(course, "PitExitLine", Vector3.new(0.6, 0.02, exitLen), exitCF * CFrame.new(-7.8, 0.02, 0), C_WHITE)
+	exitLine.CanCollide = false
+
+	-- 4. Muro de boxes (Pit Wall) separador
+	makePart(course, "PitWallBase", Vector3.new(55, 1.6, 1.4), CFrame.new(77.5, yGround + 0.8, 83.5), C_WHITE, Enum.Material.Concrete)
+	makePart(course, "PitWallCap", Vector3.new(55, 0.3, 1.8), CFrame.new(77.5, yGround + 1.75, 83.5), C_RED)
+
+	-- 5. Cajones de parada en boxes
+	for px = 55, 105, 13 do
+		local pline = makePart(course, "PitStallLine_" .. px, Vector3.new(0.6, 0.03, 16), CFrame.new(px, yGround + 0.04, 102), C_WHITE)
+		pline.CanCollide = false
+		makePart(course, "PitWheelStop_" .. px, Vector3.new(5.5, 0.45, 0.8), CFrame.new(px + 2.5, yGround + 0.25, 108), C_WHITE, Enum.Material.Concrete)
 	end
 
-	local wallColor = Color3.fromRGB(232, 107, 67)
-	local barrierCenterY = courseSurfaceY + 2.5
-	makePart(course, "NorthBarrier", Vector3.new(212, 5, 2), CFrame.new(0, barrierCenterY, -49), wallColor)
-	makePart(course, "SouthBarrier", Vector3.new(212, 5, 2), CFrame.new(0, barrierCenterY, 49), wallColor)
-	makePart(course, "WestBarrier", Vector3.new(2, 5, 100), CFrame.new(-106, barrierCenterY, 0), wallColor)
-	makePart(course, "EastBarrier", Vector3.new(2, 5, 100), CFrame.new(106, barrierCenterY, 0), wallColor)
-
-	local obstaclePositions = {
-		Vector3.new(-42, courseSurfaceY + 2, -22), Vector3.new(2, courseSurfaceY + 2, 22),
-		Vector3.new(44, courseSurfaceY + 2, -20), Vector3.new(68, courseSurfaceY + 2, 23),
+	-- Trazado principal del circuito
+	local trackWidth = 26
+	local waypoints = {
+		Vector3.new(80, yGround + 0.02, 70),
+		Vector3.new(-65, yGround + 0.02, 70),
+		Vector3.new(-115, yGround + 0.02, 40),
+		Vector3.new(-115, yGround + 0.02, -50),
+		Vector3.new(-80, yGround + 0.02, -95),
+		Vector3.new(-50, yGround + 0.02, -95),
+		Vector3.new(-50, yGround + 0.02, -15),
+		Vector3.new(-25, yGround + 0.02, 10),
+		Vector3.new(0, yGround + 0.02, -15),
+		Vector3.new(0, yGround + 0.02, -85),
+		Vector3.new(45, yGround + 0.02, -105),
+		Vector3.new(85, yGround + 0.02, -65),
+		Vector3.new(125, yGround + 0.02, -10),
+		Vector3.new(125, yGround + 0.02, 35),
+		Vector3.new(105, yGround + 0.02, 65),
+		Vector3.new(80, yGround + 0.02, 70),
 	}
-	for index, position in ipairs(obstaclePositions) do
-		local obstacle = makePart(course, "BlockObstacle" .. index, Vector3.new(7, 4, 7), CFrame.new(position), Color3.fromRGB(242, 190, 68), Enum.Material.Concrete)
-		obstacle.Anchored = true
+
+	for i = 1, #waypoints do
+		local corner = makePart(course, "CornerHub_" .. i, Vector3.new(0.04, trackWidth, trackWidth), CFrame.new(waypoints[i]) * CFrame.Angles(0, 0, math.pi / 2), C_ASPHALT, Enum.Material.Asphalt, "Cylinder")
+		corner.CanCollide = false
+		corner.CanTouch = false
 	end
+
+	for i = 1, #waypoints - 1 do
+		local p1 = waypoints[i]
+		local p2 = waypoints[i + 1]
+		local diff = p2 - p1
+		local length = diff.Magnitude
+		local mid = (p1 + p2) / 2
+		local roadCF = CFrame.lookAt(mid, p2)
+
+		local road = makePart(course, "RoadSeg_" .. i, Vector3.new(trackWidth, 0.04, length), roadCF, C_ASPHALT, Enum.Material.Asphalt)
+		road.CanCollide = false
+		road.CanTouch = false
+
+		for dist = 8, length - 8, 14 do
+			local linePos = roadCF * CFrame.new(0, 0.025, -length / 2 + dist)
+			local line = makePart(course, "DashLine", Vector3.new(0.7, 0.02, 6), linePos, C_WHITE)
+			line.CanCollide = false
+			line.CanTouch = false
+		end
+	end
+
+	-- ==========================================================
+	-- ARCO DE META TRASLADADO (DESPUÉS DE LA REINCORPORACIÓN: X = 0)
+	-- ==========================================================
+	local gantryX = 0
+	local postHeight = 15
+	local spanWidth = trackWidth + 6 -- 32 studs de luz libre total
+	local postZL = 70 - spanWidth / 2
+	local postZR = 70 + spanWidth / 2
+
+	-- Postes exteriores completamente fuera del asfalto
+	makePart(course, "GantryPostL", Vector3.new(1.8, postHeight, 1.8), CFrame.new(gantryX, yGround + postHeight / 2, postZL), C_DARKWOOD, Enum.Material.Wood)
+	makePart(course, "GantryPostR", Vector3.new(1.8, postHeight, 1.8), CFrame.new(gantryX, yGround + postHeight / 2, postZR), C_DARKWOOD, Enum.Material.Wood)
+
+	-- Viga superior y pancarta sin interferencias
+	local beamY = yGround + postHeight + 0.9
+	makePart(course, "GantryBeamTop", Vector3.new(2.2, 1.8, spanWidth + 3.6), CFrame.new(gantryX, beamY, 70), C_RED)
+	makePart(course, "GantrySign", Vector3.new(0.3, 2.6, spanWidth - 1.0), CFrame.new(gantryX - 1.2, beamY - 1.6, 70), C_WHITE)
+
+	-- Damero de meta ubicado exactamente bajo el nuevo arco
+	local checkRows = 2
+	local checkCols = 8
+	local sqSize = trackWidth / checkCols
+	for r = 1, checkRows do
+		for c = 1, checkCols do
+			local isWhite = (r + c) % 2 == 0
+			local posX = (gantryX - 1.5) + (r - 1) * 3.0
+			local posZ = (70 - trackWidth / 2 + sqSize / 2) + (c - 1) * sqSize
+			local tile = makePart(course, "CheckTile", Vector3.new(2.8, 0.02, sqSize - 0.2), CFrame.new(posX, yGround + 0.045, posZ), isWhite and C_WHITE or C_BLACK)
+			tile.CanCollide = false
+			tile.CanTouch = false
+		end
+	end
+
+	-- Neumáticos de protección en curvas
+	local function spawnTireStack(pos)
+		local tColors = { C_BLACK, C_WHITE, C_RED }
+		for h = 1, 3 do
+			local tire = makePart(course, "Tire", Vector3.new(0.65, 2.6, 2.6), CFrame.new(pos + Vector3.new(0, (h - 1) * 0.65 + 0.35, 0)) * CFrame.Angles(0, 0, math.pi / 2), tColors[h], Enum.Material.Rubber, "Cylinder")
+			tire.CanCollide = true
+		end
+	end
+
+	local tireLocations = {
+		Vector3.new(-70, yGround, 88), Vector3.new(-66, yGround, 88),
+		Vector3.new(-132, yGround, 45), Vector3.new(-132, yGround, -52),
+		Vector3.new(-88, yGround, -112), Vector3.new(-84, yGround, -112),
+		Vector3.new(-32, yGround, 26), Vector3.new(-28, yGround, 26),
+		Vector3.new(52, yGround, -122), Vector3.new(56, yGround, -122),
+		Vector3.new(142, yGround, -12), Vector3.new(120, yGround, 80)
+	}
+	for _, tPos in ipairs(tireLocations) do
+		spawnTireStack(tPos)
+	end
+
+	-- Antorchas Tiki (sin postes en divisiones de carril ni calzadas)
+	local function spawnTikiTorch(pos)
+		makePart(course, "TikiPole", Vector3.new(0.6, 6, 0.6), CFrame.new(pos) * CFrame.new(0, 3, 0), C_DARKWOOD, Enum.Material.Wood)
+		makePart(course, "TikiBowl", Vector3.new(1.2, 0.8, 1.2), CFrame.new(pos) * CFrame.new(0, 6.2, 0), C_DARKWOOD, Enum.Material.Wood)
+		local flame = makePart(course, "TikiFlame", Vector3.new(0.6, 0.8, 0.6), CFrame.new(pos) * CFrame.new(0, 6.9, 0), Color3.fromRGB(255, 140, 20), Enum.Material.Neon)
+		flame.CanCollide = false
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 160, 50)
+		light.Range = 18
+		light.Brightness = 1.8
+		light.Parent = flame
+	end
+
+	local torchPositions = {
+		Vector3.new(-146, yGround, 20),
+		Vector3.new(-146, yGround, -40),
+		Vector3.new(-75, yGround, -135),
+		Vector3.new(-35, yGround, -135),
+		Vector3.new(20, yGround, -135),
+		Vector3.new(80, yGround, -115),
+		Vector3.new(150, yGround, 15),
+	}
+	for _, tp in ipairs(torchPositions) do
+		spawnTikiTorch(tp)
+	end
+
+	-- Palmeras totalmente despejadas (> 20 studs de cualquier carril)
+	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
+		scale = scale or 1.0
+		local trunkH = 15 * scale
+		local palmBaseCF = CFrame.new(pos) * CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
+		makePart(course, "PalmTrunk", Vector3.new(1.8 * scale, trunkH, 1.8 * scale), palmBaseCF * CFrame.new(0, trunkH / 2, 0), C_WOOD, Enum.Material.Wood)
+
+		local crownCF = palmBaseCF * CFrame.new(0, trunkH, 0)
+		for rot = 0, 315, 45 do
+			local leafMat = (rot % 90 == 0) and C_LEAVES or C_LEAVES_DARK
+			local leafCF = crownCF * CFrame.Angles(0, math.rad(rot), math.rad(-22)) * CFrame.new(0, 0, 4.5 * scale)
+			makePart(course, "PalmLeaf", Vector3.new(3.8 * scale, 0.4, 7.5 * scale), leafCF, leafMat)
+		end
+		for _, co in ipairs({ Vector3.new(0.6, -0.6, 0.6), Vector3.new(-0.6, -0.6, 0.6), Vector3.new(0, -0.7, -0.7) }) do
+			makePart(course, "Coconut", Vector3.new(0.9, 0.9, 0.9), crownCF * CFrame.new(co), C_DARKWOOD, Enum.Material.Wood, "Ball")
+		end
+	end
+
+	local palmData = {
+		{ pos = Vector3.new(-150, yGround, 25),  tilt = 6,  yaw = 45,  scale = 1.1 },
+		{ pos = Vector3.new(-148, yGround, 95),  tilt = -8, yaw = 120, scale = 1.2 },
+		{ pos = Vector3.new(-150, yGround, -35), tilt = 5,  yaw = -30, scale = 0.95 },
+		{ pos = Vector3.new(-25, yGround, -50),  tilt = -7, yaw = 90,  scale = 1.1 },
+		{ pos = Vector3.new(-25, yGround, -70),  tilt = 6,  yaw = -45, scale = 1.0 },
+		{ pos = Vector3.new(20, yGround, -50),   tilt = 8,  yaw = 160, scale = 1.05 },
+		{ pos = Vector3.new(150, yGround, -10),  tilt = -6, yaw = 210, scale = 1.15 },
+		{ pos = Vector3.new(150, yGround, 45),   tilt = 7,  yaw = -60, scale = 1.05 },
+		{ pos = Vector3.new(85, yGround, -100),  tilt = -5, yaw = 30,  scale = 1.1 },
+		{ pos = Vector3.new(-45, yGround, 35),   tilt = 6,  yaw = -80, scale = 1.0 },
+		{ pos = Vector3.new(25, yGround, 38),    tilt = -6, yaw = 50,  scale = 0.95 },
+	}
+	for _, p in ipairs(palmData) do
+		spawnOrganicPalm(p.pos, p.tilt, p.yaw, p.scale)
+	end
+
+	-- Sombrillas
+	local function spawnBeachCluster(pos, umbrellaColor, towelColor, rot)
+		local cf = CFrame.new(pos) * CFrame.Angles(0, math.rad(rot or 0), 0)
+		makePart(course, "UmbrellaPole", Vector3.new(0.4, 7.5, 0.4), cf * CFrame.new(0, 3.75, 0), C_WOOD)
+		makePart(course, "UmbrellaCanopy", Vector3.new(1.8, 8.0, 8.0), cf * CFrame.new(0, 7.2, 0) * CFrame.Angles(0, 0, math.pi / 2), umbrellaColor, Enum.Material.SmoothPlastic, "Cylinder")
+		makePart(course, "Lounger1", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(-3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
+		makePart(course, "Lounger2", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
+		local towel = makePart(course, "BeachTowel", Vector3.new(3.2, 0.04, 6.0), cf * CFrame.new(0, 0.05, -3.2), towelColor)
+		towel.CanCollide = false
+		makePart(course, "BeachBall", Vector3.new(2.0, 2.0, 2.0), cf * CFrame.new(2.2, 1.0, -3.5), C_RED, Enum.Material.Plastic, "Ball")
+	end
+
+	spawnBeachCluster(Vector3.new(-85, yGround, 18),  C_BLUE,   C_YELLOW, 25)
+	spawnBeachCluster(Vector3.new(-85, yGround, -25), C_YELLOW, C_RED,    -15)
+	spawnBeachCluster(Vector3.new(-25, yGround, -20), C_RED,    C_BLUE,   40)
+	spawnBeachCluster(Vector3.new(20, yGround, -30),  C_TEAL,   C_ORANGE, -30)
+	spawnBeachCluster(Vector3.new(50, yGround, 18),   C_ORANGE, C_TEAL,   10)
+
+	-- Tablas de surf en la orilla
+	local function spawnSurfboard(pos, color, rotY)
+		local sb = makePart(course, "Surfboard", Vector3.new(0.3, 8.0, 2.2), CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), math.rad(18)) * CFrame.new(0, 3.5, 0), color)
+		sb.CanCollide = false
+	end
+	spawnSurfboard(Vector3.new(-145, yGround, 10), C_TEAL, 30)
+	spawnSurfboard(Vector3.new(-146, yGround, 14), C_ORANGE, -20)
+	spawnSurfboard(Vector3.new(-145, yGround, -20), C_YELLOW, 45)
 end
 
+-- ==========================================================
+-- 2. ENSAMBLAJE ROBUSTO DEL KART
+-- ==========================================================
 local function weldTo(root, part)
 	part.Anchored = false
 	part.Massless = true
@@ -122,13 +463,11 @@ local function weldTo(root, part)
 	weld.Parent = root
 end
 
-local function makeVisualPart(model, chassis, name, size, cframe, color, material, shape)
-	local part = makePart(model, name, size, cframe, color, material)
-	if shape then
-		part.Shape = shape
-	end
+local function makeVisualPart(model, chassis, name, size, cframe, color, material, shapeOrClass)
+	local part = makePart(model, name, size, cframe, color, material, shapeOrClass)
 	part.CanCollide = false
 	part.CanTouch = false
+	part.CanQuery = false
 	weldTo(chassis, part)
 	return part
 end
@@ -146,60 +485,63 @@ local function createKart(player, spawnIndex)
 	model:SetAttribute("OwnerUserId", player.UserId)
 	model.Parent = kartsFolder
 
-	local startX = ((spawnIndex - 1) % 6 - 2.5) * KartConfig.SpawnSpacing
-	local startZ = -34 + math.floor((spawnIndex - 1) / 6) * 16
-	local spawnCFrame = CFrame.new(startX, COURSE_SURFACE_Y + 2.5, startZ) * CFrame.Angles(0, math.pi, 0)
+	local startX = 45 + (spawnIndex - 1) * 12
+	local startZ = 70
+	local spawnCFrame = CFrame.lookAt(
+		Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
+		Vector3.new(startX - 10, COURSE_SURFACE_Y + 1.8, startZ)
+	)
 
-	local chassis = makePart(model, "Chassis", Vector3.new(5.2, 1, 7), spawnCFrame, Color3.fromRGB(39, 42, 49), Enum.Material.Metal)
+	local chassis = makePart(model, "Chassis", Vector3.new(4.8, 0.4, 6.4), spawnCFrame, Color3.fromRGB(25, 27, 30), Enum.Material.Metal)
 	chassis.Anchored = false
-	-- The non-colliding wheels make the chassis the actual floor-contact surface.
-	-- Keep that contact low-friction; lateral grip is handled by the arcade force below.
 	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 	model.PrimaryPart = chassis
 
-	local red = Color3.fromRGB(205, 38, 43)
-	local blue = Color3.fromRGB(34, 109, 204)
-	local yellow = Color3.fromRGB(255, 204, 48)
-	local dark = Color3.fromRGB(36, 39, 45)
-	local metal = Color3.fromRGB(115, 121, 130)
-	local black = Color3.fromRGB(24, 26, 30)
-	local function visual(name, size, offset, color, material, shape)
-		return makeVisualPart(model, chassis, name, size, spawnCFrame * offset, color, material, shape)
+	local C_BLACK   = Color3.fromRGB(26, 28, 32)
+	local C_DARK    = Color3.fromRGB(38, 40, 45)
+	local C_RED     = Color3.fromRGB(205, 35, 35)
+	local C_YELLOW  = Color3.fromRGB(245, 195, 25)
+	local C_WHITE   = Color3.fromRGB(242, 242, 245)
+	local C_ENGINE  = Color3.fromRGB(110, 115, 125)
+	local C_EXHAUST = Color3.fromRGB(160, 165, 175)
+	local C_TIRE    = Color3.fromRGB(32, 35, 40)
+	local C_RIM     = Color3.fromRGB(60, 65, 75)
+
+	local function visual(name, size, offset, color, material, shapeOrClass)
+		return makeVisualPart(model, chassis, name, size, spawnCFrame * offset, color, material, shapeOrClass)
 	end
 	local function visualRod(name, startOffset, endOffset, thickness, color, material)
 		return makeVisualRod(model, chassis, name, startOffset, endOffset, thickness, color, material, spawnCFrame)
 	end
 
-	-- Keep the body low and leave the seat opening unobstructed for the real R15 avatar.
-	visual("Body", Vector3.new(4.4, 0.72, 3.8), CFrame.new(0, 0.38, 0.35), red)
-	visual("SidePodLeft", Vector3.new(0.82, 0.62, 3.45), CFrame.new(-2.16, 0.24, 0.35), blue)
-	visual("SidePodRight", Vector3.new(0.82, 0.62, 3.45), CFrame.new(2.16, 0.24, 0.35), blue)
-	visual("SideAccentLeft", Vector3.new(0.08, 0.1, 2.45), CFrame.new(-2.58, 0.43, 0.3), yellow, Enum.Material.Metal)
-	visual("SideAccentRight", Vector3.new(0.08, 0.1, 2.45), CFrame.new(2.58, 0.43, 0.3), yellow, Enum.Material.Metal)
+	visual("FloorPan", Vector3.new(3.2, 0.15, 5.2), CFrame.new(0, 0.08, 0.1), C_RED)
+	visual("ChassisRailL", Vector3.new(0.2, 0.22, 4.8), CFrame.new(-1.45, 0.18, 0.1), C_BLACK)
+	visual("ChassisRailR", Vector3.new(0.2, 0.22, 4.8), CFrame.new(1.45, 0.18, 0.1), C_BLACK)
+
 	for _, side in ipairs({ -1, 1 }) do
-		local sideName = side < 0 and "Left" or "Right"
-		for axle, frontZ in ipairs({ -2.15, 2.15 }) do
-			local axleName = axle == 1 and "Front" or "Rear"
-			visual("WheelFender" .. axleName .. sideName, Vector3.new(0.28, 0.18, 1.5), CFrame.new(side * 2.38, 0.72, frontZ), blue)
-		end
+		local sideName = side < 0 and "L" or "R"
+		visual("SidePodRed_" .. sideName, Vector3.new(0.85, 0.5, 2.5), CFrame.new(side * 1.85, 0.32, 0.15), C_RED)
+		visual("SidePodYellowTop_" .. sideName, Vector3.new(0.65, 0.08, 1.6), CFrame.new(side * 1.85, 0.6, 0.0), C_YELLOW)
+		visual("SidePodWhiteSide_" .. sideName, Vector3.new(0.06, 0.35, 0.85), CFrame.new(side * 2.29, 0.32, 0.8), C_WHITE)
+		visual("SidePodYellowSide_" .. sideName, Vector3.new(0.06, 0.16, 1.2), CFrame.new(side * 2.29, 0.18, -0.2), C_YELLOW)
 	end
 
-	local noseTilt = CFrame.Angles(math.rad(-13), 0, 0)
-	visual("Nose", Vector3.new(3.45, 0.58, 1.9), CFrame.new(0, 0.8, -2.45) * noseTilt, red)
-	visual("NoseStripe", Vector3.new(0.22, 0.06, 1.3), CFrame.new(0, 1.08, -2.5) * noseTilt, yellow, Enum.Material.Metal)
-	visual("FrontBumper", Vector3.new(4.35, 0.26, 0.32), CFrame.new(0, 0.42, -3.48), dark, Enum.Material.Metal)
-	visual("FrontGrille", Vector3.new(1.65, 0.25, 0.1), CFrame.new(0, 0.68, -3.31), black, Enum.Material.Metal)
-	for _, side in ipairs({ -1, 1 }) do
-		local sideName = side < 0 and "Left" or "Right"
-		visual("Headlight" .. sideName, Vector3.new(0.48, 0.34, 0.2), CFrame.new(side * 1.24, 0.95, -3.12), yellow, Enum.Material.Neon)
-	end
+	visual("BumperBarLower", Vector3.new(3.8, 0.24, 0.24), CFrame.new(0, 0.2, -3.25), C_BLACK)
+	visual("BumperBarUpper", Vector3.new(3.0, 0.24, 0.24), CFrame.new(0, 0.52, -3.25), C_BLACK)
+	visual("BumperPostL", Vector3.new(0.24, 0.58, 0.25), CFrame.new(-1.15, 0.36, -3.26), C_BLACK)
+	visual("BumperPostR", Vector3.new(0.24, 0.58, 0.25), CFrame.new(1.15, 0.36, -3.26), C_BLACK)
+	visual("FrontNoseBaseRed", Vector3.new(2.8, 0.35, 0.85), CFrame.new(0, 0.25, -2.7), C_RED)
+
+	local wedgeRot = CFrame.Angles(0, math.pi, 0)
+	visual("NoseYellowOuter", Vector3.new(1.6, 0.85, 1.8), CFrame.new(0, 0.65, -1.9) * wedgeRot, C_YELLOW, nil, "WedgePart")
+	visual("NoseRedCenter", Vector3.new(0.95, 0.88, 1.82), CFrame.new(0, 0.66, -1.9) * wedgeRot, C_RED, nil, "WedgePart")
+	visual("NoseWhitePlate", Vector3.new(0.7, 0.90, 0.75), CFrame.new(0, 0.82, -1.55) * wedgeRot, C_WHITE, nil, "WedgePart")
 
 	local seat = Instance.new("VehicleSeat")
 	seat.Name = "DriverSeat"
-	seat.Size = Vector3.new(2.2, 0.7, 2)
-	seat.CFrame = spawnCFrame * CFrame.new(0, 1.35, 0.45)
-	seat.Color = Color3.fromRGB(42, 45, 52)
-	seat.Material = Enum.Material.SmoothPlastic
+	seat.Size = Vector3.new(1.8, 0.4, 1.6)
+	seat.CFrame = spawnCFrame * CFrame.new(0, 0.75, 0.25)
+	seat.Transparency = 1
 	seat.Anchored = false
 	seat.CanCollide = false
 	seat.Massless = true
@@ -207,49 +549,51 @@ local function createKart(player, spawnIndex)
 	seat.Torque = 0
 	seat.TurnSpeed = 0
 	seat.Parent = model
+
 	local seatWeld = Instance.new("WeldConstraint")
 	seatWeld.Part0 = chassis
 	seatWeld.Part1 = seat
 	seatWeld.Parent = chassis
 
-	visual("SeatCushion", Vector3.new(2, 0.16, 1.8), CFrame.new(0, 0.9, 0.45), dark)
-	visual("SeatBack", Vector3.new(1.9, 1, 0.24), CFrame.new(0, 1.75, 1.45), dark, Enum.Material.SmoothPlastic)
-	visual("SeatBackAccent", Vector3.new(1.5, 0.12, 0.08), CFrame.new(0, 2.18, 1.59), red)
-	visual("Dashboard", Vector3.new(2.45, 0.24, 0.62), CFrame.new(0, 2.38, -0.78), dark, Enum.Material.Metal)
-	visual("DashboardDisplay", Vector3.new(0.72, 0.12, 0.18), CFrame.new(0, 2.55, -0.94), yellow, Enum.Material.Neon)
+	visual("SeatBase", Vector3.new(1.6, 0.18, 1.4), CFrame.new(0, 0.22, 0.25), C_DARK)
+	visual("SeatBolsterL", Vector3.new(0.2, 0.55, 1.3), CFrame.new(-0.75, 0.5, 0.25), C_DARK)
+	visual("SeatBolsterR", Vector3.new(0.2, 0.55, 1.3), CFrame.new(0.75, 0.5, 0.25), C_DARK)
+	visual("SeatBack", Vector3.new(1.6, 1.85, 0.25), CFrame.new(0, 1.25, 0.95) * CFrame.Angles(math.rad(-16), 0, 0), C_DARK)
 
-	local steeringCenter = Vector3.new(0, 3.08, -1.28)
-	visualRod("SteeringColumn", Vector3.new(0, 1.86, -0.8), steeringCenter, 0.14, metal, Enum.Material.Metal)
-	local steeringRadius = 0.43
-	for segment = 1, 8 do
-		local angle = (segment - 1) * math.pi / 4
-		local ringPosition = steeringCenter + Vector3.new(math.cos(angle) * steeringRadius, math.sin(angle) * steeringRadius, 0)
-		visual("SteeringRim" .. segment, Vector3.new(0.12, 0.34, 0.14), CFrame.new(ringPosition) * CFrame.Angles(0, 0, angle), black, Enum.Material.Metal)
+	local steerCenter = Vector3.new(0, 1.5, -0.9)
+	local steerAngle = CFrame.Angles(math.rad(25), 0, 0)
+	visualRod("SteeringColumn", Vector3.new(0, 0.4, -0.7), Vector3.new(0, 1.45, -0.9), 0.12, C_BLACK, Enum.Material.Metal)
+	for i = 1, 8 do
+		local angle = (i - 1) * math.pi / 4
+		local ringPos = steerCenter + Vector3.new(math.cos(angle) * 0.36, math.sin(angle) * 0.36, 0)
+		visual("SteerRim" .. i, Vector3.new(0.08, 0.26, 0.08), CFrame.new(ringPos) * steerAngle * CFrame.Angles(0, 0, angle), C_BLACK)
 	end
-	visualRod("SteeringSpokeLower", steeringCenter, steeringCenter + Vector3.new(0, -0.34, 0), 0.08, yellow, Enum.Material.Metal)
-	visualRod("SteeringSpokeLeft", steeringCenter, steeringCenter + Vector3.new(-0.3, 0.08, 0), 0.08, yellow, Enum.Material.Metal)
-	visualRod("SteeringSpokeRight", steeringCenter, steeringCenter + Vector3.new(0.3, 0.08, 0), 0.08, yellow, Enum.Material.Metal)
-	visual("SteeringHub", Vector3.new(0.2, 0.2, 0.16), CFrame.new(steeringCenter), yellow, Enum.Material.Metal)
+	visual("SteerHub", Vector3.new(0.18, 0.18, 0.12), CFrame.new(steerCenter) * steerAngle, C_DARK)
 
-	visual("EngineBlock", Vector3.new(2.35, 0.62, 1.55), CFrame.new(0, 0.74, 2.62), dark, Enum.Material.Metal)
-	visual("EngineCover", Vector3.new(1.55, 0.2, 1.05), CFrame.new(0, 1.15, 2.62), red)
-	for _, side in ipairs({ -1, 1 }) do
-		local sideName = side < 0 and "Left" or "Right"
-		visual("Exhaust" .. sideName, Vector3.new(0.18, 0.18, 0.65), CFrame.new(side * 1.02, 0.76, 3.05), metal, Enum.Material.Metal)
-		visual("RearWingSupport" .. sideName, Vector3.new(0.16, 0.52, 0.16), CFrame.new(side * 1.25, 1.35, 3.03), dark, Enum.Material.Metal)
-	end
-	visual("RearWing", Vector3.new(4.35, 0.2, 0.62), CFrame.new(0, 1.68, 3.12), red, Enum.Material.SmoothPlastic)
-	visual("RearWingAccent", Vector3.new(3.5, 0.06, 0.1), CFrame.new(0, 1.81, 3.12), yellow, Enum.Material.Metal)
+	visual("EngineBlock", Vector3.new(1.6, 1.1, 1.3), CFrame.new(0, 1.05, 1.9), C_ENGINE, Enum.Material.Metal)
+	visual("EngineCylinderHead", Vector3.new(1.4, 0.35, 1.1), CFrame.new(0, 1.7, 1.9), C_DARK, Enum.Material.Metal)
+	local exhaustL = CFrame.new(-1.05, 1.25, 2.2) * CFrame.Angles(math.rad(28), math.rad(-20), 0)
+	visual("ExhaustL", Vector3.new(0.38, 0.38, 1.4), exhaustL, C_EXHAUST, Enum.Material.Metal, "Cylinder")
+	local exhaustR = CFrame.new(1.05, 1.25, 2.2) * CFrame.Angles(math.rad(28), math.rad(20), 0)
+	visual("ExhaustR", Vector3.new(0.38, 0.38, 1.4), exhaustR, C_EXHAUST, Enum.Material.Metal, "Cylinder")
 
-	local wheelPositions = {
-		Vector3.new(-2.5, 0.18, -2.2), Vector3.new(2.5, 0.18, -2.2),
-		Vector3.new(-2.5, 0.18, 2.2), Vector3.new(2.5, 0.18, 2.2),
+	visual("SpoilerPillarL", Vector3.new(0.18, 1.35, 0.25), CFrame.new(-0.85, 1.85, 2.55) * CFrame.Angles(math.rad(-12), 0, 0), C_BLACK)
+	visual("SpoilerPillarR", Vector3.new(0.18, 1.35, 0.25), CFrame.new(0.85, 1.85, 2.55) * CFrame.Angles(math.rad(-12), 0, 0), C_BLACK)
+	visual("SpoilerWingPlank", Vector3.new(3.8, 0.22, 0.8), CFrame.new(0, 2.45, 2.68) * CFrame.Angles(math.rad(5), 0, 0), C_BLACK)
+	visual("SpoilerEndplateL", Vector3.new(0.15, 0.75, 1.05), CFrame.new(-1.96, 2.55, 2.68) * CFrame.Angles(math.rad(5), 0, 0), C_BLACK)
+	visual("SpoilerEndplateR", Vector3.new(0.15, 0.75, 1.05), CFrame.new(1.96, 2.55, 2.68) * CFrame.Angles(math.rad(5), 0, 0), C_BLACK)
+	visual("RearBumperBar", Vector3.new(4.0, 0.28, 0.28), CFrame.new(0, 0.26, 3.05), C_BLACK)
+
+	local wheelConfigs = {
+		{ name = "FrontL", pos = Vector3.new(-2.25, 0.18, -1.95), width = 0.85, diam = 1.35, isRight = false },
+		{ name = "FrontR", pos = Vector3.new(2.25, 0.18, -1.95), width = 0.85, diam = 1.35, isRight = true },
+		{ name = "RearL",  pos = Vector3.new(-2.35, 0.28, 2.1),   width = 1.15, diam = 1.55, isRight = false },
+		{ name = "RearR",  pos = Vector3.new(2.35, 0.28, 2.1),   width = 1.15, diam = 1.55, isRight = true },
 	}
-	for index, offset in ipairs(wheelPositions) do
-		visual("BlockWheel" .. index, Vector3.new(0.74, 1.42, 1.42), CFrame.new(offset), black, Enum.Material.Rubber, Enum.PartType.Cylinder)
-		local outerSide = offset.X < 0 and -1 or 1
-		local rimOffset = offset + Vector3.new(outerSide * 0.38, 0, 0)
-		visual("WheelRim" .. index, Vector3.new(0.12, 0.9, 0.9), CFrame.new(rimOffset), yellow, Enum.Material.Metal, Enum.PartType.Cylinder)
+	for _, w in ipairs(wheelConfigs) do
+		visual("Wheel_" .. w.name, Vector3.new(w.width, w.diam, w.diam), CFrame.new(w.pos), C_TIRE, Enum.Material.Rubber, "Cylinder")
+		local rimOffset = w.pos + Vector3.new((w.isRight and 1 or -1) * (w.width / 2 + 0.02), 0, 0)
+		visual("Rim_" .. w.name, Vector3.new(0.08, w.diam * 0.58, w.diam * 0.58), CFrame.new(rimOffset), C_RIM, Enum.Material.Metal, "Cylinder")
 	end
 
 	local attachment = Instance.new("Attachment")
@@ -270,12 +614,10 @@ local function createKart(player, spawnIndex)
 	prompt.ObjectText = "Kart"
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 12
+	prompt.MaxActivationDistance = 14
 	prompt.Parent = seat
 	prompt.Triggered:Connect(function(triggeringPlayer)
-		if triggeringPlayer ~= player then
-			return
-		end
+		if triggeringPlayer ~= player then return end
 		local character = triggeringPlayer.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid and not seat.Occupant then
@@ -294,16 +636,13 @@ local function createKart(player, spawnIndex)
 		lastDiagnosticPosition = spawnCFrame.Position,
 	}
 
-		local function updateNetworkOwner()
-			local occupant = seat.Occupant
-			prompt.Enabled = occupant == nil
-			local driver = occupant and Players:GetPlayerFromCharacter(occupant.Parent)
+	local function updateNetworkOwner()
+		local occupant = seat.Occupant
+		prompt.Enabled = occupant == nil
+		local driver = occupant and Players:GetPlayerFromCharacter(occupant.Parent)
 		if not model:IsDescendantOf(Workspace) or not chassis:IsDescendantOf(Workspace) then
 			kart.networkOwner = "auto"
-			if model.Parent then
-				model:SetAttribute("NetworkOwnerUserId", 0)
-			end
-			print(("[BLOXY-KART][SERVER][NETWORK-OWNER-SKIP] kart=%s reason=outside-workspace"):format(model.Name))
+			if model.Parent then model:SetAttribute("NetworkOwnerUserId", 0) end
 			return
 		end
 		local networkRoot = chassis.AssemblyRootPart or chassis
@@ -317,18 +656,6 @@ local function createKart(player, spawnIndex)
 		if success then
 			kart.networkOwner = driver or "auto"
 			model:SetAttribute("NetworkOwnerUserId", driver and driver.UserId or 0)
-			local ownerOk, actualOwner = pcall(function()
-				return networkRoot:GetNetworkOwner()
-			end)
-			print(("[BLOXY-KART][SERVER][NETWORK-OWNER] kart=%s driver=%s requested=%s actual=%s root=%s rootAnchored=%s"):format(
-				model.Name, driver and driver.Name or "nil", driver and driver.Name or "automatic",
-				ownerOk and actualOwner and actualOwner.Name or (ownerOk and "server/nil" or "unavailable"),
-				networkRoot:GetFullName(), tostring(networkRoot.Anchored)
-			))
-		else
-			warn(("[BLOXY-KART][SERVER][NETWORK-OWNER-FAILED] kart=%s driver=%s error=%s"):format(
-				model.Name, driver and driver.Name or "nil", tostring(ownershipError)
-			))
 		end
 	end
 	seat:GetPropertyChangedSignal("Occupant"):Connect(updateNetworkOwner)
@@ -336,25 +663,25 @@ local function createKart(player, spawnIndex)
 	return kart
 end
 
+-- ==========================================================
+-- 3. GESTIÓN Y SPAWN DEL PILOTO
+-- ==========================================================
 local function spawnPlayerKart(player)
 	local current = activeKarts[player]
 	if current then
 		current.model:Destroy()
 	end
+
 	local kart = createKart(player, player:GetAttribute("KartSpawnIndex") or 1)
 	activeKarts[player] = kart
 	driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 	player:SetAttribute("KartOwnerUserId", player.UserId)
-	print(("[BLOXY-KART][SERVER][KART-CREATED] player=%s model=%s chassis=%s chassisAnchored=%s seat=%s"):format(
-		player.Name, kart.model:GetFullName(), kart.chassis:GetFullName(), tostring(kart.chassis.Anchored), kart.seat:GetFullName()
-	))
 
 	local function seatCharacter(character)
 		local humanoid = character:WaitForChild("Humanoid", 10)
 		local root = character:WaitForChild("HumanoidRootPart", 10)
-		if not humanoid or not root or not kart.model.Parent then
-			return
-		end
+		if not humanoid or not root or not kart.model.Parent then return end
+
 		root.CFrame = kart.spawnCFrame * CFrame.new(0, 4, 1)
 		task.wait(0.15)
 		if kart.seat.Parent and not kart.seat.Occupant then
@@ -369,29 +696,11 @@ local function spawnPlayerKart(player)
 end
 
 remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
-	if typeof(throttle) ~= "number" or typeof(steering) ~= "number" or typeof(braking) ~= "boolean" then
-		warn(("[BLOXY-KART][SERVER][REMOTE-INVALID] player=%s throttleType=%s steeringType=%s brakeType=%s"):format(
-			player.Name, typeof(throttle), typeof(steering), typeof(braking)
-		))
-		return
-	end
+	if typeof(throttle) ~= "number" or typeof(steering) ~= "number" or typeof(braking) ~= "boolean" then return end
 	local kart = activeKarts[player]
 	local occupant = kart and kart.seat.Occupant
 	local isAuthorizedDriver = occupant ~= nil and occupant.Parent == player.Character
-	print(("[BLOXY-KART][SERVER][REMOTE-RECV] player=%s remote=%s throttle=%s steering=%s brake=%s kartFound=%s occupant=%s authorized=%s"):format(
-		player.Name, remote:GetFullName(), tostring(throttle), tostring(steering), tostring(braking),
-		tostring(kart ~= nil), occupant and occupant.Parent.Name or "nil", tostring(isAuthorizedDriver)
-	))
-	if throttle ~= throttle or steering ~= steering then
-		warn(("[BLOXY-KART][SERVER][REMOTE-NAN] player=%s input discarded"):format(player.Name))
-		return
-	end
-	if not isAuthorizedDriver then
-		warn(("[BLOXY-KART][SERVER][DRIVER-REJECTED] player=%s seatOccupant=%s character=%s"):format(
-			player.Name, occupant and occupant.Parent:GetFullName() or "nil", player.Character and player.Character:GetFullName() or "nil"
-		))
-		return
-	end
+	if throttle ~= throttle or steering ~= steering or not isAuthorizedDriver then return end
 	driverInputs[player] = {
 		throttle = math.clamp(throttle, -1, 1),
 		steering = math.clamp(steering, -1, 1),
@@ -401,9 +710,7 @@ end)
 
 RunService.Heartbeat:Connect(function()
 	for player, kart in pairs(activeKarts) do
-		if not kart.chassis.Parent then
-			continue
-		end
+		if not kart.chassis.Parent then continue end
 		local seat = kart.seat
 		local driver = seat.Occupant
 		local input = driverInputs[player]
@@ -418,39 +725,12 @@ RunService.Heartbeat:Connect(function()
 
 		if DIAGNOSTICS_ENABLED and os.clock() >= kart.nextDiagnosticAt then
 			kart.nextDiagnosticAt = os.clock() + DIAGNOSTIC_INTERVAL
-			local assemblyRoot = chassis.AssemblyRootPart or chassis
-			local anchoredParts = {}
-			for _, part in ipairs(kart.model:GetDescendants()) do
-				if part:IsA("BasePart") and part.AssemblyRootPart == assemblyRoot and part.Anchored then
-					table.insert(anchoredParts, part.Name)
-				end
-			end
-			local ownerName = "unknown"
-			local ownerOk, owner = pcall(function()
-				return chassis:GetNetworkOwner()
-			end)
-			if ownerOk then
-				ownerName = owner and owner.Name or "server/nil"
-			end
-			local positionDelta = chassis.Position - kart.lastDiagnosticPosition
-			kart.lastDiagnosticPosition = chassis.Position
-			local characterRoot = driver and driver.Parent:FindFirstChild("HumanoidRootPart")
-			local seatWeld = seat:FindFirstChild("SeatWeld")
-			local sharesAssembly = characterRoot ~= nil and characterRoot.AssemblyRootPart == assemblyRoot
-			print(("[BLOXY-KART][SERVER][PHYSICS] player=%s occupant=%s authorized=%s input=(%.0f,%.0f,%s) chassisAnchored=%s root=%s rootAnchored=%s characterRoot=%s sharesAssembly=%s seatWeld=%s anchoredAssemblyParts=%s mass=%.2f speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f) forceTarget=%s forceEnabled=%s forceAttachment=%s applyAtCenter=%s owner=%s"):format(
-				player.Name, driver and driver.Parent.Name or "nil", tostring(isAuthorizedDriver), throttle, steering, tostring(braking),
-				tostring(chassis.Anchored), assemblyRoot:GetFullName(), tostring(assemblyRoot.Anchored),
-				characterRoot and characterRoot:GetFullName() or "nil", tostring(sharesAssembly), tostring(seatWeld ~= nil),
-				#anchoredParts > 0 and table.concat(anchoredParts, ",") or "none", chassis.AssemblyMass,
-				velocity.Magnitude, positionDelta.Magnitude, chassis.AssemblyAngularVelocity.X,
-				chassis.AssemblyAngularVelocity.Y, chassis.AssemblyAngularVelocity.Z,
-				kart.driveForce.Parent and kart.driveForce.Parent:GetFullName() or "nil",
-				tostring(kart.driveForce.Enabled), kart.driveForce.Attachment0 and kart.driveForce.Attachment0:GetFullName() or "nil",
-				tostring(kart.driveForce.ApplyAtCenterOfMass), ownerName
-			))
+			kart.lastDiagnosticPosition = kart.chassis.Position
 		end
 	end
 end)
+
+buildTestCourse()
 
 Players.PlayerAdded:Connect(function(player)
 	local existing = #Players:GetPlayers()
@@ -465,13 +745,9 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	local kart = activeKarts[player]
-	if kart then
-		kart.model:Destroy()
-	end
+	if kart then kart.model:Destroy() end
 	activeKarts[player] = nil
 	driverInputs[player] = nil
 end)
-
-buildTestCourse()
 
 return true

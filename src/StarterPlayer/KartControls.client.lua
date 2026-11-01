@@ -27,7 +27,9 @@ local currentSeat
 local cameraConnection
 local shownEnterPrompt
 local enterPromptBillboard
-local held = { forward = false, reverse = false, left = false, right = false, brake = false }
+
+-- Controles con soporte para Shift (Derrape)
+local held = { forward = false, reverse = false, left = false, right = false, brake = false, drift = false }
 local driveActionName = "BLOXYKartDriveControls"
 local driveKeys = {
 	Enum.KeyCode.W, Enum.KeyCode.Up,
@@ -35,6 +37,7 @@ local driveKeys = {
 	Enum.KeyCode.A, Enum.KeyCode.Left,
 	Enum.KeyCode.D, Enum.KeyCode.Right,
 	Enum.KeyCode.Space,
+	Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift,
 }
 local keyToControl = {
 	[Enum.KeyCode.W] = "forward", [Enum.KeyCode.Up] = "forward",
@@ -42,7 +45,15 @@ local keyToControl = {
 	[Enum.KeyCode.A] = "left", [Enum.KeyCode.Left] = "left",
 	[Enum.KeyCode.D] = "right", [Enum.KeyCode.Right] = "right",
 	[Enum.KeyCode.Space] = "brake",
+	[Enum.KeyCode.LeftShift] = "drift",
+	[Enum.KeyCode.RightShift] = "drift",
 }
+
+-- Variables de estado de derrape y turbo
+local isDrifting = false
+local driftDirection = 0
+local driftStartTime = 0
+local boostEndTime = 0
 
 local function getKartFromSeat(seat)
 	local model = seat and seat:FindFirstAncestorOfClass("Model")
@@ -145,11 +156,6 @@ local function stopDrivingCamera()
 			activeCamera.CameraSubject = humanoid
 		end
 		activeCamera.CameraType = Enum.CameraType.Custom
-		if wasDrivingCamera then
-			print(("[BLOXY-KART][CLIENT][CAMERA-RESTORE] type=%s subject=%s"):format(
-				activeCamera.CameraType.Name, activeCamera.CameraSubject and activeCamera.CameraSubject:GetFullName() or "nil"
-			))
-		end
 	end
 end
 
@@ -159,15 +165,9 @@ local function startDrivingCamera(kart)
 		cameraConnection = nil
 	end
 	camera = Workspace.CurrentCamera
-	if not camera then
-		warn("[BLOXY-KART][CLIENT][CAMERA-MISSING] Workspace.CurrentCamera no está disponible.")
-		return
-	end
+	if not camera then return end
 	camera.CameraType = Enum.CameraType.Scriptable
 	local smoothedCFrame = camera.CFrame
-	print(("[BLOXY-KART][CLIENT][CAMERA-DRIVE] type=%s offset=%s lookAhead=%.1f"):format(
-		camera.CameraType.Name, tostring(KartConfig.CameraOffset), KartConfig.CameraLookAhead
-	))
 	cameraConnection = RunService.RenderStepped:Connect(function(deltaTime)
 		if not kart.Parent or not kart.PrimaryPart then
 			stopDrivingCamera()
@@ -184,184 +184,84 @@ local function startDrivingCamera(kart)
 	end)
 end
 
-local function formatVector(vector)
-	if not vector then
-		return "nil"
-	end
-	return string.format("(%.2f,%.2f,%.2f)", vector.X, vector.Y, vector.Z)
-end
-
-local function describePartVisibility(part)
-	if not part then
-		return "missing"
-	end
-	return string.format("%s(t=%.2f,ltm=%.2f)", part.Name, part.Transparency, part.LocalTransparencyModifier)
-end
-
-local function describePartGeometry(part)
-	if not part then
-		return "missing"
-	end
-	if part:IsA("MeshPart") then
-		return string.format("MeshPart(mesh=%s,texture=%s)", part.MeshId, part.TextureID)
-	end
-	local mesh = part:FindFirstChildOfClass("SpecialMesh")
-	if mesh then
-		return string.format("%s/SpecialMesh(mesh=%s,texture=%s)", part.ClassName, mesh.MeshId, mesh.TextureId)
-	end
-	return part.ClassName
-end
-
-local function describeViewportPoint(camera, part)
-	if not camera or not part then
-		return "unavailable"
-	end
-	local point, insideViewport = camera:WorldToViewportPoint(part.Position)
-	return string.format("inside=%s(x=%.0f,y=%.0f,z=%.2f)", tostring(insideViewport), point.X, point.Y, point.Z)
-end
-
-local function logSeatedAvatar(humanoid, seat)
-	local character = humanoid.Parent
-	if not character then
-		return
-	end
-	local kart = getKartFromSeat(seat)
-	local chassis = kart and kart.PrimaryPart
-	local root = character:FindFirstChild("HumanoidRootPart")
-	local head = character:FindFirstChild("Head")
-	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
-	local visibleParts = 0
-	local totalParts = 0
-	local accessoryCount = 0
-	local hiddenParts = {}
-	for _, descendant in ipairs(character:GetDescendants()) do
-		if descendant:IsA("Accessory") then
-			accessoryCount = accessoryCount + 1
-		elseif descendant:IsA("BasePart") and descendant.Name ~= "HumanoidRootPart" then
-			totalParts = totalParts + 1
-			if descendant.Transparency < 1 and descendant.LocalTransparencyModifier < 1 then
-				visibleParts = visibleParts + 1
-			elseif #hiddenParts < 8 then
-				table.insert(hiddenParts, string.format("%s(t=%.2f,ltm=%.2f)", descendant.Name, descendant.Transparency, descendant.LocalTransparencyModifier))
-			end
-		end
-	end
-	local seatWeld = seat:FindFirstChild("SeatWeld")
-	local rootSeatOffset = root and seat.CFrame:PointToObjectSpace(root.Position)
-	local rootChassisOffset = root and chassis and chassis.CFrame:PointToObjectSpace(root.Position)
-	local seatChassisOffset = chassis and chassis.CFrame:PointToObjectSpace(seat.Position)
-	local facingDot = chassis and seat.CFrame.LookVector:Dot(chassis.CFrame.LookVector) or 0
-	local occupant = seat.Occupant
-	local camera = Workspace.CurrentCamera
-	local function getCameraBlocker(targetPart)
-		if not camera or not targetPart then
-			return "unavailable", false
-		end
-		local direction = targetPart.Position - camera.CFrame.Position
-		if direction.Magnitude < 0.001 then
-			return "camera-at-target", false
-		end
-		local raycastParams = RaycastParams.new()
-		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-		raycastParams.FilterDescendantsInstances = { character }
-		local result = Workspace:Raycast(camera.CFrame.Position, direction, raycastParams)
-		if result then
-			return result.Instance:GetFullName(), kart ~= nil and result.Instance:IsDescendantOf(kart)
-		end
-		return "none", false
-	end
-	local headBlocker, headBlockedByKart = getCameraBlocker(head)
-	local torsoBlocker, torsoBlockedByKart = getCameraBlocker(torso)
-	local headVisible = head ~= nil and head.Transparency < 1 and head.LocalTransparencyModifier < 1
-	local torsoVisible = torso ~= nil and torso.Transparency < 1 and torso.LocalTransparencyModifier < 1
-	print(("[BLOXY-KART][CLIENT][AVATAR-SEATED] humanoidSit=%s occupant=%s seatWeld=%s seatKartOffset=%s facingDot=%.2f rootSeatOffset=%s rootChassisOffset=%s root=%s head=%s headVisible=%s torso=%s torsoVisible=%s visibleParts=%d/%d accessories=%d hiddenParts=%s headBlocker=%s headBlockedByKart=%s torsoBlocker=%s torsoBlockedByKart=%s"):format(
-		tostring(humanoid.Sit), occupant and occupant.Parent and occupant.Parent.Name or "nil", tostring(seatWeld ~= nil),
-		formatVector(seatChassisOffset), facingDot, formatVector(rootSeatOffset), formatVector(rootChassisOffset),
-		describePartVisibility(root), describePartVisibility(head), tostring(headVisible), describePartVisibility(torso), tostring(torsoVisible),
-		visibleParts, totalParts, accessoryCount, #hiddenParts == 0 and "none" or table.concat(hiddenParts, ";"),
-		headBlocker, tostring(headBlockedByKart), torsoBlocker, tostring(torsoBlockedByKart)
-	))
-	local characterParent = character.Parent
-	local cameraSubject = camera and camera.CameraSubject
-	print(("[BLOXY-KART][CLIENT][AVATAR-RENDER] character=%s parent=%s characterInWorkspace=%s isLocalCharacter=%s rootInWorkspace=%s headInWorkspace=%s torsoInWorkspace=%s rig=%s state=%s health=%.1f platformStand=%s cameraType=%s cameraSubject=%s cameraPos=%s cameraLook=%s cameraFocus=%s viewport=(%.0f,%.0f) fov=%.1f headWorld=%s headScreen=%s headGeometry=%s torsoWorld=%s torsoScreen=%s torsoGeometry=%s"):format(
-		character:GetFullName(), characterParent and characterParent:GetFullName() or "nil", tostring(character:IsDescendantOf(Workspace)),
-		tostring(player.Character == character), tostring(root ~= nil and root:IsDescendantOf(Workspace)),
-		tostring(head ~= nil and head:IsDescendantOf(Workspace)), tostring(torso ~= nil and torso:IsDescendantOf(Workspace)),
-		humanoid.RigType.Name, humanoid:GetState().Name, humanoid.Health, tostring(humanoid.PlatformStand),
-		camera and camera.CameraType.Name or "missing", cameraSubject and cameraSubject:GetFullName() or "nil",
-		formatVector(camera and camera.CFrame.Position), formatVector(camera and camera.CFrame.LookVector),
-		formatVector(camera and camera.Focus.Position), camera and camera.ViewportSize.X or 0, camera and camera.ViewportSize.Y or 0,
-		camera and camera.FieldOfView or 0, formatVector(head and head.Position), describeViewportPoint(camera, head), describePartGeometry(head),
-		formatVector(torso and torso.Position), describeViewportPoint(camera, torso), describePartGeometry(torso)
-	))
-end
-
 local function sendDriveInput()
-	if not currentSeat then
-		return
-	end
+	if not currentSeat then return end
 	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
 	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
-	print(("[BLOXY-KART][CLIENT][REMOTE-SEND] remote=%s seat=%s throttle=%.0f steering=%.0f brake=%s"):format(
-		controlRemote:GetFullName(), currentSeat:GetFullName(), throttle, steering, tostring(held.brake)
-	))
 	controlRemote:FireServer(throttle, steering, held.brake)
 end
 
 local physicsDiagnosticNext = 0
-local lastPhysicsPosition = {}
 local function simulateOwnedKart()
-	if not currentSeat then
-		return
-	end
+	if not currentSeat then return end
 	local kart = getKartFromSeat(currentSeat)
-	if not kart or kart:GetAttribute("NetworkOwnerUserId") ~= player.UserId then
-		return
-	end
+	if not kart or kart:GetAttribute("NetworkOwnerUserId") ~= player.UserId then return end
 	local chassis = kart and kart.PrimaryPart
 	local driveForce = chassis and chassis:FindFirstChild("ArcadeDriveForce")
-	if not chassis or not driveForce or not driveForce:IsA("VectorForce") then
-		warn(("[BLOXY-KART][CLIENT][PHYSICS-MISSING] seat=%s kart=%s chassis=%s force=%s"):format(
-			currentSeat:GetFullName(), kart and kart:GetFullName() or "nil",
-			chassis and chassis:GetFullName() or "nil", driveForce and driveForce:GetFullName() or "nil"
-		))
-		return
-	end
-	if not driveForce.Attachment0 then
-		warn(("[BLOXY-KART][CLIENT][FORCE-ATTACHMENT-MISSING] force=%s"):format(driveForce:GetFullName()))
-		return
-	end
+	if not chassis or not driveForce or not driveForce:IsA("VectorForce") or not driveForce.Attachment0 then return end
 
 	local velocity = chassis.AssemblyLinearVelocity
 	local lookVector = chassis.CFrame.LookVector
 	local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
-	if forward.Magnitude > 0.001 then
-		forward = forward.Unit
-	else
-		forward = Vector3.new(0, 0, -1)
-	end
+	forward = (forward.Magnitude > 0.001) and forward.Unit or Vector3.new(0, 0, -1)
+
 	local rightVector = chassis.CFrame.RightVector
 	local right = Vector3.new(rightVector.X, 0, rightVector.Z)
-	if right.Magnitude > 0.001 then
-		right = right.Unit
-	else
-		right = Vector3.new(1, 0, 0)
-	end
+	right = (right.Magnitude > 0.001) and right.Unit or Vector3.new(1, 0, 0)
+
 	local forwardSpeed = velocity:Dot(forward)
 	local lateralSpeed = velocity:Dot(right)
 	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
 	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+
+	-- ==========================================================
+	-- GESTIÓN DEL DERRAPE (DRIFT CON SHIFT)
+	-- ==========================================================
+	local canDrift = (forwardSpeed > 8) and (not held.brake)
+	if held.drift and canDrift then
+		if not isDrifting then
+			isDrifting = true
+			driftStartTime = os.clock()
+			driftDirection = (steering ~= 0) and math.sign(steering) or 1
+		end
+	else
+		if isDrifting then
+			-- Mini-turbo si derrapaste más de 0.8 segundos
+			local driftDuration = os.clock() - driftStartTime
+			if driftDuration >= 0.8 then
+				boostEndTime = os.clock() + 0.75 -- 0.75s de impulso
+			end
+			isDrifting = false
+			driftDirection = 0
+		end
+	end
+
+	-- Rotación angular (Yaw Rate)
 	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
 	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
-	local travelDirection = forwardSpeed >= 0 and 1 or -1
-	local yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection
+	local travelDirection = (forwardSpeed >= 0) and 1 or -1
+
+	local yawRate = 0
+	if isDrifting then
+		-- Derrape: mayor rotación y apoyo de dirección asistida
+		local driftSteerRate = KartConfig.SteeringRate * 1.6
+		local effectiveSteer = (steering ~= 0) and steering or (driftDirection * 0.5)
+		yawRate = -effectiveSteer * driftSteerRate * steeringFactor * travelDirection
+	else
+		yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection
+	end
 	chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
 
+	-- Aceleración y Frenado
+	local isBoosting = (os.clock() < boostEndTime)
 	local acceleration = 0
 	if held.brake then
 		acceleration = -math.sign(forwardSpeed) * KartConfig.BrakeDeceleration
 	elseif throttle > 0 then
 		acceleration = KartConfig.ForwardAcceleration
+		if isBoosting then
+			acceleration = acceleration * 1.45 -- Impulso de mini-turbo
+		end
 	elseif throttle < 0 then
 		if forwardSpeed > 2 then
 			acceleration = -KartConfig.BrakeDeceleration * 0.65
@@ -370,65 +270,23 @@ local function simulateOwnedKart()
 		end
 	end
 
+	-- Agarre lateral: durante el derrape baja al 25% para resbalar
+	local gripMultiplier = isDrifting and 0.25 or 1.0
 	local drag = -forwardSpeed * KartConfig.CoastDrag
-	local lateralForce = -lateralSpeed * KartConfig.LateralGrip
+	local lateralForce = -lateralSpeed * (KartConfig.LateralGrip * gripMultiplier)
+
 	driveForce.Force = forward * ((acceleration + drag) * chassis.AssemblyMass)
 		+ right * (lateralForce * chassis.AssemblyMass)
 
+	-- Límite de velocidad
 	local maxSpeed = (throttle < 0 and forwardSpeed <= 2) and KartConfig.MaxReverseSpeed or KartConfig.MaxForwardSpeed
+	if isBoosting then
+		maxSpeed = maxSpeed * 1.25
+	end
+
 	if math.abs(forwardSpeed) > maxSpeed then
 		local clamped = math.sign(forwardSpeed) * maxSpeed
 		chassis.AssemblyLinearVelocity = forward * clamped + right * lateralSpeed + Vector3.new(0, velocity.Y, 0)
-	end
-
-	if os.clock() >= physicsDiagnosticNext then
-		physicsDiagnosticNext = os.clock() + 2
-		local root = chassis.AssemblyRootPart or chassis
-		local characterRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		local sharesAssembly = characterRoot ~= nil and characterRoot.AssemblyRootPart == root
-		local seatWeld = currentSeat:FindFirstChild("SeatWeld")
-		local chassisProperties = chassis.CurrentPhysicalProperties
-		local raycastParams = RaycastParams.new()
-		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-		raycastParams.FilterDescendantsInstances = { kart, player.Character }
-		local groundHit = Workspace:Raycast(chassis.Position, Vector3.new(0, -(chassis.Size.Y * 0.5 + 2), 0), raycastParams)
-		local ground = groundHit and groundHit.Instance
-		local groundProperties = ground and ground:IsA("BasePart") and ground.CurrentPhysicalProperties or nil
-		local combinedFriction = -1
-		if groundProperties then
-			local totalFrictionWeight = chassisProperties.FrictionWeight + groundProperties.FrictionWeight
-			if totalFrictionWeight > 0 then
-				combinedFriction = (chassisProperties.Friction * chassisProperties.FrictionWeight
-					+ groundProperties.Friction * groundProperties.FrictionWeight) / totalFrictionWeight
-			end
-		end
-		local estimatedFrictionAccelerationLimit = combinedFriction >= 0 and combinedFriction * Workspace.Gravity or -1
-		local forwardAcceleration = driveForce.Force:Dot(forward) / math.max(chassis.AssemblyMass, 0.001)
-		local previousPosition = lastPhysicsPosition[kart] or chassis.Position
-		local distance = (chassis.Position - previousPosition).Magnitude
-		lastPhysicsPosition[kart] = chassis.Position
-		local anchoredParts = {}
-		for _, part in ipairs(kart:GetDescendants()) do
-			if part:IsA("BasePart") and part.AssemblyRootPart == root and part.Anchored then
-				table.insert(anchoredParts, part.Name)
-			end
-		end
-		print(("[BLOXY-KART][CLIENT][PHYSICS] input=(%.0f,%.0f,%s) chassis=%s chassisAnchored=%s root=%s rootAnchored=%s characterRoot=%s sharesAssembly=%s seatWeld=%s anchoredAssemblyParts=%s mass=%.2f forward=(%.2f,%.2f,%.2f) forwardSpeed=%.2f force=(%.1f,%.1f,%.1f) forceMagnitude=%.1f forwardAcceleration=%.2f forceEnabled=%s attachment=%s applyAtCenter=%s chassisFriction=%.3f chassisFrictionWeight=%.2f ground=%s groundMaterial=%s groundFriction=%.3f groundFrictionWeight=%.2f estimatedFrictionAccelerationLimit=%.2f gravity=%.1f speed=%.2f distance2s=%.2f angular=(%.2f,%.2f,%.2f)"):format(
-			throttle, steering, tostring(held.brake), chassis:GetFullName(), tostring(chassis.Anchored),
-			root:GetFullName(), tostring(root.Anchored), characterRoot and characterRoot:GetFullName() or "nil",
-			tostring(sharesAssembly), tostring(seatWeld ~= nil), #anchoredParts > 0 and table.concat(anchoredParts, ",") or "none",
-			chassis.AssemblyMass, forward.X, forward.Y, forward.Z, forwardSpeed,
-			driveForce.Force.X, driveForce.Force.Y, driveForce.Force.Z, driveForce.Force.Magnitude,
-			forwardAcceleration, tostring(driveForce.Enabled),
-			driveForce.Attachment0:GetFullName(), tostring(driveForce.ApplyAtCenterOfMass),
-			chassisProperties.Friction, chassisProperties.FrictionWeight,
-			ground and ground:GetFullName() or "none", groundHit and groundHit.Material.Name or "none",
-			groundProperties and groundProperties.Friction or -1,
-			groundProperties and groundProperties.FrictionWeight or -1,
-			estimatedFrictionAccelerationLimit, Workspace.Gravity, chassis.AssemblyLinearVelocity.Magnitude, distance,
-			chassis.AssemblyAngularVelocity.X,
-			chassis.AssemblyAngularVelocity.Y, chassis.AssemblyAngularVelocity.Z
-		))
 	end
 end
 
@@ -436,9 +294,6 @@ RunService.Heartbeat:Connect(simulateOwnedKart)
 
 local function onDriveAction(_, inputState, inputObject)
 	local control = keyToControl[inputObject.KeyCode]
-	print(("[BLOXY-KART][CLIENT][ACTION] key=%s state=%s mapped=%s seated=%s"):format(
-		inputObject.KeyCode.Name, inputState.Name, tostring(control), tostring(currentSeat ~= nil)
-	))
 	if control then
 		if inputState == Enum.UserInputState.Begin then
 			held[control] = true
@@ -450,30 +305,13 @@ local function onDriveAction(_, inputState, inputObject)
 	return Enum.ContextActionResult.Sink
 end
 
-local function isDriveKey(keyCode)
-	return keyToControl[keyCode] ~= nil
-end
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if currentSeat and isDriveKey(input.KeyCode) then
-		print(("[BLOXY-KART][CLIENT][RAW-KEY] key=%s state=Begin gameProcessed=%s"):format(
-			input.KeyCode.Name, tostring(gameProcessed)
-		))
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-	if currentSeat and isDriveKey(input.KeyCode) then
-		print(("[BLOXY-KART][CLIENT][RAW-KEY] key=%s state=End gameProcessed=%s"):format(
-			input.KeyCode.Name, tostring(gameProcessed)
-		))
-	end
-end)
-
 local function clearDriveInput()
 	for key in pairs(held) do
 		held[key] = false
 	end
+	isDrifting = false
+	driftDirection = 0
+	boostEndTime = 0
 	if currentSeat then
 		controlRemote:FireServer(0, 0, false)
 	end
@@ -486,12 +324,7 @@ local function bindCharacter(character)
 		local seat = humanoid.SeatPart
 		local kart = getKartFromSeat(seat)
 		if seat and seat:IsA("VehicleSeat") and kart then
-			if currentSeat == seat then
-				return
-			end
-			print(("[BLOXY-KART][CLIENT][SEAT] seated=true seat=%s kart=%s ownerAttribute=%s"):format(
-				seat:GetFullName(), kart:GetFullName(), tostring(kart:GetAttribute("OwnerUserId"))
-			))
+			if currentSeat == seat then return end
 			hideEnterPrompt()
 			clearDriveInput()
 			currentSeat = seat
@@ -502,18 +335,9 @@ local function bindCharacter(character)
 				Enum.ContextActionPriority.High.Value,
 				table.unpack(driveKeys)
 			)
-			print(("[BLOXY-KART][CLIENT][BIND] action=%s keys=W,A,S,D,Up,Down,Left,Right,Space"):format(driveActionName))
 			sendDriveInput()
 			startDrivingCamera(kart)
-			task.delay(0.4, function()
-				if currentSeat == seat and humanoid.Parent == character then
-					logSeatedAvatar(humanoid, seat)
-				end
-			end)
 		else
-			print(("[BLOXY-KART][CLIENT][SEAT] seated=false seatPart=%s"):format(
-				humanoid.SeatPart and humanoid.SeatPart:GetFullName() or "nil"
-			))
 			clearDriveInput()
 			currentSeat = nil
 			stopDrivingCamera()
