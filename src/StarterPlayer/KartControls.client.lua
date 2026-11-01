@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 
 local remote = ReplicatedStorage:WaitForChild("KartControl")
@@ -24,6 +25,10 @@ local steerInput = 0
 local brakeInput = false
 local driftInput = false
 
+local lastSentThrottle = 0
+local lastSentSteer = 0
+local lastSentBrake = false
+
 local isDrifting = false
 local driftStartTime = 0
 local miniTurboEndTime = 0
@@ -40,9 +45,9 @@ end)
 
 wrongWayRemote.OnClientEvent:Connect(function(isWrongWay)
 	if isWrongWay then
-		warn("[BLOXY-KART][CLIENT] ¡DIRECCIÓN CONTRARIA! Da la vuelta.")
+		warn("[BLOXY-KART][CLIENT] DIRECCION CONTRARIA! Da la vuelta.")
 	else
-		print("[BLOXY-KART][CLIENT] Dirección regularizada.")
+		print("[BLOXY-KART][CLIENT] Direccion regularizada.")
 	end
 end)
 
@@ -104,13 +109,18 @@ end
 local function onSeated(occupant)
 	if occupant and occupant.Parent == player.Character then
 		bindInputs()
+		camera.CameraType = Enum.CameraType.Scriptable
 	else
 		unbindInputs()
+		camera.CameraType = Enum.CameraType.Custom
 		throttleInput = 0
 		steerInput = 0
 		brakeInput = false
 		driftInput = false
 		isDrifting = false
+		lastSentThrottle = 0
+		lastSentSteer = 0
+		lastSentBrake = false
 	end
 end
 
@@ -146,13 +156,18 @@ RunService.RenderStepped:Connect(function(dt)
 		return
 	end
 
-	-- Lógica de conducción local delegada
-	local forwardVector = currentChassis.CFrame.LookVector
-	local rightVector = currentChassis.CFrame.RightVector
+	-- Aplanamiento de vectores al plano X-Z para evitar impulsos verticales y tunneling
+	local rawLook = currentChassis.CFrame.LookVector
+	local rawRight = currentChassis.CFrame.RightVector
+	local forwardVector = Vector3.new(rawLook.X, 0, rawLook.Z)
+	forwardVector = forwardVector.Magnitude > 0 and forwardVector.Unit or Vector3.new(0, 0, -1)
+	
+	local rightVector = Vector3.new(rawRight.X, 0, rawRight.Z)
+	rightVector = rightVector.Magnitude > 0 and rightVector.Unit or Vector3.new(1, 0, 0)
+
 	local velocity = currentChassis.AssemblyLinearVelocity
 	local currentSpeed = forwardVector:Dot(velocity)
 
-	-- Mecánica de derrape
 	local now = os.clock()
 	if driftInput and math.abs(currentSpeed) > (KartConfig.DriftMinSpeed or 8) then
 		if not isDrifting then
@@ -173,31 +188,51 @@ RunService.RenderStepped:Connect(function(dt)
 	local accelMult = isTurboActive and (KartConfig.MiniTurboAccelMultiplier or 1.45) or 1.0
 	local maxSpdMult = isTurboActive and (KartConfig.MiniTurboSpeedMultiplier or 1.25) or 1.0
 
-	-- Cálculo de fuerzas en chassis
 	local targetForce = Vector3.zero
-	if throttleInput > 0 then
-		if currentSpeed < (KartConfig.MaxSpeed * maxSpdMult) then
-			targetForce = targetForce + forwardVector * (KartConfig.ForwardAcceleration * accelMult * currentChassis.AssemblyMass)
-		end
-	elseif throttleInput < 0 then
-		if currentSpeed > -KartConfig.ReverseMaxSpeed then
-			targetForce = targetForce - forwardVector * (KartConfig.ReverseAcceleration * currentChassis.AssemblyMass)
+	local absoluteMaxSpeed = (KartConfig.MaxSpeed or 75) * maxSpdMult * 1.4
+
+	-- Límite absoluto de velocidad físico (Top-Speed Clamping)
+	if velocity.Magnitude < absoluteMaxSpeed then
+		if throttleInput > 0 then
+			if currentSpeed < ((KartConfig.MaxSpeed or 75) * maxSpdMult) then
+				targetForce = targetForce + forwardVector * ((KartConfig.ForwardAcceleration or 48) * accelMult * currentChassis.AssemblyMass)
+			end
+		elseif throttleInput < 0 then
+			if currentSpeed > -(KartConfig.ReverseMaxSpeed or 22) then
+				targetForce = targetForce - forwardVector * ((KartConfig.ReverseAcceleration or 25) * currentChassis.AssemblyMass)
+			end
 		end
 	end
 
-	-- Cancelación de deslizamiento lateral (Grip)
+	-- Límite de fuerza lateral y control de resonancia
 	local lateralSpeed = rightVector:Dot(velocity)
 	local gripMult = isDrifting and (KartConfig.DriftGripMultiplier or 0.25) or 1.0
-	local gripForce = -rightVector * (lateralSpeed * KartConfig.Grip * gripMult * currentChassis.AssemblyMass)
-	targetForce = targetForce + gripForce
+	local maxLateralForce = currentChassis.AssemblyMass * 120 -- Tolerancia máxima
+	local rawGripForce = -lateralSpeed * (KartConfig.Grip or 18) * gripMult * currentChassis.AssemblyMass
+	local safeGripForce = math.clamp(rawGripForce, -maxLateralForce, maxLateralForce)
+	targetForce = targetForce + (rightVector * safeGripForce)
 
 	if driveForce and driveForce.Parent then
 		driveForce.Force = targetForce
 	end
 
-	-- Dirección angular
 	local steerMult = isDrifting and (KartConfig.DriftSteerMultiplier or 1.6) or 1.0
-	currentChassis.AssemblyAngularVelocity = Vector3.new(0, -steerInput * KartConfig.SteerSpeed * steerMult, 0)
+	currentChassis.AssemblyAngularVelocity = Vector3.new(0, -steerInput * (KartConfig.SteerSpeed or 2.4) * steerMult, 0)
+	
+	-- Blindaje de cámara y look-ahead acotado
+	local clampedSpeedVector = velocity.Magnitude > 90 and (velocity.Unit * 90) or velocity
+	local targetLookAt = currentChassis.Position + (clampedSpeedVector * (KartConfig.CameraLookAhead or 0.25))
 
-	remote:FireServer(throttleInput, steerInput, brakeInput)
+	local camHeight = Vector3.new(0, KartConfig.CameraHeight or 5.5, 0)
+	local camOffset = -forwardVector * (KartConfig.CameraDistance or 14) + camHeight
+	local targetCamPos = currentChassis.Position + camOffset
+
+	camera.CFrame = camera.CFrame:Lerp(CFrame.lookAt(targetCamPos, targetLookAt), math.clamp(dt * (KartConfig.CameraLerpSpeed or 12), 0, 1))
+
+	if throttleInput ~= lastSentThrottle or steerInput ~= lastSentSteer or brakeInput ~= lastSentBrake then
+		lastSentThrottle = throttleInput
+		lastSentSteer = steerInput
+		lastSentBrake = brakeInput
+		remote:FireServer(throttleInput, steerInput, brakeInput)
+	end
 end)
