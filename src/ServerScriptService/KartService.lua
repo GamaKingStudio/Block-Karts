@@ -9,6 +9,9 @@ local DIAGNOSTIC_INTERVAL = 2
 local COURSE_SURFACE_Y = 1.0
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 
+-- ==========================================================
+-- GESTIÓN DE EVENTOS REMOTOS
+-- ==========================================================
 local remote = ReplicatedStorage:FindFirstChild("KartControl")
 if remote and not remote:IsA("RemoteEvent") then
 	error(("[BLOXY-KART][SERVER][REMOTE-WRONG-CLASS] ReplicatedStorage.KartControl is %s, expected RemoteEvent."):format(remote.ClassName))
@@ -19,6 +22,29 @@ if not remote then
 	remote.Parent = ReplicatedStorage
 end
 
+local raceEventsFolder = ReplicatedStorage:FindFirstChild("RaceEvents") or Instance.new("Folder")
+raceEventsFolder.Name = "RaceEvents"
+raceEventsFolder.Parent = ReplicatedStorage
+
+local function getOrCreateRemote(name)
+	local r = raceEventsFolder:FindFirstChild(name)
+	if not r or not r:IsA("RemoteEvent") then
+		if r then r:Destroy() end
+		r = Instance.new("RemoteEvent")
+		r.Name = name
+		r.Parent = raceEventsFolder
+	end
+	return r
+end
+
+local checkpointPassedRemote = getOrCreateRemote("CheckpointPassed")
+local lapCompletedRemote = getOrCreateRemote("LapCompleted")
+local wrongWayRemote = getOrCreateRemote("WrongWayStateChanged")
+local requestRespawnRemote = getOrCreateRemote("RequestRespawn")
+
+-- ==========================================================
+-- CONTENEDORES Y ESTADO
+-- ==========================================================
 local kartsFolder = Workspace:FindFirstChild("PlayerKarts") or Instance.new("Folder")
 kartsFolder.Name = "PlayerKarts"
 kartsFolder.Parent = Workspace
@@ -32,6 +58,7 @@ end
 local activeKarts = {}
 local driverInputs = {}
 local mapBuilt = false
+local raceData = {} -- Tabla de validación de carrera por jugador
 
 local function makePart(parent, name, size, cframe, color, material, shapeOrClass)
 	local className = "Part"
@@ -65,7 +92,7 @@ local function makePart(parent, name, size, cframe, color, material, shapeOrClas
 end
 
 -- ==========================================================
--- 1. PISTA Y ENTORNO BEACH RESORT
+-- 1. PISTA, ENTORNO Y CHECKPOINTS BEACH RESORT
 -- ==========================================================
 local function buildTestCourse()
 	if mapBuilt then return end
@@ -77,7 +104,7 @@ local function buildTestCourse()
 	Lighting.GeographicLatitude = 18
 	Lighting.ShadowSoftness = 0.2
 
-	-- Eliminar Baseplate y SpawnLocation residuales de Studio
+	-- Limpieza de artefactos residuales de Studio
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj:IsA("SpawnLocation") then
 			pcall(function() obj:Destroy() end)
@@ -117,7 +144,7 @@ local function buildTestCourse()
 	local C_ORANGE = Color3.fromRGB(245, 125, 30)
 	local C_TEAL = Color3.fromRGB(30, 185, 160)
 
-	-- Base de arena continua y uniforme
+	-- Base de arena continua
 	local sandFloor = makePart(course, "IslandSand", Vector3.new(650, 4, 650), CFrame.new(50, yGround - 2, 0), C_SAND, Enum.Material.Sand)
 	sandFloor.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 
@@ -132,7 +159,7 @@ local function buildTestCourse()
 		makePart(course, "Buoy", Vector3.new(2.4, 2.4, 2.4), CFrame.new(-175, yWaterShallow + 1.2, bz), C_ORANGE, Enum.Material.Plastic, "Ball")
 	end
 
-	-- Muelle de madera y botes
+	-- Muelle y barcos
 	makePart(course, "PierDeck", Vector3.new(24, 1.2, 75), CFrame.new(-150, yGround + 0.5, 70), C_WOOD, Enum.Material.WoodPlanks)
 	for pz = 35, 105, 14 do
 		makePart(course, "PierPostL", Vector3.new(1.6, 5.5, 1.6), CFrame.new(-161, yGround - 1.5, pz), C_DARKWOOD, Enum.Material.Wood)
@@ -148,7 +175,7 @@ local function buildTestCourse()
 		makePart(course, "FenceRailMid_" .. bz, Vector3.new(0.4, 0.4, 10), CFrame.new(-138, yGround + 1.6, bz + 5), C_WOOD_LIGHT, Enum.Material.Wood)
 	end
 
-	-- Pasarelas de madera
+	-- Pasarelas
 	makePart(course, "BoardwalkNorth", Vector3.new(8, 0.15, 110), CFrame.new(-144, yGround + 0.08, -15), C_WOOD_LIGHT, Enum.Material.WoodPlanks)
 	makePart(course, "BoardwalkEast", Vector3.new(125, 0.15, 8), CFrame.new(-75, yGround + 0.08, -145), C_WOOD_LIGHT, Enum.Material.WoodPlanks)
 
@@ -186,21 +213,6 @@ local function buildTestCourse()
 		spawnBeachKiosk(k.x, k.z, k.c)
 	end
 
-	-- Cabañas de descanso
-	local function spawnCabana(x, z, rot)
-		local baseCF = CFrame.new(x, yGround, z) * CFrame.Angles(0, math.rad(rot or 0), 0)
-		makePart(course, "HutFloor", Vector3.new(14, 0.6, 14), baseCF * CFrame.new(0, 0.3, 0), C_WOOD, Enum.Material.WoodPlanks)
-		for _, cx in ipairs({ -5.5, 5.5 }) do
-			for _, cz in ipairs({ -5.5, 5.5 }) do
-				makePart(course, "HutPillar", Vector3.new(1.2, 8, 1.2), baseCF * CFrame.new(cx, 4.3, cz), C_DARKWOOD, Enum.Material.Wood)
-			end
-		end
-		makePart(course, "HutRoof", Vector3.new(18, 4, 18), baseCF * CFrame.new(0, 9.5, 0), C_THATCH, Enum.Material.Fabric)
-	end
-	spawnCabana(-85, -145, 10)
-	spawnCabana(-55, -145, -5)
-	spawnCabana(-25, -145, 0)
-
 	-- Graderías de público
 	for tier = 1, 3 do
 		local benchZ = 52 - (tier - 1) * 3.5
@@ -213,16 +225,11 @@ local function buildTestCourse()
 		end
 	end
 
-	-- ==========================================================
-	-- CALLE DE PITS: BIFURCACIÓN, HUECO SELLADO Y SALIDA FLUIDA
-	-- ==========================================================
+	-- Pit Lane (Boxes) y transición sellada
 	local pitRoadZ = 96
 	local pitRoadWidth = 22
-
-	-- 1. Calzada principal de boxes
 	makePart(course, "PitLanePad", Vector3.new(75, 0.04, pitRoadWidth), CFrame.new(80, yGround + 0.02, pitRoadZ), C_ASPHALT, Enum.Material.Asphalt)
 
-	-- 2. Entrada / bifurcación a pits (diagonal suave desde la curva final)
 	local entryStart = Vector3.new(118, yGround + 0.02, 60)
 	local entryEnd = Vector3.new(95, yGround + 0.02, pitRoadZ)
 	local entryDiff = entryEnd - entryStart
@@ -232,12 +239,10 @@ local function buildTestCourse()
 	local pitEntry = makePart(course, "PitEntryLane", Vector3.new(16, 0.04, entryLen), entryCF, C_ASPHALT, Enum.Material.Asphalt)
 	pitEntry.CanCollide = false
 
-	-- Cuña triangular que rellena el ángulo abierto de asfalto en la bifurcación
 	local wedgeCF = CFrame.new(103, yGround + 0.02, 78) * CFrame.Angles(0, math.rad(-145), 0)
 	local transitionWedge = makePart(course, "PitEntryGapFiller", Vector3.new(12, 0.04, 18), wedgeCF, C_ASPHALT, Enum.Material.Asphalt, "WedgePart")
 	transitionWedge.CanCollide = false
 
-	-- 3. Salida de pits incorporándose a la recta antes de la meta
 	local exitStart = Vector3.new(45, yGround + 0.02, pitRoadZ)
 	local exitEnd = Vector3.new(15, yGround + 0.02, 70)
 	local exitDiff = exitEnd - exitStart
@@ -250,18 +255,16 @@ local function buildTestCourse()
 	local exitLine = makePart(course, "PitExitLine", Vector3.new(0.6, 0.02, exitLen), exitCF * CFrame.new(-7.8, 0.02, 0), C_WHITE)
 	exitLine.CanCollide = false
 
-	-- 4. Muro de boxes (Pit Wall) separador
 	makePart(course, "PitWallBase", Vector3.new(55, 1.6, 1.4), CFrame.new(77.5, yGround + 0.8, 83.5), C_WHITE, Enum.Material.Concrete)
 	makePart(course, "PitWallCap", Vector3.new(55, 0.3, 1.8), CFrame.new(77.5, yGround + 1.75, 83.5), C_RED)
 
-	-- 5. Cajones de parada en boxes
 	for px = 55, 105, 13 do
 		local pline = makePart(course, "PitStallLine_" .. px, Vector3.new(0.6, 0.03, 16), CFrame.new(px, yGround + 0.04, 102), C_WHITE)
 		pline.CanCollide = false
 		makePart(course, "PitWheelStop_" .. px, Vector3.new(5.5, 0.45, 0.8), CFrame.new(px + 2.5, yGround + 0.25, 108), C_WHITE, Enum.Material.Concrete)
 	end
 
-	-- Trazado principal del circuito
+	-- Trazado principal
 	local trackWidth = 26
 	local waypoints = {
 		Vector3.new(80, yGround + 0.02, 70),
@@ -308,25 +311,21 @@ local function buildTestCourse()
 		end
 	end
 
-	-- ==========================================================
-	-- ARCO DE META TRASLADADO (DESPUÉS DE LA REINCORPORACIÓN: X = 0)
-	-- ==========================================================
+	-- Pórtico de meta en X = 0
 	local gantryX = 0
 	local postHeight = 15
-	local spanWidth = trackWidth + 6 -- 32 studs de luz libre total
+	local spanWidth = trackWidth + 6
 	local postZL = 70 - spanWidth / 2
 	local postZR = 70 + spanWidth / 2
 
-	-- Postes exteriores completamente fuera del asfalto
 	makePart(course, "GantryPostL", Vector3.new(1.8, postHeight, 1.8), CFrame.new(gantryX, yGround + postHeight / 2, postZL), C_DARKWOOD, Enum.Material.Wood)
 	makePart(course, "GantryPostR", Vector3.new(1.8, postHeight, 1.8), CFrame.new(gantryX, yGround + postHeight / 2, postZR), C_DARKWOOD, Enum.Material.Wood)
 
-	-- Viga superior y pancarta sin interferencias
 	local beamY = yGround + postHeight + 0.9
 	makePart(course, "GantryBeamTop", Vector3.new(2.2, 1.8, spanWidth + 3.6), CFrame.new(gantryX, beamY, 70), C_RED)
 	makePart(course, "GantrySign", Vector3.new(0.3, 2.6, spanWidth - 1.0), CFrame.new(gantryX - 1.2, beamY - 1.6, 70), C_WHITE)
 
-	-- Damero de meta ubicado exactamente bajo el nuevo arco
+	-- Damero de meta
 	local checkRows = 2
 	local checkCols = 8
 	local sqSize = trackWidth / checkCols
@@ -341,7 +340,7 @@ local function buildTestCourse()
 		end
 	end
 
-	-- Neumáticos de protección en curvas
+	-- Neumáticos protectores
 	local function spawnTireStack(pos)
 		local tColors = { C_BLACK, C_WHITE, C_RED }
 		for h = 1, 3 do
@@ -362,7 +361,7 @@ local function buildTestCourse()
 		spawnTireStack(tPos)
 	end
 
-	-- Antorchas Tiki (sin postes en divisiones de carril ni calzadas)
+	-- Props despejados (Antorchas y Palmeras a >= 20 studs)
 	local function spawnTikiTorch(pos)
 		makePart(course, "TikiPole", Vector3.new(0.6, 6, 0.6), CFrame.new(pos) * CFrame.new(0, 3, 0), C_DARKWOOD, Enum.Material.Wood)
 		makePart(course, "TikiBowl", Vector3.new(1.2, 0.8, 1.2), CFrame.new(pos) * CFrame.new(0, 6.2, 0), C_DARKWOOD, Enum.Material.Wood)
@@ -375,20 +374,15 @@ local function buildTestCourse()
 		light.Parent = flame
 	end
 
-	local torchPositions = {
-		Vector3.new(-146, yGround, 20),
-		Vector3.new(-146, yGround, -40),
-		Vector3.new(-75, yGround, -135),
-		Vector3.new(-35, yGround, -135),
-		Vector3.new(20, yGround, -135),
-		Vector3.new(80, yGround, -115),
-		Vector3.new(150, yGround, 15),
-	}
-	for _, tp in ipairs(torchPositions) do
+	for _, tp in ipairs({
+		Vector3.new(-146, yGround, 20), Vector3.new(-146, yGround, -40),
+		Vector3.new(-75, yGround, -135), Vector3.new(-35, yGround, -135),
+		Vector3.new(20, yGround, -135), Vector3.new(80, yGround, -115),
+		Vector3.new(150, yGround, 15)
+	}) do
 		spawnTikiTorch(tp)
 	end
 
-	-- Palmeras totalmente despejadas (> 20 studs de cualquier carril)
 	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
 		scale = scale or 1.0
 		local trunkH = 15 * scale
@@ -406,7 +400,7 @@ local function buildTestCourse()
 		end
 	end
 
-	local palmData = {
+	for _, p in ipairs({
 		{ pos = Vector3.new(-150, yGround, 25),  tilt = 6,  yaw = 45,  scale = 1.1 },
 		{ pos = Vector3.new(-148, yGround, 95),  tilt = -8, yaw = 120, scale = 1.2 },
 		{ pos = Vector3.new(-150, yGround, -35), tilt = 5,  yaw = -30, scale = 0.95 },
@@ -418,37 +412,59 @@ local function buildTestCourse()
 		{ pos = Vector3.new(85, yGround, -100),  tilt = -5, yaw = 30,  scale = 1.1 },
 		{ pos = Vector3.new(-45, yGround, 35),   tilt = 6,  yaw = -80, scale = 1.0 },
 		{ pos = Vector3.new(25, yGround, 38),    tilt = -6, yaw = 50,  scale = 0.95 },
-	}
-	for _, p in ipairs(palmData) do
+	}) do
 		spawnOrganicPalm(p.pos, p.tilt, p.yaw, p.scale)
 	end
 
-	-- Sombrillas
-	local function spawnBeachCluster(pos, umbrellaColor, towelColor, rot)
-		local cf = CFrame.new(pos) * CFrame.Angles(0, math.rad(rot or 0), 0)
-		makePart(course, "UmbrellaPole", Vector3.new(0.4, 7.5, 0.4), cf * CFrame.new(0, 3.75, 0), C_WOOD)
-		makePart(course, "UmbrellaCanopy", Vector3.new(1.8, 8.0, 8.0), cf * CFrame.new(0, 7.2, 0) * CFrame.Angles(0, 0, math.pi / 2), umbrellaColor, Enum.Material.SmoothPlastic, "Cylinder")
-		makePart(course, "Lounger1", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(-3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
-		makePart(course, "Lounger2", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
-		local towel = makePart(course, "BeachTowel", Vector3.new(3.2, 0.04, 6.0), cf * CFrame.new(0, 0.05, -3.2), towelColor)
-		towel.CanCollide = false
-		makePart(course, "BeachBall", Vector3.new(2.0, 2.0, 2.0), cf * CFrame.new(2.2, 1.0, -3.5), C_RED, Enum.Material.Plastic, "Ball")
-	end
+	-- ==========================================================
+	-- CONSTRUCCIÓN DE CHECKPOINTS PROCEDURALES
+	-- ==========================================================
+	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
+	checkpointsFolder.Name = "CourseCheckpoints"
+	checkpointsFolder.Parent = Workspace
+	checkpointsFolder:ClearAllChildren()
 
-	spawnBeachCluster(Vector3.new(-85, yGround, 18),  C_BLUE,   C_YELLOW, 25)
-	spawnBeachCluster(Vector3.new(-85, yGround, -25), C_YELLOW, C_RED,    -15)
-	spawnBeachCluster(Vector3.new(-25, yGround, -20), C_RED,    C_BLUE,   40)
-	spawnBeachCluster(Vector3.new(20, yGround, -30),  C_TEAL,   C_ORANGE, -30)
-	spawnBeachCluster(Vector3.new(50, yGround, 18),   C_ORANGE, C_TEAL,   10)
+	local debugTrans = KartConfig.DEBUG_CHECKPOINTS and 0.75 or 1
+	local triggerHeight = 15
+	local triggerThickness = 2
+	local triggerSpan = 48 -- Ancho ampliado para abarcar calzada y márgenes
 
-	-- Tablas de surf en la orilla
-	local function spawnSurfboard(pos, color, rotY)
-		local sb = makePart(course, "Surfboard", Vector3.new(0.3, 8.0, 2.2), CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), math.rad(18)) * CFrame.new(0, 3.5, 0), color)
-		sb.CanCollide = false
+	-- 1. Línea de Meta (FinishLine / Checkpoint 0)
+	local finishCF = CFrame.lookAt(Vector3.new(gantryX, yGround + triggerHeight / 2, 70), Vector3.new(gantryX - 10, yGround + triggerHeight / 2, 70))
+	local finishPart = makePart(checkpointsFolder, "FinishLine", Vector3.new(triggerSpan, triggerHeight, triggerThickness), finishCF, Color3.fromRGB(255, 255, 255))
+	finishPart.Transparency = debugTrans
+	finishPart.CanCollide = false
+	finishPart.CanTouch = true
+	finishPart.CanQuery = false
+	finishPart:SetAttribute("CheckpointIndex", 0)
+
+	-- 2. Matriz de Checkpoints Intermedios (1 al 14)
+	local checkpointDefinitions = {
+		{ pos = Vector3.new(-35, yGround + triggerHeight / 2, 70),     target = Vector3.new(-65, yGround + triggerHeight / 2, 70) },      -- CP 1
+		{ pos = Vector3.new(-90, yGround + triggerHeight / 2, 55),     target = Vector3.new(-115, yGround + triggerHeight / 2, 40) },     -- CP 2
+		{ pos = Vector3.new(-115, yGround + triggerHeight / 2, -5),    target = Vector3.new(-115, yGround + triggerHeight / 2, -50) },    -- CP 3
+		{ pos = Vector3.new(-97.5, yGround + triggerHeight / 2, -72.5),target = Vector3.new(-80, yGround + triggerHeight / 2, -95) },    -- CP 4
+		{ pos = Vector3.new(-65, yGround + triggerHeight / 2, -95),    target = Vector3.new(-50, yGround + triggerHeight / 2, -95) },     -- CP 5
+		{ pos = Vector3.new(-50, yGround + triggerHeight / 2, -55),    target = Vector3.new(-50, yGround + triggerHeight / 2, -15) },     -- CP 6
+		{ pos = Vector3.new(-37.5, yGround + triggerHeight / 2, -2.5), target = Vector3.new(-25, yGround + triggerHeight / 2, 10) },     -- CP 7
+		{ pos = Vector3.new(-12.5, yGround + triggerHeight / 2, -2.5), target = Vector3.new(0, yGround + triggerHeight / 2, -15) },      -- CP 8
+		{ pos = Vector3.new(0, yGround + triggerHeight / 2, -50),      target = Vector3.new(0, yGround + triggerHeight / 2, -85) },       -- CP 9
+		{ pos = Vector3.new(22.5, yGround + triggerHeight / 2, -95),   target = Vector3.new(45, yGround + triggerHeight / 2, -105) },    -- CP 10
+		{ pos = Vector3.new(65, yGround + triggerHeight / 2, -85),     target = Vector3.new(85, yGround + triggerHeight / 2, -65) },      -- CP 11
+		{ pos = Vector3.new(105, yGround + triggerHeight / 2, -37.5),  target = Vector3.new(125, yGround + triggerHeight / 2, -10) },    -- CP 12
+		{ pos = Vector3.new(125, yGround + triggerHeight / 2, 12.5),   target = Vector3.new(125, yGround + triggerHeight / 2, 35) },     -- CP 13
+		{ pos = Vector3.new(115, yGround + triggerHeight / 2, 50),     target = Vector3.new(105, yGround + triggerHeight / 2, 65) },     -- CP 14
+	}
+
+	for idx, def in ipairs(checkpointDefinitions) do
+		local cpCF = CFrame.lookAt(def.pos, def.target)
+		local cpPart = makePart(checkpointsFolder, "Checkpoint_" .. idx, Vector3.new(triggerSpan, triggerHeight, triggerThickness), cpCF, Color3.fromRGB(0, 170, 255))
+		cpPart.Transparency = debugTrans
+		cpPart.CanCollide = false
+		cpPart.CanTouch = true
+		cpPart.CanQuery = false
+		cpPart:SetAttribute("CheckpointIndex", idx)
 	end
-	spawnSurfboard(Vector3.new(-145, yGround, 10), C_TEAL, 30)
-	spawnSurfboard(Vector3.new(-146, yGround, 14), C_ORANGE, -20)
-	spawnSurfboard(Vector3.new(-145, yGround, -20), C_YELLOW, 45)
 end
 
 -- ==========================================================
@@ -664,7 +680,136 @@ local function createKart(player, spawnIndex)
 end
 
 -- ==========================================================
--- 3. GESTIÓN Y SPAWN DEL PILOTO
+-- 3. VALIDACIÓN DE CARRERA Y CHECKPOINTS (BACKEND)
+-- ==========================================================
+local TOTAL_INTERMEDIATE_CHECKPOINTS = 14
+
+local function initPlayerRaceData(player, spawnCFrame)
+	raceData[player] = {
+		CurrentLap = 1,
+		NextCheckpoint = 1,
+		TotalCheckpoints = TOTAL_INTERMEDIATE_CHECKPOINTS,
+		LastValidCFrame = spawnCFrame,
+		LapStartTime = 0.0,
+		BestLapTime = nil,
+		CanFinishLap = false,
+		IsWrongWay = false,
+		LastTriggerTime = 0.0,
+	}
+end
+
+local function onCheckpointTouched(hitPart, triggerPart)
+	if hitPart.Name ~= "Chassis" then return end
+	local kartModel = hitPart.Parent
+	if not kartModel or not kartModel:IsA("Model") then return end
+
+	local ownerUserId = kartModel:GetAttribute("OwnerUserId")
+	if typeof(ownerUserId) ~= "number" then return end
+
+	local player = Players:GetPlayerByUserId(ownerUserId)
+	if not player then return end
+
+	local pData = raceData[player]
+	if not pData then return end
+
+	local now = os.clock()
+	if now - pData.LastTriggerTime < (KartConfig.CHECKPOINT_DEBOUNCE_TIME or 0.4) then
+		return
+	end
+
+	local cpIndex = triggerPart:GetAttribute("CheckpointIndex")
+	if typeof(cpIndex) ~= "number" then return end
+
+	-- Verificación angular de avance respecto a este checkpoint
+	local chassis = hitPart
+	local dotProduct = chassis.CFrame.LookVector:Dot(triggerPart.CFrame.LookVector)
+	local isFacingWrongWay = dotProduct < (KartConfig.WRONG_WAY_DOT_THRESHOLD or -0.2)
+	if isFacingWrongWay ~= pData.IsWrongWay then
+		pData.IsWrongWay = isFacingWrongWay
+		wrongWayRemote:FireClient(player, isFacingWrongWay)
+	end
+
+	-- Cruce de la Línea de Meta (Checkpoint 0)
+	if cpIndex == 0 then
+		if pData.CanFinishLap then
+			pData.LastTriggerTime = now
+			local lapTime = now - pData.LapStartTime
+			local isBest = (pData.BestLapTime == nil) or (lapTime < pData.BestLapTime)
+			if isBest then
+				pData.BestLapTime = lapTime
+			end
+
+			lapCompletedRemote:FireClient(player, pData.CurrentLap, lapTime, isBest)
+			pData.CurrentLap = pData.CurrentLap + 1
+			pData.NextCheckpoint = 1
+			pData.CanFinishLap = false
+			pData.LapStartTime = now
+			pData.LastValidCFrame = triggerPart.CFrame
+
+			print(("[BLOXY-KART][RACE] %s completó Vuelta %d en %.2fs (Record: %s)"):format(
+				player.Name, pData.CurrentLap - 1, lapTime, tostring(isBest)
+			))
+		elseif pData.LapStartTime == 0.0 and pData.NextCheckpoint == 1 then
+			-- Salida oficial desde la grilla
+			pData.LastTriggerTime = now
+			pData.LapStartTime = now
+			pData.LastValidCFrame = triggerPart.CFrame
+			checkpointPassedRemote:FireClient(player, 0, TOTAL_INTERMEDIATE_CHECKPOINTS)
+			print(("[BLOXY-KART][RACE] %s cruzó la largada. Cronómetro iniciado."):format(player.Name))
+		end
+		return
+	end
+
+	-- Validación secuencial de Checkpoint Intermedio (1 a 14)
+	if cpIndex == pData.NextCheckpoint then
+		pData.LastTriggerTime = now
+		pData.LastValidCFrame = triggerPart.CFrame
+		pData.NextCheckpoint = pData.NextCheckpoint + 1
+
+		checkpointPassedRemote:FireClient(player, cpIndex, TOTAL_INTERMEDIATE_CHECKPOINTS)
+
+		if pData.NextCheckpoint > TOTAL_INTERMEDIATE_CHECKPOINTS then
+			pData.CanFinishLap = true
+		end
+	end
+end
+
+local function hookCheckpoints()
+	local folder = Workspace:WaitForChild("CourseCheckpoints", 10)
+	if not folder then return end
+
+	for _, trigger in ipairs(folder:GetChildren()) do
+		if trigger:IsA("BasePart") then
+			trigger.Touched:Connect(function(hit)
+				onCheckpointTouched(hit, trigger)
+			end)
+		end
+	end
+end
+
+-- Petición de Respawn seguro desde el cliente
+requestRespawnRemote.OnServerEvent:Connect(function(player)
+	local kart = activeKarts[player]
+	local pData = raceData[player]
+	if not kart or not kart.chassis.Parent then return end
+
+	local targetCF = (pData and pData.LastValidCFrame) or kart.spawnCFrame
+	local respawnOffset = Vector3.new(0, KartConfig.RESPAWN_Y_OFFSET or 3.0, 0)
+
+	-- Reposicionamiento y cancelación total de inercia
+	kart.chassis.CFrame = targetCF + respawnOffset
+	kart.chassis.AssemblyLinearVelocity = Vector3.zero
+	kart.chassis.AssemblyAngularVelocity = Vector3.zero
+
+	-- Normalizar alerta de sentido contrario
+	if pData and pData.IsWrongWay then
+		pData.IsWrongWay = false
+		wrongWayRemote:FireClient(player, false)
+	end
+end)
+
+-- ==========================================================
+-- 4. GESTIÓN Y SPAWN DEL PILOTO
 -- ==========================================================
 local function spawnPlayerKart(player)
 	local current = activeKarts[player]
@@ -672,10 +817,13 @@ local function spawnPlayerKart(player)
 		current.model:Destroy()
 	end
 
-	local kart = createKart(player, player:GetAttribute("KartSpawnIndex") or 1)
+	local spawnIndex = player:GetAttribute("KartSpawnIndex") or 1
+	local kart = createKart(player, spawnIndex)
 	activeKarts[player] = kart
 	driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 	player:SetAttribute("KartOwnerUserId", player.UserId)
+
+	initPlayerRaceData(player, kart.spawnCFrame)
 
 	local function seatCharacter(character)
 		local humanoid = character:WaitForChild("Humanoid", 10)
@@ -685,7 +833,7 @@ local function spawnPlayerKart(player)
 		root.CFrame = kart.spawnCFrame * CFrame.new(0, 4, 1)
 		task.wait(0.15)
 		if kart.seat.Parent and not kart.seat.Occupant then
-			kart.seat:Sit(humanoid)
+			seat:Sit(humanoid)
 		end
 	end
 
@@ -731,6 +879,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 buildTestCourse()
+hookCheckpoints()
 
 Players.PlayerAdded:Connect(function(player)
 	local existing = #Players:GetPlayers()
@@ -748,6 +897,7 @@ Players.PlayerRemoving:Connect(function(player)
 	if kart then kart.model:Destroy() end
 	activeKarts[player] = nil
 	driverInputs[player] = nil
+	raceData[player] = nil
 end)
 
 return true

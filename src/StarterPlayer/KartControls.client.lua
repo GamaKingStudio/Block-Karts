@@ -1,355 +1,203 @@
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ContextActionService = game:GetService("ContextActionService")
-local ProximityPromptService = game:GetService("ProximityPromptService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+
 local player = Players.LocalPlayer
-print(("[BLOXY-KART][CLIENT][LOCAL-SCRIPT-ENTER] script=%s parent=%s player=%s"):format(
-	script:GetFullName(), script.Parent:GetFullName(), player.Name
-))
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
-local controlRemote = ReplicatedStorage:WaitForChild("KartControl", 15)
-if not controlRemote then
-	warn("[BLOXY-KART][CLIENT][REMOTE-MISSING] KartControl no apareció en ReplicatedStorage tras 15 segundos.")
-	return
-end
-if not controlRemote:IsA("RemoteEvent") then
-	warn(("[BLOXY-KART][CLIENT][REMOTE-WRONG-CLASS] ReplicatedStorage.KartControl es %s, no RemoteEvent."):format(controlRemote.ClassName))
-	return
-end
-print(("[BLOXY-KART][CLIENT][START] script=%s parent=%s remote=%s class=%s"):format(
-	script:GetFullName(), script.Parent:GetFullName(), controlRemote:GetFullName(), controlRemote.ClassName
-))
-local camera = Workspace.CurrentCamera
-local currentSeat
-local cameraConnection
-local shownEnterPrompt
-local enterPromptBillboard
 
--- Controles con soporte para Shift (Derrape)
-local held = { forward = false, reverse = false, left = false, right = false, brake = false, drift = false }
-local driveActionName = "BLOXYKartDriveControls"
-local driveKeys = {
-	Enum.KeyCode.W, Enum.KeyCode.Up,
-	Enum.KeyCode.S, Enum.KeyCode.Down,
-	Enum.KeyCode.A, Enum.KeyCode.Left,
-	Enum.KeyCode.D, Enum.KeyCode.Right,
-	Enum.KeyCode.Space,
-	Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift,
-}
-local keyToControl = {
-	[Enum.KeyCode.W] = "forward", [Enum.KeyCode.Up] = "forward",
-	[Enum.KeyCode.S] = "reverse", [Enum.KeyCode.Down] = "reverse",
-	[Enum.KeyCode.A] = "left", [Enum.KeyCode.Left] = "left",
-	[Enum.KeyCode.D] = "right", [Enum.KeyCode.Right] = "right",
-	[Enum.KeyCode.Space] = "brake",
-	[Enum.KeyCode.LeftShift] = "drift",
-	[Enum.KeyCode.RightShift] = "drift",
-}
+local remote = ReplicatedStorage:WaitForChild("KartControl")
+local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
+local checkpointPassedRemote = raceEvents:WaitForChild("CheckpointPassed")
+local lapCompletedRemote = raceEvents:WaitForChild("LapCompleted")
+local wrongWayRemote = raceEvents:WaitForChild("WrongWayStateChanged")
+local requestRespawnRemote = raceEvents:WaitForChild("RequestRespawn")
 
--- Variables de estado de derrape y turbo
+local currentKart = nil
+local currentSeat = nil
+local currentChassis = nil
+local driveForce = nil
+
+local throttleInput = 0
+local steerInput = 0
+local brakeInput = false
+local driftInput = false
+
 local isDrifting = false
-local driftDirection = 0
 local driftStartTime = 0
-local boostEndTime = 0
+local miniTurboEndTime = 0
+local cameraYaw = 0
 
-local function getKartFromSeat(seat)
-	local model = seat and seat:FindFirstAncestorOfClass("Model")
-	if model and model:GetAttribute("OwnerUserId") == player.UserId then
-		return model
-	end
-	return nil
-end
+-- Escucha de eventos de carrera (Base para el futuro HUD)
+checkpointPassedRemote.OnClientEvent:Connect(function(cpIndex, totalCps)
+	print(("[BLOXY-KART][CLIENT] Checkpoint: %d / %d"):format(cpIndex, totalCps))
+end)
 
-local function hideEnterPrompt(prompt)
-	if prompt and shownEnterPrompt ~= prompt then
-		return
-	end
-	if enterPromptBillboard then
-		enterPromptBillboard:Destroy()
-		enterPromptBillboard = nil
-	end
-	shownEnterPrompt = nil
-end
+lapCompletedRemote.OnClientEvent:Connect(function(lap, lapTime, isBest)
+	print(("[BLOXY-KART][CLIENT] Vuelta %d completada en %.2fs (Mejor Vuelta: %s)"):format(lap, lapTime, tostring(isBest)))
+end)
 
-local function showEnterPrompt(prompt)
-	if not prompt:IsA("ProximityPrompt") or prompt.Name ~= "EnterKartPrompt" or currentSeat then
-		return
-	end
-	local seat = prompt.Parent
-	if not seat or not seat:IsA("VehicleSeat") or seat.Occupant or not getKartFromSeat(seat) then
-		return
-	end
-	hideEnterPrompt()
-	shownEnterPrompt = prompt
-
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "BLOXYKartEnterHint"
-	billboard.Adornee = seat
-	billboard.Size = UDim2.fromOffset(132, 36)
-	billboard.StudsOffset = Vector3.new(0, 2.4, 0)
-	billboard.AlwaysOnTop = true
-	billboard.LightInfluence = 0
-	billboard.MaxDistance = prompt.MaxActivationDistance
-	local frame = Instance.new("Frame")
-	frame.Name = "Pill"
-	frame.Size = UDim2.fromScale(1, 1)
-	frame.BackgroundColor3 = Color3.fromRGB(25, 29, 36)
-	frame.BackgroundTransparency = 0.12
-	frame.Parent = billboard
-	local frameCorner = Instance.new("UICorner")
-	frameCorner.CornerRadius = UDim.new(0, 8)
-	frameCorner.Parent = frame
-	local frameStroke = Instance.new("UIStroke")
-	frameStroke.Color = Color3.fromRGB(255, 197, 72)
-	frameStroke.Thickness = 1
-	frameStroke.Transparency = 0.2
-	frameStroke.Parent = frame
-
-	local keyBadge = Instance.new("TextLabel")
-	keyBadge.Name = "Key"
-	keyBadge.Position = UDim2.fromOffset(5, 5)
-	keyBadge.Size = UDim2.fromOffset(27, 26)
-	keyBadge.BackgroundColor3 = Color3.fromRGB(255, 197, 72)
-	keyBadge.Text = "E"
-	keyBadge.TextColor3 = Color3.fromRGB(28, 30, 34)
-	keyBadge.TextSize = 16
-	keyBadge.Font = Enum.Font.GothamBold
-	keyBadge.Parent = frame
-	local keyCorner = Instance.new("UICorner")
-	keyCorner.CornerRadius = UDim.new(0, 5)
-	keyCorner.Parent = keyBadge
-
-	local actionLabel = Instance.new("TextLabel")
-	actionLabel.Name = "Action"
-	actionLabel.Position = UDim2.fromOffset(40, 0)
-	actionLabel.Size = UDim2.new(1, -44, 1, 0)
-	actionLabel.BackgroundTransparency = 1
-	actionLabel.Text = "Conducir"
-	actionLabel.TextColor3 = Color3.fromRGB(245, 246, 248)
-	actionLabel.TextSize = 14
-	actionLabel.TextXAlignment = Enum.TextXAlignment.Left
-	actionLabel.Font = Enum.Font.GothamMedium
-	actionLabel.Parent = frame
-
-	billboard.Parent = player:WaitForChild("PlayerGui")
-	enterPromptBillboard = billboard
-end
-
-ProximityPromptService.PromptShown:Connect(showEnterPrompt)
-ProximityPromptService.PromptHidden:Connect(hideEnterPrompt)
-
-local function stopDrivingCamera()
-	local wasDrivingCamera = cameraConnection ~= nil or (camera and camera.CameraType == Enum.CameraType.Scriptable)
-	if cameraConnection then
-		cameraConnection:Disconnect()
-		cameraConnection = nil
-	end
-	local activeCamera = Workspace.CurrentCamera
-	if activeCamera then
-		camera = activeCamera
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			activeCamera.CameraSubject = humanoid
-		end
-		activeCamera.CameraType = Enum.CameraType.Custom
-	end
-end
-
-local function startDrivingCamera(kart)
-	if cameraConnection then
-		cameraConnection:Disconnect()
-		cameraConnection = nil
-	end
-	camera = Workspace.CurrentCamera
-	if not camera then return end
-	camera.CameraType = Enum.CameraType.Scriptable
-	local smoothedCFrame = camera.CFrame
-	cameraConnection = RunService.RenderStepped:Connect(function(deltaTime)
-		if not kart.Parent or not kart.PrimaryPart then
-			stopDrivingCamera()
-			return
-		end
-		local chassis = kart.PrimaryPart
-		local focus = chassis.Position + chassis.CFrame.LookVector * KartConfig.CameraLookAhead + Vector3.new(0, 1.5, 0)
-		local desiredPosition = (chassis.CFrame * CFrame.new(KartConfig.CameraOffset)).Position
-		local desiredCFrame = CFrame.lookAt(desiredPosition, focus)
-		local alpha = 1 - math.exp(-6 * deltaTime)
-		smoothedCFrame = smoothedCFrame:Lerp(desiredCFrame, alpha)
-		camera.CFrame = smoothedCFrame
-		camera.Focus = CFrame.new(focus)
-	end)
-end
-
-local function sendDriveInput()
-	if not currentSeat then return end
-	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
-	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
-	controlRemote:FireServer(throttle, steering, held.brake)
-end
-
-local physicsDiagnosticNext = 0
-local function simulateOwnedKart()
-	if not currentSeat then return end
-	local kart = getKartFromSeat(currentSeat)
-	if not kart or kart:GetAttribute("NetworkOwnerUserId") ~= player.UserId then return end
-	local chassis = kart and kart.PrimaryPart
-	local driveForce = chassis and chassis:FindFirstChild("ArcadeDriveForce")
-	if not chassis or not driveForce or not driveForce:IsA("VectorForce") or not driveForce.Attachment0 then return end
-
-	local velocity = chassis.AssemblyLinearVelocity
-	local lookVector = chassis.CFrame.LookVector
-	local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
-	forward = (forward.Magnitude > 0.001) and forward.Unit or Vector3.new(0, 0, -1)
-
-	local rightVector = chassis.CFrame.RightVector
-	local right = Vector3.new(rightVector.X, 0, rightVector.Z)
-	right = (right.Magnitude > 0.001) and right.Unit or Vector3.new(1, 0, 0)
-
-	local forwardSpeed = velocity:Dot(forward)
-	local lateralSpeed = velocity:Dot(right)
-	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
-	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
-
-	-- ==========================================================
-	-- GESTIÓN DEL DERRAPE (DRIFT CON SHIFT)
-	-- ==========================================================
-	local canDrift = (forwardSpeed > 8) and (not held.brake)
-	if held.drift and canDrift then
-		if not isDrifting then
-			isDrifting = true
-			driftStartTime = os.clock()
-			driftDirection = (steering ~= 0) and math.sign(steering) or 1
-		end
+wrongWayRemote.OnClientEvent:Connect(function(isWrongWay)
+	if isWrongWay then
+		warn("[BLOXY-KART][CLIENT] ¡DIRECCIÓN CONTRARIA! Da la vuelta.")
 	else
-		if isDrifting then
-			-- Mini-turbo si derrapaste más de 0.8 segundos
-			local driftDuration = os.clock() - driftStartTime
-			if driftDuration >= 0.8 then
-				boostEndTime = os.clock() + 0.75 -- 0.75s de impulso
-			end
-			isDrifting = false
-			driftDirection = 0
-		end
+		print("[BLOXY-KART][CLIENT] Dirección regularizada.")
 	end
+end)
 
-	-- Rotación angular (Yaw Rate)
-	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
-	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
-	local travelDirection = (forwardSpeed >= 0) and 1 or -1
-
-	local yawRate = 0
-	if isDrifting then
-		-- Derrape: mayor rotación y apoyo de dirección asistida
-		local driftSteerRate = KartConfig.SteeringRate * 1.6
-		local effectiveSteer = (steering ~= 0) and steering or (driftDirection * 0.5)
-		yawRate = -effectiveSteer * driftSteerRate * steeringFactor * travelDirection
-	else
-		yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection
-	end
-	chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
-
-	-- Aceleración y Frenado
-	local isBoosting = (os.clock() < boostEndTime)
-	local acceleration = 0
-	if held.brake then
-		acceleration = -math.sign(forwardSpeed) * KartConfig.BrakeDeceleration
-	elseif throttle > 0 then
-		acceleration = KartConfig.ForwardAcceleration
-		if isBoosting then
-			acceleration = acceleration * 1.45 -- Impulso de mini-turbo
-		end
-	elseif throttle < 0 then
-		if forwardSpeed > 2 then
-			acceleration = -KartConfig.BrakeDeceleration * 0.65
-		else
-			acceleration = -KartConfig.ReverseAcceleration
-		end
-	end
-
-	-- Agarre lateral: durante el derrape baja al 25% para resbalar
-	local gripMultiplier = isDrifting and 0.25 or 1.0
-	local drag = -forwardSpeed * KartConfig.CoastDrag
-	local lateralForce = -lateralSpeed * (KartConfig.LateralGrip * gripMultiplier)
-
-	driveForce.Force = forward * ((acceleration + drag) * chassis.AssemblyMass)
-		+ right * (lateralForce * chassis.AssemblyMass)
-
-	-- Límite de velocidad
-	local maxSpeed = (throttle < 0 and forwardSpeed <= 2) and KartConfig.MaxReverseSpeed or KartConfig.MaxForwardSpeed
-	if isBoosting then
-		maxSpeed = maxSpeed * 1.25
-	end
-
-	if math.abs(forwardSpeed) > maxSpeed then
-		local clamped = math.sign(forwardSpeed) * maxSpeed
-		chassis.AssemblyLinearVelocity = forward * clamped + right * lateralSpeed + Vector3.new(0, velocity.Y, 0)
-	end
-end
-
-RunService.Heartbeat:Connect(simulateOwnedKart)
-
-local function onDriveAction(_, inputState, inputObject)
-	local control = keyToControl[inputObject.KeyCode]
-	if control then
-		if inputState == Enum.UserInputState.Begin then
-			held[control] = true
-		elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
-			held[control] = false
-		end
-		sendDriveInput()
+local function handleRespawnAction(actionName, inputState, inputObject)
+	if inputState == Enum.UserInputState.Begin then
+		requestRespawnRemote:FireServer()
 	end
 	return Enum.ContextActionResult.Sink
 end
 
-local function clearDriveInput()
-	for key in pairs(held) do
-		held[key] = false
+local function handleThrottle(actionName, inputState, inputObject)
+	if inputState == Enum.UserInputState.Begin then
+		throttleInput = actionName == "ThrottleForward" and 1 or -1
+	elseif inputState == Enum.UserInputState.End then
+		throttleInput = 0
 	end
-	isDrifting = false
-	driftDirection = 0
-	boostEndTime = 0
-	if currentSeat then
-		controlRemote:FireServer(0, 0, false)
-	end
-	ContextActionService:UnbindAction(driveActionName)
+	return Enum.ContextActionResult.Sink
 end
 
-local function bindCharacter(character)
-	local humanoid = character:WaitForChild("Humanoid")
-	local function updateDrivingState()
-		local seat = humanoid.SeatPart
-		local kart = getKartFromSeat(seat)
-		if seat and seat:IsA("VehicleSeat") and kart then
-			if currentSeat == seat then return end
-			hideEnterPrompt()
-			clearDriveInput()
-			currentSeat = seat
-			ContextActionService:BindActionAtPriority(
-				driveActionName,
-				onDriveAction,
-				false,
-				Enum.ContextActionPriority.High.Value,
-				table.unpack(driveKeys)
-			)
-			sendDriveInput()
-			startDrivingCamera(kart)
-		else
-			clearDriveInput()
-			currentSeat = nil
-			stopDrivingCamera()
+local function handleSteer(actionName, inputState, inputObject)
+	if inputState == Enum.UserInputState.Begin then
+		steerInput = actionName == "SteerRight" and 1 or -1
+	elseif inputState == Enum.UserInputState.End then
+		steerInput = 0
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+local function handleBrake(actionName, inputState, inputObject)
+	brakeInput = inputState == Enum.UserInputState.Begin
+	return Enum.ContextActionResult.Sink
+end
+
+local function handleDrift(actionName, inputState, inputObject)
+	driftInput = inputState == Enum.UserInputState.Begin
+	return Enum.ContextActionResult.Sink
+end
+
+local function bindInputs()
+	ContextActionService:BindAction("ThrottleForward", handleThrottle, false, Enum.KeyCode.W, Enum.KeyCode.Up)
+	ContextActionService:BindAction("ThrottleBackward", handleThrottle, false, Enum.KeyCode.S, Enum.KeyCode.Down)
+	ContextActionService:BindAction("SteerLeft", handleSteer, false, Enum.KeyCode.A, Enum.KeyCode.Left)
+	ContextActionService:BindAction("SteerRight", handleSteer, false, Enum.KeyCode.D, Enum.KeyCode.Right)
+	ContextActionService:BindAction("Handbrake", handleBrake, false, Enum.KeyCode.Space)
+	ContextActionService:BindAction("Drift", handleDrift, false, Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift)
+	ContextActionService:BindAction("RespawnKart", handleRespawnAction, false, Enum.KeyCode.R)
+end
+
+local function unbindInputs()
+	ContextActionService:UnbindAction("ThrottleForward")
+	ContextActionService:UnbindAction("ThrottleBackward")
+	ContextActionService:UnbindAction("SteerLeft")
+	ContextActionService:UnbindAction("SteerRight")
+	ContextActionService:UnbindAction("Handbrake")
+	ContextActionService:UnbindAction("Drift")
+	ContextActionService:UnbindAction("RespawnKart")
+end
+
+local function onSeated(occupant)
+	if occupant and occupant.Parent == player.Character then
+		bindInputs()
+	else
+		unbindInputs()
+		throttleInput = 0
+		steerInput = 0
+		brakeInput = false
+		driftInput = false
+		isDrifting = false
+	end
+end
+
+local function setupKartTracking()
+	local karts = Workspace:WaitForChild("PlayerKarts", 10)
+	if not karts then return end
+
+	local function checkKart(child)
+		if child:IsA("Model") and child.Name == "Kart_" .. player.UserId then
+			currentKart = child
+			currentChassis = child:WaitForChild("Chassis", 5)
+			currentSeat = child:WaitForChild("DriverSeat", 5)
+			if currentSeat then
+				driveForce = currentChassis:WaitForChild("ArcadeDriveForce", 5)
+				currentSeat:GetPropertyChangedSignal("Occupant"):Connect(function()
+					onSeated(currentSeat.Occupant)
+				end)
+				if currentSeat.Occupant then
+					onSeated(currentSeat.Occupant)
+				end
+			end
 		end
 	end
 
-	humanoid.Seated:Connect(updateDrivingState)
-	humanoid:GetPropertyChangedSignal("SeatPart"):Connect(updateDrivingState)
-	task.defer(updateDrivingState)
+	karts.ChildAdded:Connect(checkKart)
+	for _, c in ipairs(karts:GetChildren()) do checkKart(c) end
 end
 
-player.CharacterAdded:Connect(bindCharacter)
-if player.Character then
-	task.spawn(bindCharacter, player.Character)
-end
+setupKartTracking()
+
+RunService.RenderStepped:Connect(function(dt)
+	if not currentChassis or not currentSeat or currentSeat.Occupant ~= (player.Character and player.Character:FindFirstChildOfClass("Humanoid")) then
+		return
+	end
+
+	-- Lógica de conducción local delegada
+	local forwardVector = currentChassis.CFrame.LookVector
+	local rightVector = currentChassis.CFrame.RightVector
+	local velocity = currentChassis.AssemblyLinearVelocity
+	local currentSpeed = forwardVector:Dot(velocity)
+
+	-- Mecánica de derrape
+	local now = os.clock()
+	if driftInput and math.abs(currentSpeed) > (KartConfig.DriftMinSpeed or 8) then
+		if not isDrifting then
+			isDrifting = true
+			driftStartTime = now
+		end
+	else
+		if isDrifting then
+			local driftDuration = now - driftStartTime
+			if driftDuration >= (KartConfig.DriftMinDuration or 0.8) then
+				miniTurboEndTime = now + (KartConfig.MiniTurboDuration or 0.75)
+			end
+			isDrifting = false
+		end
+	end
+
+	local isTurboActive = now < miniTurboEndTime
+	local accelMult = isTurboActive and (KartConfig.MiniTurboAccelMultiplier or 1.45) or 1.0
+	local maxSpdMult = isTurboActive and (KartConfig.MiniTurboSpeedMultiplier or 1.25) or 1.0
+
+	-- Cálculo de fuerzas en chassis
+	local targetForce = Vector3.zero
+	if throttleInput > 0 then
+		if currentSpeed < (KartConfig.MaxSpeed * maxSpdMult) then
+			targetForce = targetForce + forwardVector * (KartConfig.ForwardAcceleration * accelMult * currentChassis.AssemblyMass)
+		end
+	elseif throttleInput < 0 then
+		if currentSpeed > -KartConfig.ReverseMaxSpeed then
+			targetForce = targetForce - forwardVector * (KartConfig.ReverseAcceleration * currentChassis.AssemblyMass)
+		end
+	end
+
+	-- Cancelación de deslizamiento lateral (Grip)
+	local lateralSpeed = rightVector:Dot(velocity)
+	local gripMult = isDrifting and (KartConfig.DriftGripMultiplier or 0.25) or 1.0
+	local gripForce = -rightVector * (lateralSpeed * KartConfig.Grip * gripMult * currentChassis.AssemblyMass)
+	targetForce = targetForce + gripForce
+
+	if driveForce and driveForce.Parent then
+		driveForce.Force = targetForce
+	end
+
+	-- Dirección angular
+	local steerMult = isDrifting and (KartConfig.DriftSteerMultiplier or 1.6) or 1.0
+	currentChassis.AssemblyAngularVelocity = Vector3.new(0, -steerInput * KartConfig.SteerSpeed * steerMult, 0)
+
+	remote:FireServer(throttleInput, steerInput, brakeInput)
+end)
