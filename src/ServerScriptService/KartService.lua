@@ -417,6 +417,7 @@ local function buildTestCourse()
 		-- Base de arena bajo las uniones de curva.
 		-- El asfalto y los pianos quedan por encima; la arena solo aparece
 		-- en los huecos irregulares que dejan los segmentos rectos al girar.
+		if sideIndex == 1 then
 		for cornerIndex = 1, uniqueCount do
 			local corner = waypoints[cornerIndex]
 			local sandHub = makePart(
@@ -431,6 +432,7 @@ local function buildTestCourse()
 			sandHub.CanCollide = false
 			sandHub.CanTouch = false
 			sandHub.CanQuery = false
+		end
 		end
 
 		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
