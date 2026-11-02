@@ -423,8 +423,8 @@ local function buildTestCourse()
 			local sandHub = makePart(
 				course,
 				("SandCorner_%d_%d"):format(sideIndex, cornerIndex),
-				Vector3.new(0.035, trackWidth + 3.0, trackWidth + 3.0),
-				CFrame.new(corner.X, yGround - 0.012, corner.Z) * CFrame.Angles(0, 0, math.rad(90)),
+				Vector3.new(0.04, trackWidth + 2.8, trackWidth + 2.8),
+				CFrame.new(corner.X, yGround + 0.02, corner.Z) * CFrame.Angles(0, 0, math.rad(90)),
 				C_SAND,
 				Enum.Material.Sand
 			)
