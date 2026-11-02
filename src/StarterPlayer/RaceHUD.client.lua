@@ -67,9 +67,18 @@ local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -
 local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42)
 label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216))
 
-local wrongPanel = panel("WrongWayPanel", UDim2.fromOffset(300, 44), UDim2.new(0.5, -150, 0, 102))
-wrongPanel.Visible = false
-label(wrongPanel, "WrongWayLabel", UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), "¡SENTIDO CONTRARIO!", 17, Color3.fromRGB(255, 105, 95))
+local wrongWayLabel = label(
+ hud,
+ "WrongWayWarning",
+ UDim2.new(1, -40, 0, 54),
+ UDim2.new(0, 20, 0.44, -27),
+ "¡SENTIDO CONTRARIO!",
+ 27,
+ Color3.fromRGB(255, 65, 65)
+)
+wrongWayLabel.TextStrokeColor3 = Color3.fromRGB(35, 12, 12)
+wrongWayLabel.TextStrokeTransparency = 0.25
+wrongWayLabel.Visible = false
 
 local totalLaps = config.TOTAL_LAPS or 3
 local function setLap(lap)
@@ -111,7 +120,7 @@ lapEvent.OnClientEvent:Connect(function(lap, lapTime, isBest)
 end)
 
 wrongWayEvent.OnClientEvent:Connect(function(isWrongWay)
- wrongPanel.Visible = isWrongWay
+ wrongWayLabel.Visible = isWrongWay
 end)
 
 local currentSeat
@@ -144,7 +153,7 @@ local function setDriving(seat)
   bestLapTime = nil
   bestLabel.Text = "MEJOR --:--.--"
   bestLabel.TextColor3 = Color3.fromRGB(190, 202, 216)
-  wrongPanel.Visible = false
+  wrongWayLabel.Visible = false
   updateSpeed()
   if renderConnection then renderConnection:Disconnect() end
   renderConnection = RunService.RenderStepped:Connect(updateSpeed)
@@ -152,7 +161,7 @@ local function setDriving(seat)
   currentSeat = nil
   currentChassis = nil
   hud.Enabled = false
-  wrongPanel.Visible = false
+  wrongWayLabel.Visible = false
   if renderConnection then
    renderConnection:Disconnect()
    renderConnection = nil
