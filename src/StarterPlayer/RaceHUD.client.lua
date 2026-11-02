@@ -211,7 +211,8 @@ local function updateMiniMap()
  local look = currentChassis.CFrame.LookVector
  markerArrow.Rotation = math.deg(math.atan2(-look.X, -look.Z))
 end
-\nlocal totalLaps = config.TOTAL_LAPS or 3
+
+local totalLaps = config.TOTAL_LAPS or 3
 local function setLap(lap)
  if lap > totalLaps then
   lapLabel.Text = "¡CARRERA COMPLETADA!"
