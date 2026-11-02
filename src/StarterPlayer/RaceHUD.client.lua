@@ -144,11 +144,10 @@ local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
  local midpoint = (p1 + p2) * 0.5
  local line = Instance.new("Frame")
  line.Name = name
- -- Roblox rota el GuiObject alrededor de su centro. Posicionarlo en el
- -- punto medio evita el desplazamiento lateral que dejaba los tramos separados.
  line.AnchorPoint = Vector2.new(0.5, 0.5)
  line.Position = UDim2.fromOffset(midpoint.X, midpoint.Y)
- line.Size = UDim2.fromOffset(delta.Magnitude, thickness)
+ -- Un pequeño solapamiento evita huecos entre tramos consecutivos.
+ line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.6, thickness)
  line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
  line.BackgroundColor3 = color
  line.BorderSizePixel = 0
@@ -161,22 +160,6 @@ local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
 end
 
 local trackSegments = {}
-local function makeTrackJoint(name, point, diameter, color, zIndex)
- local joint = Instance.new("Frame")
- joint.Name = name
- joint.AnchorPoint = Vector2.new(0.5, 0.5)
- joint.Position = UDim2.fromOffset(point.X, point.Y)
- joint.Size = UDim2.fromOffset(diameter, diameter)
- joint.BackgroundColor3 = color
- joint.BorderSizePixel = 0
- joint.ZIndex = zIndex
- joint.Parent = mapArea
- local corner = Instance.new("UICorner")
- corner.CornerRadius = UDim.new(1, 0)
- corner.Parent = joint
- return joint
-end
-
 local function drawTrack()
  for _, segment in ipairs(trackSegments) do
   if segment.Parent then segment:Destroy() end
@@ -190,19 +173,24 @@ local function drawTrack()
   mappedPoints[i] = mapPosition(worldPoint)
  end
 
- -- Los tramos usan el mismo ancho visual y las uniones redondas
- -- representan los hubs circulares que conectan los segmentos reales.
  for i = 1, #mappedPoints - 1 do
   local p1, p2 = mappedPoints[i], mappedPoints[i + 1]
   table.insert(trackSegments, makeTrackStroke("TrackBorder", p1, p2, 20, borderColor, 1))
   table.insert(trackSegments, makeTrackStroke("TrackAsphalt", p1, p2, 14, asphaltColor, 2))
  end
 
- for i = 1, #mappedPoints do
-  local point = mappedPoints[i]
-  table.insert(trackSegments, makeTrackJoint("TrackJointBorder", point, 20, borderColor, 3))
-  table.insert(trackSegments, makeTrackJoint("TrackJointAsphalt", point, 14, asphaltColor, 4))
- end
+ -- Meta: la pista cruza la recta principal en X=0, Z=70.
+ local finishCenter = mapPosition(Vector2.new(0, 70))
+ local finishLine = Instance.new("Frame")
+ finishLine.Name = "MiniMapFinishLine"
+ finishLine.AnchorPoint = Vector2.new(0.5, 0.5)
+ finishLine.Position = UDim2.fromOffset(finishCenter.X, finishCenter.Y)
+ finishLine.Size = UDim2.fromOffset(3, 20)
+ finishLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ finishLine.BorderSizePixel = 0
+ finishLine.ZIndex = 5
+ finishLine.Parent = mapArea
+ table.insert(trackSegments, finishLine)
 end
 
 drawTrack()
