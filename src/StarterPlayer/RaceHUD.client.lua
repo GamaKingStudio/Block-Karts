@@ -81,6 +81,10 @@ wrongWayLabel.TextStrokeTransparency = 0.25
 wrongWayLabel.Visible = false
 
 
+local currentSeat
+local currentChassis
+local renderConnection
+
 -- ==========================================================
 -- LEADERBOARD + MINIMAPA
 -- ==========================================================
@@ -247,10 +251,6 @@ end)
 wrongWayEvent.OnClientEvent:Connect(function(isWrongWay)
  wrongWayLabel.Visible = isWrongWay
 end)
-
-local currentSeat
-local currentChassis
-local renderConnection
 
 local function updateSpeed()
  if not currentChassis or not currentChassis.Parent then
