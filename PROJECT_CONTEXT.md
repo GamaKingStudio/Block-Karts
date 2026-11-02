@@ -1,6 +1,6 @@
 # BLOXY KARTS - Project Context
 
-Última actualización: Noviembre de 2026
+Última actualización: 2 de noviembre de 2026
 
 Motor: Roblox Studio (Luau)
 
@@ -10,7 +10,7 @@ Estudio: GamaKingStudio
 
 Repositorio: https://github.com/GamaKingStudio/Block-Karts
 
-Rama de trabajo: `feature/kart-prototype`
+Rama de trabajo actual: `recovery/stable-handling` (rama aislada para correcciones y validación del manejo y circuito).
 
 Rama protegida: `main`
 
@@ -95,8 +95,8 @@ BLOXY KARTS es un juego de carreras arcade para Roblox, con estética low-poly i
 ### Reglas de trabajo
 
 - Extender el proyecto existente; evitar reescrituras completas de módulos funcionales.
-- Todo nuevo desarrollo debe integrarse en la rama `feature/kart-prototype`.
-- No realizar merges ni modificaciones en la rama `main` sin autorización explícita.
+- Todo nuevo desarrollo debe integrarse en la rama de trabajo autorizada para la tarea. Para la iteración actual de recuperación y estabilidad se utiliza `recovery/stable-handling`.
+- No realizar merges ni modificaciones en la rama `main` sin autorización explícita. Mantener los cambios de esta iteración exclusivamente en `recovery/stable-handling`.
 - Mantener estricta compatibilidad con Rojo (versión 7.7.1).
 - Limitar las tareas exploratorias autónomas para optimizar el consumo de recursos y tiempo de desarrollo.
 - Antes de modificar código, revisar la implementación existente y sus dependencias.
@@ -185,6 +185,10 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Mitigación de Z-Fighting:** Escalado micrométrico en el eje Y (deltas de ~0.02 studs) para separar arena, asfalto, marcas viales y límites de pista.
 
+**Pianos y guardarraíles (estado de la rama `recovery/stable-handling`):** Pianos alternados rojo/blanco de 1.6 studs de ancho, con recorrido redondeado mediante curvas Bézier y muestreo de 12 pasos; el usuario confirmó que su apariencia quedó correcta. Guardarraíles metálicos continuos con postes y dos perfiles horizontales; el usuario confirmó que quedaron perfectos. No modificar estos elementos aprobados sin una solicitud expresa.
+
+**Relleno de arena en uniones (implementación reciente, pendiente de prueba en Studio):** Se sustituyó la franja estrecha de arena que no cubría los huecos por discos cilíndricos de arena de diámetro `trackWidth + 3.0`, centrados en los waypoints y colocados por debajo del asfalto. Su objetivo es rellenar los huecos irregulares que dejan los tramos rectos y los hubs circulares en las curvas sin cubrir visualmente el asfalto. Los discos se generan una sola vez por esquina. Commit: `0271e73d0dbfe89a588cc8521e9d291aab4f57b0`. Esta solución está implementada en código, pero todavía no está probada en Roblox Studio; comprobar especialmente que no aparezcan parches circulares visibles fuera de los huecos ni artefactos de solapamiento.
+
 ### Elementos estructurales
 
 **Pit Lane (Calle de Boxes):** Carril paralelo al sur de la recta principal. Incluye muro divisor físico, cajones de detención, un WedgePart para sellar la geometría en la entrada y un carril de incorporación fluida a la vía principal.
@@ -208,7 +212,10 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ## 8. Próximos pasos (Roadmap técnico)
 
-### Fase actual: HUD y sistemas de lógica de carrera
+### Fase actual: validación visual del circuito y sistemas de lógica de carrera
+
+- Probar en Roblox Studio el relleno de arena bajo las uniones de los pianos en curvas.
+- Revisar si persisten solapamientos visuales entre piezas de piano; no dar por resuelto este punto hasta la confirmación del usuario.
 
 **Implementación de la Interfaz de Usuario (HUD):**
 - Desarrollo de cronómetro.
@@ -257,8 +264,8 @@ La prioridad es consolidar primero la experiencia de conducción y el ciclo prin
 ### Gemini Desarrollador
 
 - Revisar el estado real del repositorio antes de implementar una tarea.
-- Confirmar la rama activa `feature/kart-prototype`.
-- No modificar `main` ni realizar merges sin autorización explícita.
+- Confirmar la rama activa autorizada para la tarea; en la iteración actual es `recovery/stable-handling`.
+- No modificar `main` ni realizar merges sin autorización explícita. Para la iteración actual, trabajar solo en `recovery/stable-handling`.
 - Revisar los archivos y dependencias involucrados antes de realizar cambios.
 - Implementar únicamente el alcance aprobado.
 - Mantener compatibilidad con Rojo 7.7.1.
