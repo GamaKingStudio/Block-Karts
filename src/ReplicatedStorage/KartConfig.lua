@@ -8,9 +8,13 @@ local KartConfig = {
 	LateralGrip = 8.5,
 	SteeringRate = math.rad(68),
 	MinimumSteeringSpeed = 3,
-	CameraOffset = Vector3.new(0, 8, 18), -- Local +Z is behind the vehicle's forward (-Z) axis.
+	CameraOffset = Vector3.new(0, 8, 18),
 	CameraLookAhead = 7,
-	SpawnSpacing = 18,
+	SpawnSpacing = 12,
+	TOTAL_LAPS = 3,
+	DEBUG_CHECKPOINTS = false,
+	WRONG_WAY_DOT_THRESHOLD = -0.2,
+	RESPAWN_Y_OFFSET = 3.0,
+	CHECKPOINT_DEBOUNCE_TIME = 0.4,
 }
-
 return KartConfig

@@ -10,6 +10,26 @@ print(("[BLOXY-KART][CLIENT][LOCAL-SCRIPT-ENTER] script=%s parent=%s player=%s")
 	script:GetFullName(), script.Parent:GetFullName(), player.Name
 ))
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
+local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
+local checkpointPassedRemote = raceEvents:WaitForChild("CheckpointPassed")
+local lapCompletedRemote = raceEvents:WaitForChild("LapCompleted")
+local wrongWayRemote = raceEvents:WaitForChild("WrongWayStateChanged")
+local requestRespawnRemote = raceEvents:WaitForChild("RequestRespawn")
+
+checkpointPassedRemote.OnClientEvent:Connect(function(cpIndex, totalCps)
+	print(("[BLOXY-KART][RACE] Checkpoint %d / %d"):format(cpIndex, totalCps))
+end)
+lapCompletedRemote.OnClientEvent:Connect(function(lap, lapTime, isBest)
+	print(("[BLOXY-KART][RACE] Vuelta %d: %.2fs (mejor: %s)"):format(lap, lapTime, tostring(isBest)))
+end)
+wrongWayRemote.OnClientEvent:Connect(function(isWrongWay)
+	if isWrongWay then warn("[BLOXY-KART][RACE] DIRECCIÓN CONTRARIA") end
+end)
+local function onRespawnAction(_, inputState)
+	if inputState == Enum.UserInputState.Begin then requestRespawnRemote:FireServer() end
+	return Enum.ContextActionResult.Sink
+end
+
 local controlRemote = ReplicatedStorage:WaitForChild("KartControl", 15)
 if not controlRemote then
 	warn("[BLOXY-KART][CLIENT][REMOTE-MISSING] KartControl no apareció en ReplicatedStorage tras 15 segundos.")
@@ -34,7 +54,7 @@ local driveKeys = {
 	Enum.KeyCode.S, Enum.KeyCode.Down,
 	Enum.KeyCode.A, Enum.KeyCode.Left,
 	Enum.KeyCode.D, Enum.KeyCode.Right,
-	Enum.KeyCode.Space,
+	Enum.KeyCode.Space, Enum.KeyCode.R,
 }
 local keyToControl = {
 	[Enum.KeyCode.W] = "forward", [Enum.KeyCode.Up] = "forward",
@@ -435,6 +455,10 @@ end
 RunService.Heartbeat:Connect(simulateOwnedKart)
 
 local function onDriveAction(_, inputState, inputObject)
+	if inputObject.KeyCode == Enum.KeyCode.R and inputState == Enum.UserInputState.Begin then
+		requestRespawnRemote:FireServer()
+		return Enum.ContextActionResult.Sink
+	end
 	local control = keyToControl[inputObject.KeyCode]
 	print(("[BLOXY-KART][CLIENT][ACTION] key=%s state=%s mapped=%s seated=%s"):format(
 		inputObject.KeyCode.Name, inputState.Name, tostring(control), tostring(currentSeat ~= nil)
