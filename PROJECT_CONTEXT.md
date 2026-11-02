@@ -204,11 +204,11 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
 
-**Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `91930867309243`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El código conserva los colores, materiales y texturas del modelo importado; no aplica recoloración automática. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
+**Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `139237715567825`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El código conserva los colores, materiales y texturas del modelo importado; no aplica recoloración automática. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
 
 ### Registro de integración de palmera (2 de noviembre de 2026)
 
-- El usuario publicó desde Blender/Roblox Studio una versión completa del modelo de palmera (no solamente el Mesh), con asset ID `91930867309243`. El usuario confirmó que la importación completa corrigió el problema de geometría/apariencia del modelo.
+- El usuario publicó desde Blender/Roblox Studio una versión completa del modelo de palmera (no solamente el Mesh), con asset ID `139237715567825`. El usuario confirmó que la importación completa corrigió el problema de geometría/apariencia del modelo.
 - `KartService.lua` utiliza ese asset ID y conserva la normalización de altura, el ajuste por bounding box, el pivote y el respaldo procedural.
 - En la prueba posterior, el usuario detectó que toda la palmera aparecía verde. La causa identificada en el código era la recoloración automática de cada `BasePart`, junto con la asignación forzada de `SmoothPlastic`.
 - Cambio de esta actualización: se eliminó la recoloración y la sustitución forzada de materiales del modelo importado. El script ahora conserva los colores, materiales y texturas configurados en el asset y solo ajusta propiedades físicas (anclaje, colisión, contacto, consulta y masa).
@@ -230,7 +230,7 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-- **Palmeras del Beach Resort:** el asset completo `91930867309243` se carga dinámicamente y se normaliza por altura real (objetivo aproximado 14–17 studs), con ajuste por bounding box y respaldo procedural. El código conserva los colores, materiales y texturas del modelo importado; se eliminó la recoloración automática que dejaba toda la palmera verde. Pendiente probar en Roblox Studio para confirmar colores, materiales, tamaño, orientación y apoyo en el suelo.
+- **Palmeras del Beach Resort:** el asset completo `139237715567825` se carga dinámicamente y se normaliza por altura real (objetivo aproximado 14–17 studs), con ajuste por bounding box y respaldo procedural. El código conserva los colores, materiales y texturas del modelo importado; se eliminó la recoloración automática que dejaba toda la palmera verde. Pendiente probar en Roblox Studio para confirmar colores, materiales, tamaño, orientación y apoyo en el suelo.
 
 - Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
@@ -336,9 +336,9 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 
 ### Actualización de integración de palmera (2 de noviembre de 2026)
 
-- El usuario publicó una nueva versión unificada de la palmera desde Blender/Roblox Studio con asset ID `91930867309243`. El modelo se ve correctamente en Studio según confirmación del usuario.
+- El usuario publicó una nueva versión unificada de la palmera desde Blender/Roblox Studio con asset ID `139237715567825`. El modelo se ve correctamente en Studio según confirmación del usuario.
 - Se detectó que `KartService.lua` todavía apuntaba al asset anterior `91776332943612`; por tanto, el juego no estaba cargando el modelo nuevo.
-- Cambio aplicado en esta actualización: `PALM_ASSET_ID` debe apuntar a `91930867309243`. Se conserva sin cambios la lógica actual de normalización de altura, pivote, posicionamiento y respaldo procedural para aislar la causa antes de ajustar escala o bounds.
+- Cambio aplicado en esta actualización: `PALM_ASSET_ID` debe apuntar a `139237715567825`. Se conserva sin cambios la lógica actual de normalización de altura, pivote, posicionamiento y respaldo procedural para aislar la causa antes de ajustar escala o bounds.
 - No se ha probado todavía la carga del nuevo asset dentro de la experiencia ni su apariencia en Play de Roblox Studio. El reporte de menor lag del usuario es preliminar; la apariencia anómala debe reevaluarse una vez que el juego cargue el ID correcto.
 - Archivos de esta actualización: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
 
@@ -353,10 +353,21 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 
 ### Actualización de ID de palmera y sincronización (2 de noviembre de 2026)
 
-- El usuario confirmó que la palmera que debe utilizar el juego es el asset `91930867309243`, que actualmente se ve completamente verde dentro de la experiencia.
+- El usuario confirmó que la palmera que debe utilizar el juego es el asset `139237715567825`, que actualmente se ve completamente verde dentro de la experiencia.
 - Se actualizó `src/ServerScriptService/KartService.lua` para cargar ese ID, manteniendo la corrección anterior que preserva los colores, materiales y texturas originales del modelo importado.
 - Se conserva la configuración física de las piezas, la normalización de escala, el posicionamiento por bounding box y el respaldo procedural.
 - El cambio de ID y la preservación visual están implementados en el código del repositorio. Todavía no se ha probado la carga ni la apariencia en Roblox Studio; esa validación queda pendiente.
 - Se registra que la carpeta local del usuario tenía este cambio de ID sin commit, lo que impidió ejecutar `git pull`. La solución se publica directamente en `recovery/stable-handling` para que, al actualizar localmente, ambas correcciones queden integradas.
 - Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
 - Pruebas realizadas: inspección del diff y comprobación del ID configurado y de que el bloque de recoloración/forzado de material no está presente. No se ejecutó Roblox Studio ni pruebas de runtime.
+
+
+### Actualización de palmera separada en tronco y hojas (2 de noviembre de 2026)
+
+- El usuario importó desde Blender a Roblox Studio una nueva versión del modelo y confirmó que el asset publicado tiene ID `139237715567825`.
+- El modelo ahora contiene dos piezas independientes confirmadas por el usuario: `Palm_Trunk` (tronco) y `Palm_Leaves` (hojas).
+- Se actualizó `src/ServerScriptService/KartService.lua` para cargar el nuevo ID. La lógica existente clona el modelo y configura las propiedades físicas de cada descendiente `BasePart`, por lo que ambas piezas quedan incluidas sin requerir una reconstrucción del modelo.
+- Se conserva la apariencia importada: el código no recolorea las piezas ni fuerza un material visual.
+- Estado: ID y estructura del asset confirmados por el usuario en Roblox Studio; integración de código publicada pendiente de prueba dentro de la experiencia. No se ha confirmado todavía que las dos piezas conserven sus materiales/texturas al cargar mediante `InsertService:LoadAsset`.
+- Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
+- Pruebas realizadas: inspección del código y confirmación del usuario sobre los nombres de las dos piezas en el modelo importado. No se ejecutó Roblox Studio ni una prueba de runtime.
