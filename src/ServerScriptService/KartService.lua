@@ -752,6 +752,8 @@ end
 local TOTAL_INTERMEDIATE_CHECKPOINTS = 14
 
 local function initPlayerRaceData(player, spawnCFrame)
+	player:SetAttribute("RaceLap", 1)
+	player:SetAttribute("RaceCheckpoint", 0)
 	raceData[player] = {
 		CurrentLap = 1,
 		NextCheckpoint = 1,
@@ -807,6 +809,8 @@ local function onCheckpointTouched(hitPart, triggerPart)
 
 			lapCompletedRemote:FireClient(player, pData.CurrentLap, lapTime, isBest)
 			pData.CurrentLap = pData.CurrentLap + 1
+			player:SetAttribute("RaceLap", pData.CurrentLap)
+			player:SetAttribute("RaceCheckpoint", 0)
 			pData.NextCheckpoint = 1
 			pData.CanFinishLap = false
 			pData.LapStartTime = now
@@ -824,6 +828,7 @@ local function onCheckpointTouched(hitPart, triggerPart)
 		pData.LastTriggerTime = now
 		pData.LastValidCFrame = triggerPart.CFrame
 		pData.NextCheckpoint = pData.NextCheckpoint + 1
+		player:SetAttribute("RaceCheckpoint", cpIndex)
 		checkpointPassedRemote:FireClient(player, cpIndex, TOTAL_INTERMEDIATE_CHECKPOINTS)
 
 		if pData.NextCheckpoint > TOTAL_INTERMEDIATE_CHECKPOINTS then
