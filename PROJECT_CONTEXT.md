@@ -187,7 +187,7 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Pianos y guardarraíles (estado de la rama `recovery/stable-handling`):** Pianos alternados rojo/blanco de 1.6 studs de ancho, con recorrido redondeado mediante curvas Bézier y muestreo de 12 pasos; el usuario confirmó que su apariencia quedó correcta. Guardarraíles metálicos continuos con postes y dos perfiles horizontales; el usuario confirmó que quedaron perfectos. No modificar estos elementos aprobados sin una solicitud expresa.
 
-**Relleno de arena en uniones (implementación reciente, pendiente de prueba en Studio):** Se añadieron discos cilíndricos de arena de diámetro `trackWidth + 2.8`, centrados en los waypoints. La primera versión quedó oculta bajo `IslandSand` porque su cara superior estaba por debajo del nivel del terreno; el usuario confirmó que visualmente no cambió nada. Corrección posterior: se elevó el centro a `yGround + 0.02` y el grosor a `0.04`, de modo que la superficie quede sobre el terreno y debajo del asfalto. Commit inicial: `0271e73d0dbfe89a588cc8521e9d291aab4f57b0`; corrección de altura: `f9ace02002e32d9d2033482914d5433865f48c65`. Esta segunda versión está implementada en código, pero aún requiere prueba visual en Roblox Studio.
+**Relleno de arena en uniones (pendiente):** Se probaron discos cilíndricos de arena centrados en los waypoints para cubrir huecos entre el asfalto y los pianos. La primera versión quedó oculta bajo `IslandSand`; al elevarla, produjo grandes círculos de arena e interferencia visual en las curvas, según la prueba del usuario. Se retiró por completo ese bloque de discos en el commit actual. El relleno correcto sigue pendiente y debe ajustarse a la geometría real del borde de pista, sin círculos completos ni solapamientos. No modificar los pianos ni guardarraíles aprobados.
 
 ### Elementos estructurales
 
@@ -214,8 +214,8 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-- Probar en Roblox Studio el relleno de arena bajo las uniones de los pianos en curvas.
-- Revisar si persisten solapamientos visuales entre piezas de piano; no dar por resuelto este punto hasta la confirmación del usuario.
+- Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
+- Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
 
 **Implementación de la Interfaz de Usuario (HUD):**
 - Desarrollo de cronómetro.
