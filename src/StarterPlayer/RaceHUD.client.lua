@@ -182,6 +182,9 @@ playerMarker.AnchorPoint = Vector2.new(0.5, 0.5)
 playerMarker.BackgroundColor3 = Color3.fromRGB(255, 197, 72)
 playerMarker.BorderSizePixel = 0
 playerMarker.Image = ""
+playerMarker.ImageTransparency = 0
+playerMarker.BackgroundTransparency = 0
+playerMarker.ZIndex = 10
 playerMarker.Parent = mapArea
 local markerCorner = Instance.new("UICorner")
 markerCorner.CornerRadius = UDim.new(1, 0)
@@ -192,7 +195,7 @@ markerStroke.Thickness = 2
 markerStroke.Parent = playerMarker
 local markerArrow = label(mapArea, "PlayerDirection", UDim2.fromOffset(22, 22), UDim2.fromOffset(0, 0), "▲", 15, Color3.fromRGB(255, 220, 90))
 markerArrow.AnchorPoint = Vector2.new(0.5, 0.5)
-markerArrow.ZIndex = 3
+markerArrow.ZIndex = 11
 playerMarker.ZIndex = 2
 
 local thumbnailReady = false
@@ -200,7 +203,7 @@ task.spawn(function()
  local ok, imageUrl = pcall(function()
   return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
  end)
- if ok then playerMarker.Image = imageUrl; thumbnailReady = true end
+ if ok then playerMarker.Image = imageUrl; playerMarker.ImageTransparency = 0; thumbnailReady = true end
 end)
 
 local function refreshLeaderboard()
@@ -292,6 +295,7 @@ local function updateSpeed()
  end
  local speed = math.abs(currentChassis.AssemblyLinearVelocity:Dot(currentChassis.CFrame.LookVector))
  speedValue.Text = tostring(math.floor(speed * 1.008 + 0.5))
+ updateMiniMap()
  if lapStartedAt then
   timerLabel.Text = formatTime(os.clock() - lapStartedAt)
  end
