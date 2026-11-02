@@ -382,9 +382,30 @@ local function buildTestCourse()
 		spawnTikiTorch(tp)
 	end
 
-	-- Si existe un modelo importado llamado PalmImported en ReplicatedStorage,
-	-- se utiliza como reemplazo visual. La física del circuito no depende de él.
+	-- Carga la palmera publicada. Si Roblox no permite cargar el recurso (permisos,
+	-- moderación o ID incorrecto), se conserva la palmera procedural como respaldo.
 	local importedPalmTemplate = ReplicatedStorage:FindFirstChild("PalmImported")
+	if not importedPalmTemplate then
+		local InsertService = game:GetService("InsertService")
+		local assetId = 87753578406826
+		local ok, assetOrError = pcall(function()
+			return InsertService:LoadAsset(assetId)
+		end)
+		if ok and assetOrError then
+			local loadedAsset = assetOrError
+			local candidate = loadedAsset:FindFirstChildWhichIsA("Model", true)
+			if candidate then
+				importedPalmTemplate = candidate:Clone()
+				importedPalmTemplate.Name = "PalmImported"
+				importedPalmTemplate.Parent = ReplicatedStorage
+			else
+				warn("[BLOXY-KART][PALM] El recurso publicado no contiene un Model; se usará la palmera de respaldo.")
+			end
+			loadedAsset:Destroy()
+		else
+			warn(("[BLOXY-KART][PALM] No se pudo cargar el recurso %d: %s. Se usará la palmera de respaldo."):format(assetId, tostring(assetOrError)))
+		end
+	end
 
 	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
 		scale = scale or 1.0
