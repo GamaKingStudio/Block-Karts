@@ -158,17 +158,47 @@ local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
 end
 
 local trackSegments = {}
+local function makeTrackJoint(name, point, diameter, color, zIndex)
+ local joint = Instance.new("Frame")
+ joint.Name = name
+ joint.AnchorPoint = Vector2.new(0.5, 0.5)
+ joint.Position = UDim2.fromOffset(point.X, point.Y)
+ joint.Size = UDim2.fromOffset(diameter, diameter)
+ joint.BackgroundColor3 = color
+ joint.BorderSizePixel = 0
+ joint.ZIndex = zIndex
+ joint.Parent = mapArea
+ local corner = Instance.new("UICorner")
+ corner.CornerRadius = UDim.new(1, 0)
+ corner.Parent = joint
+ return joint
+end
+
 local function drawTrack()
  for _, segment in ipairs(trackSegments) do
   if segment.Parent then segment:Destroy() end
  end
  table.clear(trackSegments)
 
- for i = 1, #mapPoints - 1 do
-  local p1, p2 = mapPosition(mapPoints[i]), mapPosition(mapPoints[i + 1])
-  -- Borde exterior + superficie de asfalto.
-  table.insert(trackSegments, makeTrackStroke("TrackBorder", p1, p2, 19, Color3.fromRGB(5, 9, 14), 1))
-  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", p1, p2, 14, Color3.fromRGB(105, 117, 130), 2))
+ local borderColor = Color3.fromRGB(5, 9, 14)
+ local asphaltColor = Color3.fromRGB(82, 91, 103)
+ local mappedPoints = {}
+ for i, worldPoint in ipairs(mapPoints) do
+  mappedPoints[i] = mapPosition(worldPoint)
+ end
+
+ -- Los tramos usan el mismo ancho visual y las uniones redondas
+ -- representan los hubs circulares que conectan los segmentos reales.
+ for i = 1, #mappedPoints - 1 do
+  local p1, p2 = mappedPoints[i], mappedPoints[i + 1]
+  table.insert(trackSegments, makeTrackStroke("TrackBorder", p1, p2, 20, borderColor, 1))
+  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", p1, p2, 14, asphaltColor, 2))
+ end
+
+ for i = 1, #mappedPoints do
+  local point = mappedPoints[i]
+  table.insert(trackSegments, makeTrackJoint("TrackJointBorder", point, 20, borderColor, 3))
+  table.insert(trackSegments, makeTrackJoint("TrackJointAsphalt", point, 14, asphaltColor, 4))
  end
 end
 
@@ -196,7 +226,7 @@ markerStroke.Parent = playerMarker
 local markerArrow = label(mapArea, "PlayerDirection", UDim2.fromOffset(22, 22), UDim2.fromOffset(0, 0), "▲", 15, Color3.fromRGB(255, 220, 90))
 markerArrow.AnchorPoint = Vector2.new(0.5, 0.5)
 markerArrow.ZIndex = 11
-playerMarker.ZIndex = 2
+playerMarker.ZIndex = 10
 
 local thumbnailReady = false
 task.spawn(function()
