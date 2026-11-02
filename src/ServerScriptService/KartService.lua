@@ -312,17 +312,22 @@ local function buildTestCourse()
 
 
 	-- ==========================================================
-	-- BORDES DE PISTA: PIANOS ROJO/BLANCO Y BARRERAS
+	-- ==========================================================
+	-- BORDES DE PISTA: PIANOS Y DEFENSAS METÁLICAS
 	-- ==========================================================
 	local curbWidth = 1.8
 	local curbHeight = 0.14
 	local curbOffset = trackWidth / 2 - curbWidth / 2
 	local curbTileLength = 4.0
-	local barrierOffset = trackWidth / 2 + 1.25
-	local barrierHeight = 2.4
-	local barrierThickness = 0.9
-	local barrierModuleLength = 8.0
-	local curbColors = { C_RED, C_WHITE }
+	local guardrailOffset = trackWidth / 2 + 1.8
+	local guardrailPostSpacing = 8.0
+	local guardrailPostHeight = 1.75
+	local guardrailPostWidth = 0.32
+	local guardrailBeamThickness = 0.22
+	local guardrailBeamHeight = 0.24
+	local guardrailColors = { C_RED, C_WHITE }
+	local C_GUARDRAIL = Color3.fromRGB(155, 165, 172)
+	local C_GUARDRAIL_DARK = Color3.fromRGB(95, 105, 112)
 
 	for i = 1, #waypoints - 1 do
 		local p1 = waypoints[i]
@@ -332,42 +337,66 @@ local function buildTestCourse()
 		local mid = (p1 + p2) / 2
 		local edgeCF = CFrame.lookAt(mid, p2)
 
-		-- Pianos planos sobre el asfalto, alternando rojo y blanco.
-		local curbCount = math.floor(length / curbTileLength)
+		-- Pianos: piezas separadas, sin prolongación ni solapamiento.
+		-- Se deja un pequeño margen al inicio y al final de cada tramo.
+		local usableCurbLength = math.max(0, length - 1.0)
+		local curbCount = math.floor(usableCurbLength / curbTileLength)
 		for sideIndex, side in ipairs({ -1, 1 }) do
 			for tileIndex = 1, curbCount do
-				local zOffset = -length / 2 + (tileIndex - 0.5) * curbTileLength
-				local tileCF = edgeCF * CFrame.new(side * curbOffset, 0.105, zOffset)
+				local zOffset = -usableCurbLength / 2 + (tileIndex - 0.5) * curbTileLength
+				local tileCF = edgeCF * CFrame.new(side * curbOffset, 0.115, zOffset)
 				local tile = makePart(
 					course,
 					("Kerb_%d_%d_%d"):format(i, sideIndex, tileIndex),
-					Vector3.new(curbWidth, curbHeight, curbTileLength + 0.04),
+					Vector3.new(curbWidth, curbHeight, curbTileLength - 0.06),
 					tileCF,
-					curbColors[((tileIndex - 1) % #curbColors) + 1],
+					guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
 					Enum.Material.SmoothPlastic
 				)
 				tile.CanCollide = false
 				tile.CanTouch = false
+				 tile.CanQuery = false
 			end
 		end
 
-		-- Barreras modulares sólidas por fuera de ambos bordes.
-		local barrierCount = math.max(1, math.ceil(length / barrierModuleLength))
-		local moduleLength = length / barrierCount + 0.12
-		for sideIndex, side in ipairs({ -1, 1 }) do
-			for moduleIndex = 1, barrierCount do
-				local zOffset = -length / 2 + (moduleIndex - 0.5) * (length / barrierCount)
-				local moduleCF = edgeCF * CFrame.new(side * barrierOffset, barrierHeight / 2, zOffset)
-				local barrier = makePart(
-					course,
-					("TrackBarrier_%d_%d_%d"):format(i, sideIndex, moduleIndex),
-					Vector3.new(barrierThickness, barrierHeight, moduleLength),
-					moduleCF,
-					curbColors[((moduleIndex - 1) % #curbColors) + 1],
-					Enum.Material.Concrete
-				)
-				barrier.CanCollide = true
-				barrier.CanTouch = false
+		-- Guardarraíl tipo carretera: postes y dos perfiles metálicos
+		-- longitudinales. Los extremos se retraen para que las defensas
+		-- de los segmentos contiguos no se atraviesen en las esquinas.
+		local endInset = math.min(2.0, length * 0.12)
+		local railLength = length - endInset * 2
+		if railLength > 2 then
+			local postCount = math.max(1, math.floor(railLength / guardrailPostSpacing))
+			local postStep = railLength / postCount
+
+			for sideIndex, side in ipairs({ -1, 1 }) do
+				local sideOffset = side * guardrailOffset
+
+				for postIndex = 0, postCount do
+					local zOffset = -railLength / 2 + postIndex * postStep
+					local postCF = edgeCF * CFrame.new(sideOffset, guardrailPostHeight / 2, zOffset)
+					local post = makePart(
+						course,
+						("GuardrailPost_%d_%d_%d"):format(i, sideIndex, postIndex),
+						Vector3.new(guardrailPostWidth, guardrailPostHeight, guardrailPostWidth),
+						postCF,
+						C_GUARDRAIL_DARK,
+						Enum.Material.Metal
+					)
+					post.CanTouch = false
+				end
+
+				for railIndex, railY in ipairs({ 1.05, 1.58 }) do
+					local railCF = edgeCF * CFrame.new(sideOffset, railY, 0)
+					local rail = makePart(
+						course,
+						("GuardrailBeam_%d_%d_%d"):format(i, sideIndex, railIndex),
+						Vector3.new(guardrailBeamThickness, guardrailBeamHeight, railLength),
+						railCF,
+						C_GUARDRAIL,
+						Enum.Material.Metal
+					)
+					rail.CanTouch = false
+				end
 			end
 		end
 	end
