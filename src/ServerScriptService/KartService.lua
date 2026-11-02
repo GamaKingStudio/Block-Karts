@@ -382,8 +382,43 @@ local function buildTestCourse()
 		spawnTikiTorch(tp)
 	end
 
+	-- Si existe un modelo importado llamado PalmImported en ReplicatedStorage,
+	-- se utiliza como reemplazo visual. La física del circuito no depende de él.
+	local importedPalmTemplate = ReplicatedStorage:FindFirstChild("PalmImported")
+
 	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
 		scale = scale or 1.0
+
+		if importedPalmTemplate and importedPalmTemplate:IsA("Model") then
+			local palm = importedPalmTemplate:Clone()
+			palm.Name = "PalmImported"
+			palm.Parent = course
+
+			-- Normaliza el alto del modelo a una palmera de aproximadamente 18 studs.
+			local _, originalSize = palm:GetBoundingBox()
+			if originalSize.Y > 0 then
+				palm:ScaleTo((18 * scale) / originalSize.Y)
+			end
+
+			-- Las palmeras son decoración: no deben interferir con los karts.
+			for _, descendant in ipairs(palm:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = true
+					descendant.CanCollide = false
+					descendant.CanTouch = false
+					descendant.CanQuery = false
+				end
+			end
+
+			local yaw = CFrame.Angles(0, math.rad(tiltYaw or 0), 0)
+			palm:PivotTo(CFrame.new(pos) * yaw)
+			local boxCFrame, boxSize = palm:GetBoundingBox()
+			local bottomY = boxCFrame.Position.Y - boxSize.Y / 2
+			palm:PivotTo(palm:GetPivot() + Vector3.new(0, pos.Y - bottomY, 0))
+			return
+		end
+
+		-- Respaldo actual: mantiene la ambientación si todavía no se ha publicado el FBX.
 		local trunkH = 15 * scale
 		local palmBaseCF = CFrame.new(pos) * CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
 		makePart(course, "PalmTrunk", Vector3.new(1.8 * scale, trunkH, 1.8 * scale), palmBaseCF * CFrame.new(0, trunkH / 2, 0), C_WOOD, Enum.Material.Wood)
