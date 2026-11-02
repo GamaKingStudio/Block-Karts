@@ -136,11 +136,18 @@ Servicios: Roblox Studio, VS Code, Git/GitHub, Rojo CLI 7.7.1.
 
 El proyecto se encuentra en fase de prototipo jugable, con un circuito base y un sistema de físicas de karts funcional, según el estado técnico documentado.
 
+### Tipografía e identidad visual del HUD
+
+- `src/ReplicatedStorage/BloxyTypography.lua`: módulo central de tipografía. Expone los roles `Bold` y `Light` para mantener una jerarquía consistente en la interfaz.
+- **Jerarquía prevista:** Bold para cuenta regresiva, vuelta actual, cronómetro, velocidad, avisos y títulos de panel; Light para etiquetas, unidades, checkpoints, mejor tiempo y filas informativas.
+- **Estado actual:** la integración del HUD utiliza temporalmente la familia nativa Gotham SSm con pesos Bold y Light mediante `FontFace`. Los archivos BLOXY `.ttf` del usuario aún no están incorporados como assets de Roblox; por tanto, la tipografía BLOXY real está pendiente de publicación/obtención de IDs y sustitución de la familia de respaldo. No se han inventado IDs ni se afirma que BLOXY esté aplicada.
+
 ### Archivos principales en uso
 
 - `src/ServerScriptService/KartService.lua`: Controlador del servidor. Gestiona la generación del entorno, spawn de jugadores y ensamblaje de los karts.
 - `src/ServerScriptService/KartBootstrap.server.lua`: Punto de entrada del servidor.
 - `src/ReplicatedStorage/KartConfig.lua`: Módulo de datos (parámetros físicos, multiplicadores, configuración de cámara).
+- `src/ReplicatedStorage/BloxyTypography.lua`: Roles tipográficos centralizados para el HUD (respaldo Gotham SSm hasta disponer de los assets BLOXY publicados).
 - `src/StarterPlayer/KartControls.client.lua`: Lógica del cliente. Captura de inputs y aplicación de fuerzas físicas.
 
 ### Sistemas implementados según el estado documentado
@@ -217,10 +224,10 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 - Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
 
-**Implementación de la Interfaz de Usuario (HUD):**
-- Desarrollo de cronómetro.
-- Contador de vueltas.
-- Telemetría local (velocímetro).
+**Interfaz de Usuario (HUD):**
+- Cronómetro, contador de vueltas, telemetría local, clasificación y minimapa implementados en `RaceHUD.client.lua` según el código actual.
+- Jerarquía tipográfica Bold/Light centralizada e integrada con `FontFace`, usando Gotham SSm como respaldo temporal.
+- Pendiente: publicar/obtener los IDs de BLOXY Bold y BLOXY Light e incorporarlos en `BloxyTypography.lua`; validar visualmente el resultado en Roblox Studio.
 
 **Sistema de Checkpoints (Backend):**
 - Zonas de validación vectoriales (invisibles) para certificar vueltas válidas.
