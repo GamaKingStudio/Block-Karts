@@ -312,11 +312,11 @@ local function buildTestCourse()
 
 
 	-- ==========================================================
-	-- PIANOS ROJO/BLANCO: trazado paralelo continuo al borde de pista.
+	-- PIANOS ROJO/BLANCO: rectas paralelas y arcos segmentados en curvas.
 	local curbWidth = 1.8
 	local curbHeight = 0.14
-	local curbOffset = trackWidth / 2 + 0.85
-	local curbTileLength = 4.0
+	local curbEdgeOffset = 0.9
+	local curbTileLength = 3.0
 	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
 	local guardrailPostHeight = 1.75
@@ -336,38 +336,76 @@ local function buildTestCourse()
 		return Vector3.new(-direction.Z, 0, direction.X)
 	end
 
+	-- Cada curva sigue el arco del CornerHub circular, no una diagonal entre vértices.
 	for sideIndex, side in ipairs({ -1, 1 }) do
-		local curbPoints = {}
-		for i = 1, #waypoints do
-			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
-			local nextIndex = (i == #waypoints) and 2 or (i + 1)
-			local incoming = curbDirection(waypoints[previousIndex], waypoints[i])
-			local outgoing = curbDirection(waypoints[i], waypoints[nextIndex])
-			local normalIn = curbNormal(incoming)
-			local normalOut = curbNormal(outgoing)
-			local bisector = normalIn + normalOut
-			if bisector.Magnitude < 0.001 then
-				bisector = normalOut
-			else
-				bisector = bisector.Unit
-			end
-			local denominator = math.abs(bisector:Dot(normalOut))
-			local miterDistance = curbOffset / math.max(denominator, 0.5)
-			miterDistance = math.min(miterDistance, curbOffset * 1.6)
-			curbPoints[i] = waypoints[i] + bisector * (side * miterDistance)
-		end
-		curbPoints[#waypoints] = curbPoints[1]
-
+		local cornerArcs = {}
 		for i = 1, #waypoints - 1 do
-			local a = curbPoints[i]
-			local b = curbPoints[i + 1]
+			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
+			local nextIndex = (i == #waypoints - 1) and 2 or (i + 1)
+			local center = waypoints[i]
+			local incoming = curbDirection(waypoints[previousIndex], center)
+			local outgoing = curbDirection(center, waypoints[nextIndex])
+			local turnCross = incoming.Z * outgoing.X - incoming.X * outgoing.Z
+			local radius = trackWidth / 2 + curbEdgeOffset
+			if math.abs(turnCross) > 0.001 then
+				radius = trackWidth / 2 + curbEdgeOffset * (side * (turnCross > 0 and 1 or -1))
+			end
+
+			local radialStart = curbNormal(incoming) * side
+			local radialEnd = curbNormal(outgoing) * side
+			local startAngle = math.atan2(radialStart.Z, radialStart.X)
+			local endAngle = math.atan2(radialEnd.Z, radialEnd.X)
+			local delta = endAngle - startAngle
+			if turnCross > 0 then
+				while delta < 0 do delta += math.pi * 2 end
+				while delta > math.pi do delta -= math.pi * 2 end
+			elseif turnCross < 0 then
+				while delta > 0 do delta -= math.pi * 2 end
+				while delta < -math.pi do delta += math.pi * 2 end
+			else
+				delta = 0
+			end
+
+			local arcLength = math.abs(delta) * radius
+			local steps = math.max(1, math.ceil(arcLength / 1.25))
+			local points = {}
+			for step = 0, steps do
+				local angle = startAngle + delta * (step / steps)
+				points[#points + 1] = Vector3.new(
+					center.X + math.cos(angle) * radius,
+					yGround,
+					center.Z + math.sin(angle) * radius
+				)
+			end
+			cornerArcs[i] = points
+		end
+
+		-- Recorre el circuito: arco de cada vértice y recta hasta el siguiente.
+		local pathSegments = {}
+		for i = 1, #waypoints - 1 do
+			local arc = cornerArcs[i]
+			for p = 1, #arc - 1 do
+				pathSegments[#pathSegments + 1] = { arc[p], arc[p + 1] }
+			end
+			local nextArc = cornerArcs[(i % (#waypoints - 1)) + 1]
+			local arcEnd = arc[#arc]
+			local nextArcStart = nextArc[1]
+			if (nextArcStart - arcEnd).Magnitude > 0.05 then
+				pathSegments[#pathSegments + 1] = { arcEnd, nextArcStart }
+			end
+		end
+
+		local colorTileIndex = 0
+		for segmentIndex, segmentPoints in ipairs(pathSegments) do
+			local a, b = segmentPoints[1], segmentPoints[2]
 			local segment = b - a
 			local length = segment.Magnitude
-			if length > 0.5 then
+			if length > 0.05 then
 				local direction = segment.Unit
 				local tileCount = math.max(1, math.ceil(length / curbTileLength))
 				local tileLength = length / tileCount
 				for tileIndex = 1, tileCount do
+					colorTileIndex += 1
 					local center = a + direction * ((tileIndex - 0.5) * tileLength)
 					local tileCF = CFrame.lookAt(
 						Vector3.new(center.X, yGround + 0.13, center.Z),
@@ -375,10 +413,10 @@ local function buildTestCourse()
 					)
 					local tile = makePart(
 						course,
-						("Kerb_%d_%d_%d"):format(i, sideIndex, tileIndex),
-						Vector3.new(curbWidth, curbHeight, tileLength - 0.015),
+						("Kerb_%d_%d_%d"):format(sideIndex, segmentIndex, tileIndex),
+						Vector3.new(curbWidth, curbHeight, math.max(0.05, tileLength - 0.025)),
 						tileCF,
-						guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
+						guardrailColors[((colorTileIndex - 1) % #guardrailColors) + 1],
 						Enum.Material.SmoothPlastic
 					)
 					tile.CanCollide = false
