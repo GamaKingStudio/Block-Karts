@@ -655,21 +655,10 @@ local function buildTestCourse()
 		local boxBottomY = finalBoxCFrame.Position.Y - finalBoxSize.Y / 2
 		local boxTopY = finalBoxCFrame.Position.Y + finalBoxSize.Y / 2
 
-		-- Recupera una paleta tropical si el FBX llega sin colores/materiales útiles.
+		-- Conserva los colores, materiales y texturas definidos en el modelo importado.
+		-- Aquí solo se configuran propiedades físicas para integrarlo al circuito.
 		for _, descendant in ipairs(palmModel:GetDescendants()) do
 			if descendant:IsA("BasePart") then
-				local partName = string.lower(descendant.Name)
-				local relativeHeight = (descendant.Position.Y - boxBottomY) / math.max(boxTopY - boxBottomY, 0.01)
-				if string.find(partName, "coconut") or string.find(partName, "fruit") then
-					descendant.Color = Color3.fromRGB(105, 68, 38)
-				elseif string.find(partName, "leaf") or string.find(partName, "frond") or string.find(partName, "foliage") then
-					descendant.Color = Color3.fromRGB(48, 150, 54)
-				elseif relativeHeight >= 0.56 then
-					descendant.Color = Color3.fromRGB(48, 150, 54)
-				else
-					descendant.Color = Color3.fromRGB(132, 91, 52)
-				end
-				descendant.Material = Enum.Material.SmoothPlastic
 				descendant.Anchored = true
 				descendant.CanCollide = false
 				descendant.CanTouch = false

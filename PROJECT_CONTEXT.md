@@ -204,16 +204,16 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
 
-**Vegetación:** `KartService.lua` intenta cargar el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `108576686181949`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, evitando depender de la escala interna del FBX. Se colorean las partes con una paleta tropical (hojas verdes, tronco café y cocos oscuros), se apoya según el centro de su bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. La integración del nuevo modelo está implementada, pero requiere validación visual en Roblox Studio. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración está implementada en código, pero aún requiere prueba en Roblox Studio para confirmar permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
+**Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `108576686181949`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El código conserva los colores, materiales y texturas del modelo importado; no aplica recoloración automática. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
 
-### Registro de actualización de palmera (2 de noviembre de 2026)
+### Registro de integración de palmera (2 de noviembre de 2026)
 
-- Se sustituyó el FBX anterior por el nuevo `assets/models/import/palmera.fbx` procedente de `main` (sin modificar la rama `main`).
-- Se actualizó `PALM_ASSET_ID` en `KartService.lua` a `91776332943612`.
-- Se corrigió el cálculo de la altura relativa de las piezas para que utilice el bounding box después de posicionar el modelo.
-- El FBX contiene piezas nombradas `Palm_Trunk`, `Leaf_High_*` y `Leaf_Low_*`; el código puede reconocer las hojas por nombre y mantener la diferenciación cromática.
-- Pruebas realizadas: revisión del contenido FBX y comparación de la rama antes de publicar. No se ejecutó Roblox Studio ni se verificó la carga del asset dentro de la experiencia.
-- Estado: implementado en GitHub; pendiente prueba visual y de permisos en Roblox Studio.
+- El usuario publicó desde Blender/Roblox Studio una versión completa del modelo de palmera (no solamente el Mesh), con asset ID `108576686181949`. El usuario confirmó que la importación completa corrigió el problema de geometría/apariencia del modelo.
+- `KartService.lua` utiliza ese asset ID y conserva la normalización de altura, el ajuste por bounding box, el pivote y el respaldo procedural.
+- En la prueba posterior, el usuario detectó que toda la palmera aparecía verde. La causa identificada en el código era la recoloración automática de cada `BasePart`, junto con la asignación forzada de `SmoothPlastic`.
+- Cambio de esta actualización: se eliminó la recoloración y la sustitución forzada de materiales del modelo importado. El script ahora conserva los colores, materiales y texturas configurados en el asset y solo ajusta propiedades físicas (anclaje, colisión, contacto, consulta y masa).
+- No se ha ejecutado Roblox Studio después de este cambio. La conservación de la apariencia original está implementada en código, pero queda pendiente la comprobación visual en Play.
+- Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
 
 ## 7. Historial de problemas críticos resueltos
 
@@ -230,7 +230,7 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-- **Palmeras del Beach Resort:** integración del modelo publicado (`108576686181949`) implementada con carga dinámica, normalización por altura real (objetivo aproximado 14–17 studs), recoloración tropical de respaldo, ajuste por bounding box y respaldo procedural. La primera prueba visual del usuario reportó palmeras gigantes y sin colores; se corrigió el cálculo de escala y se añadió coloración por nombre/altura de las piezas. Pendiente volver a probar en Roblox Studio para confirmar tamaño, colores, orientación y apoyo en el suelo.
+- **Palmeras del Beach Resort:** el asset completo `108576686181949` se carga dinámicamente y se normaliza por altura real (objetivo aproximado 14–17 studs), con ajuste por bounding box y respaldo procedural. El código conserva los colores, materiales y texturas del modelo importado; se eliminó la recoloración automática que dejaba toda la palmera verde. Pendiente probar en Roblox Studio para confirmar colores, materiales, tamaño, orientación y apoyo en el suelo.
 
 - Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
@@ -341,3 +341,11 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 - Cambio aplicado en esta actualización: `PALM_ASSET_ID` debe apuntar a `108576686181949`. Se conserva sin cambios la lógica actual de normalización de altura, pivote, posicionamiento y respaldo procedural para aislar la causa antes de ajustar escala o bounds.
 - No se ha probado todavía la carga del nuevo asset dentro de la experiencia ni su apariencia en Play de Roblox Studio. El reporte de menor lag del usuario es preliminar; la apariencia anómala debe reevaluarse una vez que el juego cargue el ID correcto.
 - Archivos de esta actualización: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
+
+
+### Actualización de preservación visual de palmera (2 de noviembre de 2026)
+
+- Se eliminó de `spawnImportedPalm` el bloque que asignaba colores según nombre/altura y forzaba `Enum.Material.SmoothPlastic` en todas las piezas.
+- El modelo importado conserva ahora los atributos visuales definidos en el asset. El script solo modifica propiedades físicas necesarias para el entorno.
+- Pruebas realizadas: revisión del código fuente y comprobación de que el bloque anterior de recoloración fue sustituido. No se ejecutó Roblox Studio ni una prueba de runtime.
+- Estado: cambio preparado para validación visual en Studio; no afirmar todavía que el resultado visual quedó confirmado.
