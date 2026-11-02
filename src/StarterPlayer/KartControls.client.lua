@@ -54,7 +54,7 @@ local driveKeys = {
 	Enum.KeyCode.S, Enum.KeyCode.Down,
 	Enum.KeyCode.A, Enum.KeyCode.Left,
 	Enum.KeyCode.D, Enum.KeyCode.Right,
-	Enum.KeyCode.Space,
+	Enum.KeyCode.Space, Enum.KeyCode.R,
 }
 local keyToControl = {
 	[Enum.KeyCode.W] = "forward", [Enum.KeyCode.Up] = "forward",
@@ -455,6 +455,10 @@ end
 RunService.Heartbeat:Connect(simulateOwnedKart)
 
 local function onDriveAction(_, inputState, inputObject)
+	if inputObject.KeyCode == Enum.KeyCode.R and inputState == Enum.UserInputState.Begin then
+		requestRespawnRemote:FireServer()
+		return Enum.ContextActionResult.Sink
+	end
 	local control = keyToControl[inputObject.KeyCode]
 	print(("[BLOXY-KART][CLIENT][ACTION] key=%s state=%s mapped=%s seated=%s"):format(
 		inputObject.KeyCode.Name, inputState.Name, tostring(control), tostring(currentSeat ~= nil)
