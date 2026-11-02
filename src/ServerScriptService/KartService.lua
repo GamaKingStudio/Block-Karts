@@ -426,6 +426,21 @@ local function buildTestCourse()
 			return
 		end
 
+		-- Respaldo actual: mantiene la ambientación si todavía no se ha publicado el FBX.
+		local trunkH = 15 * scale
+		local palmBaseCF = CFrame.new(pos) * CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
+		makePart(course, "PalmTrunk", Vector3.new(1.8 * scale, trunkH, 1.8 * scale), palmBaseCF * CFrame.new(0, trunkH / 2, 0), C_WOOD, Enum.Material.Wood)
+
+		local crownCF = palmBaseCF * CFrame.new(0, trunkH, 0)
+		for rot = 0, 315, 45 do
+			local leafMat = (rot % 90 == 0) and C_LEAVES or C_LEAVES_DARK
+			local leafCF = crownCF * CFrame.Angles(0, math.rad(rot), math.rad(-22)) * CFrame.new(0, 0, 4.5 * scale)
+			makePart(course, "PalmLeaf", Vector3.new(3.8 * scale, 0.4, 7.5 * scale), leafCF, leafMat)
+		end
+		for _, co in ipairs({ Vector3.new(0.6, -0.6, 0.6), Vector3.new(-0.6, -0.6, 0.6), Vector3.new(0, -0.7, -0.7) }) do
+			makePart(course, "Coconut", Vector3.new(0.9, 0.9, 0.9), crownCF * CFrame.new(co), C_DARKWOOD, Enum.Material.Wood, "Ball")
+		end
+
 	end
 
 	local palmData = {
