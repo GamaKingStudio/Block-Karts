@@ -338,9 +338,17 @@ local function buildTestCourse()
 		return Vector3.new(-direction.Z, 0, direction.X)
 	end
 
-	-- Cada curva sigue el arco del CornerHub circular, no una diagonal entre vértices.
+	-- Construye una única línea continua por lado y distribuye los colores
+	-- por distancia recorrida, no por cada pequeño segmento del arco.
 	for sideIndex, side in ipairs({ -1, 1 }) do
-		local cornerArcs = {}
+		local pathPoints = {}
+		local function appendPoint(point)
+			local previous = pathPoints[#pathPoints]
+			if not previous or (point - previous).Magnitude > 0.01 then
+				pathPoints[#pathPoints + 1] = point
+			end
+		end
+
 		for i = 1, #waypoints - 1 do
 			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
 			local nextIndex = (i == #waypoints - 1) and 2 or (i + 1)
@@ -348,10 +356,6 @@ local function buildTestCourse()
 			local incoming = curbDirection(waypoints[previousIndex], center)
 			local outgoing = curbDirection(center, waypoints[nextIndex])
 			local turnCross = incoming.Z * outgoing.X - incoming.X * outgoing.Z
-			-- Ambos lados usan el mismo radio exterior. Reducirlo en el
-			-- lado interior hacía que los pianos quedaran sobre el asfalto.
-			local radius = trackWidth / 2 + curbEdgeOffset
-
 			local radialStart = curbNormal(incoming) * side
 			local radialEnd = curbNormal(outgoing) * side
 			local startAngle = math.atan2(radialStart.Z, radialStart.X)
@@ -367,64 +371,66 @@ local function buildTestCourse()
 				delta = 0
 			end
 
+			local radius = trackWidth / 2 + curbEdgeOffset
 			local arcLength = math.abs(delta) * radius
-			local steps = math.max(1, math.ceil(arcLength / 1.25))
-			local points = {}
+			local steps = math.max(1, math.ceil(arcLength / 0.75))
 			for step = 0, steps do
 				local angle = startAngle + delta * (step / steps)
-				points[#points + 1] = Vector3.new(
+				appendPoint(Vector3.new(
 					center.X + math.cos(angle) * radius,
 					yGround,
 					center.Z + math.sin(angle) * radius
-				)
-			end
-			cornerArcs[i] = points
-		end
-
-		-- Recorre el circuito: arco de cada vértice y recta hasta el siguiente.
-		local pathSegments = {}
-		for i = 1, #waypoints - 1 do
-			local arc = cornerArcs[i]
-			for p = 1, #arc - 1 do
-				pathSegments[#pathSegments + 1] = { arc[p], arc[p + 1] }
-			end
-			local nextArc = cornerArcs[(i % (#waypoints - 1)) + 1]
-			local arcEnd = arc[#arc]
-			local nextArcStart = nextArc[1]
-			if (nextArcStart - arcEnd).Magnitude > 0.05 then
-				pathSegments[#pathSegments + 1] = { arcEnd, nextArcStart }
+				))
 			end
 		end
 
-		local colorTileIndex = 0
-		for segmentIndex, segmentPoints in ipairs(pathSegments) do
-			local a, b = segmentPoints[1], segmentPoints[2]
-			local segment = b - a
-			local length = segment.Magnitude
-			if length > 0.05 then
-				local direction = segment.Unit
-				local tileCount = math.max(1, math.ceil(length / curbTileLength))
-				local tileLength = length / tileCount
-				for tileIndex = 1, tileCount do
-					colorTileIndex += 1
-					local center = a + direction * ((tileIndex - 0.5) * tileLength)
-					local tileCF = CFrame.lookAt(
-						Vector3.new(center.X, yGround + 0.13, center.Z),
-						Vector3.new(center.X, yGround + 0.13, center.Z) + direction
-					)
-					local tile = makePart(
-						course,
-						("Kerb_%d_%d_%d"):format(sideIndex, segmentIndex, tileIndex),
-						Vector3.new(curbWidth, curbHeight, math.max(0.05, tileLength - 0.025)),
-						tileCF,
-						guardrailColors[((colorTileIndex - 1) % #guardrailColors) + 1],
-						Enum.Material.SmoothPlastic
-					)
-					tile.CanCollide = false
-					tile.CanTouch = false
-					tile.CanQuery = false
+		-- Cierra la polilínea con el primer punto.
+		if #pathPoints > 2 then
+			appendPoint(pathPoints[1])
+		end
+
+		-- Longitud acumulada de la línea curva.
+		local cumulative = { 0 }
+		for i = 2, #pathPoints do
+			cumulative[i] = cumulative[i - 1] + (pathPoints[i] - pathPoints[i - 1]).Magnitude
+		end
+		local totalLength = cumulative[#cumulative]
+
+		local function pointAtDistance(distance)
+			distance = math.clamp(distance, 0, totalLength)
+			for i = 2, #cumulative do
+				if distance <= cumulative[i] then
+					local segmentLength = cumulative[i] - cumulative[i - 1]
+					local alpha = segmentLength > 0 and (distance - cumulative[i - 1]) / segmentLength or 0
+					return pathPoints[i - 1]:Lerp(pathPoints[i], alpha)
 				end
 			end
+			return pathPoints[#pathPoints]
+		end
+
+		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
+		local actualTileLength = totalLength / tileCount
+		for tileIndex = 1, tileCount do
+			local distance = (tileIndex - 0.5) * actualTileLength
+			local center = pointAtDistance(distance)
+			local before = pointAtDistance(math.max(0, distance - actualTileLength * 0.45))
+			local after = pointAtDistance(math.min(totalLength, distance + actualTileLength * 0.45))
+			local direction = (after - before).Unit
+			local tileCF = CFrame.lookAt(
+				Vector3.new(center.X, yGround + 0.13, center.Z),
+				Vector3.new(center.X, yGround + 0.13, center.Z) + direction
+			)
+			local tile = makePart(
+				course,
+				("Kerb_%d_%d"):format(sideIndex, tileIndex),
+				Vector3.new(curbWidth, curbHeight, actualTileLength - 0.04),
+				tileCF,
+				guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
+				Enum.Material.SmoothPlastic
+			)
+			tile.CanCollide = false
+			tile.CanTouch = false
+			tile.CanQuery = false
 		end
 	end
 
