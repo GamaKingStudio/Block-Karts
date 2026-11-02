@@ -355,21 +355,16 @@ local function buildTestCourse()
 			local center = waypoints[i]
 			local incoming = curbDirection(waypoints[previousIndex], center)
 			local outgoing = curbDirection(center, waypoints[nextIndex])
-			local turnCross = incoming.Z * outgoing.X - incoming.X * outgoing.Z
 			local radialStart = curbNormal(incoming) * side
 			local radialEnd = curbNormal(outgoing) * side
 			local startAngle = math.atan2(radialStart.Z, radialStart.X)
-			local endAngle = math.atan2(radialEnd.Z, radialEnd.X)
-			local delta = endAngle - startAngle
-			if turnCross > 0 then
-				while delta < 0 do delta += math.pi * 2 end
-				while delta > math.pi do delta -= math.pi * 2 end
-			elseif turnCross < 0 then
-				while delta > 0 do delta -= math.pi * 2 end
-				while delta < -math.pi do delta += math.pi * 2 end
-			else
-				delta = 0
-			end
+			-- Usa el giro angular firmado más corto entre ambas normales.
+			-- Así cada lado sigue su propio arco y nunca intenta recorrer
+			-- media vuelta en sentido contrario en las curvas.
+			local delta = math.atan2(
+				radialStart.X * radialEnd.Z - radialStart.Z * radialEnd.X,
+				radialStart:Dot(radialEnd)
+			)
 
 			local radius = trackWidth / 2 + curbEdgeOffset
 			local arcLength = math.abs(delta) * radius
