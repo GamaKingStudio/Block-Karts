@@ -313,10 +313,12 @@ local function buildTestCourse()
 
 	-- ==========================================================
 	-- PIANOS ROJO/BLANCO: rectas paralelas y arcos segmentados en curvas.
-	local curbWidth = 1.8
+	local curbWidth = 1.6
 	local curbHeight = 0.14
-	local curbEdgeOffset = 0.9
-	local curbTileLength = 3.0
+	-- El piano queda completamente fuera del asfalto: su borde interior
+	-- mantiene 0.2 studs de separación respecto del límite de la pista.
+	local curbEdgeOffset = 1.0
+	local curbTileLength = 2.5
 	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
 	local guardrailPostHeight = 1.75
@@ -346,10 +348,9 @@ local function buildTestCourse()
 			local incoming = curbDirection(waypoints[previousIndex], center)
 			local outgoing = curbDirection(center, waypoints[nextIndex])
 			local turnCross = incoming.Z * outgoing.X - incoming.X * outgoing.Z
+			-- Ambos lados usan el mismo radio exterior. Reducirlo en el
+			-- lado interior hacía que los pianos quedaran sobre el asfalto.
 			local radius = trackWidth / 2 + curbEdgeOffset
-			if math.abs(turnCross) > 0.001 then
-				radius = trackWidth / 2 + curbEdgeOffset * (side * (turnCross > 0 and 1 or -1))
-			end
 
 			local radialStart = curbNormal(incoming) * side
 			local radialEnd = curbNormal(outgoing) * side
