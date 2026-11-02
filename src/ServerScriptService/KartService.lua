@@ -621,24 +621,51 @@ local function buildTestCourse()
 		local palmModel = importedPalmTemplate:Clone()
 		palmModel.Name = "Palm"
 		palmModel.Parent = course
-		local safeScale = math.clamp(scale or 1, 0.85, 1.2)
-		local scaled, scaleError = pcall(function()
-			palmModel:ScaleTo(safeScale)
-		end)
-		if not scaled then
-			warn("[BLOXY-KART][PALM] No se pudo escalar el modelo importado: " .. tostring(scaleError))
+
+		-- Normaliza el tamaño por la altura real del FBX. El factor anterior
+		-- (0.85-1.2) asumía que el asset ya estaba cerca de la escala de Roblox.
+		local _, originalBounds = palmModel:GetBoundingBox()
+		if originalBounds.Y <= 0.01 then
+			warn("[BLOXY-KART][PALM] El modelo importado tiene una altura inválida; se usará el respaldo procedural.")
 			palmModel:Destroy()
 			return false
 		end
+		local targetHeight = 15.5 * math.clamp(scale or 1, 0.9, 1.1)
+		local normalizedScale = targetHeight / originalBounds.Y
+		local scaled, scaleError = pcall(function()
+			palmModel:ScaleTo(normalizedScale)
+		end)
+		if not scaled then
+			warn("[BLOXY-KART][PALM] No se pudo normalizar la escala del modelo: " .. tostring(scaleError))
+			palmModel:Destroy()
+			return false
+		end
+
 		local boxCFrame, boxSize = palmModel:GetBoundingBox()
+		local boxBottomY = boxCFrame.Position.Y - boxSize.Y / 2
+		local boxTopY = boxCFrame.Position.Y + boxSize.Y / 2
 		local pivotToBox = palmModel:GetPivot():ToObjectSpace(boxCFrame)
 		local targetBox = CFrame.new(pos)
 			* CFrame.Angles(0, math.rad(tiltYaw or 0), 0)
 			* CFrame.Angles(0, 0, math.rad(tiltDeg or 0))
 			* CFrame.new(0, boxSize.Y / 2, 0)
 		palmModel:PivotTo(targetBox * pivotToBox:Inverse())
+
+		-- Recupera una paleta tropical si el FBX llega sin colores/materiales útiles.
 		for _, descendant in ipairs(palmModel:GetDescendants()) do
 			if descendant:IsA("BasePart") then
+				local partName = string.lower(descendant.Name)
+				local relativeHeight = (descendant.Position.Y - boxBottomY) / math.max(boxTopY - boxBottomY, 0.01)
+				if string.find(partName, "coconut") or string.find(partName, "fruit") then
+					descendant.Color = Color3.fromRGB(105, 68, 38)
+				elseif string.find(partName, "leaf") or string.find(partName, "frond") or string.find(partName, "foliage") then
+					descendant.Color = Color3.fromRGB(48, 150, 54)
+				elseif relativeHeight >= 0.56 then
+					descendant.Color = Color3.fromRGB(48, 150, 54)
+				else
+					descendant.Color = Color3.fromRGB(132, 91, 52)
+				end
+				descendant.Material = Enum.Material.SmoothPlastic
 				descendant.Anchored = true
 				descendant.CanCollide = false
 				descendant.CanTouch = false
