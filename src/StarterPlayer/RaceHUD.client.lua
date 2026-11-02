@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local config = require(ReplicatedStorage:WaitForChild("KartConfig"))
+local typography = require(ReplicatedStorage:WaitForChild("BloxyTypography"))
 local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
 local checkpointEvent = raceEvents:WaitForChild("CheckpointPassed")
 local lapEvent = raceEvents:WaitForChild("LapCompleted")
@@ -41,7 +42,7 @@ local function panel(name, size, position)
  return frame
 end
 
-local function label(parent, name, size, position, text, textSize, color)
+local function label(parent, name, size, position, text, textSize, color, fontRole)
  local item = Instance.new("TextLabel")
  item.Name = name
  item.Size = size
@@ -50,7 +51,7 @@ local function label(parent, name, size, position, text, textSize, color)
  item.Text = text
  item.TextColor3 = color or Color3.fromRGB(245, 247, 250)
  item.TextSize = textSize
- item.Font = Enum.Font.GothamBold
+ item.FontFace = typography.getFont(fontRole or "Light")
  item.TextXAlignment = Enum.TextXAlignment.Center
  item.TextYAlignment = Enum.TextYAlignment.Center
  item.Parent = parent
@@ -59,7 +60,7 @@ end
 
 
 local countdownEvent = raceEvents:WaitForChild("RaceCountdown")
-local countdownLabel = label(hud, "RaceCountdown", UDim2.fromOffset(360, 150), UDim2.new(0.5, -180, 0.34, 0), "", 76, Color3.fromRGB(255, 205, 75))
+local countdownLabel = label(hud, "RaceCountdown", UDim2.fromOffset(360, 150), UDim2.new(0.5, -180, 0.34, 0), "", 76, Color3.fromRGB(255, 205, 75), "Bold")
 countdownLabel.TextStrokeTransparency = 0.35
 countdownLabel.Visible = false
 countdownEvent.OnClientEvent:Connect(function(value)
@@ -76,13 +77,13 @@ countdownEvent.OnClientEvent:Connect(function(value)
 end)
 
 local racePanel = panel("RacePanel", UDim2.fromOffset(300, 100), UDim2.new(0.5, -150, 0, 22))
-local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19)
-local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 18, Color3.fromRGB(255, 220, 145))
+local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19, nil, "Bold")
+local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 18, Color3.fromRGB(255, 220, 145), "Bold")
 local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 11, Color3.fromRGB(190, 202, 216))
 local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 12, Color3.fromRGB(190, 202, 216))
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -174, 1, -116))
-local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42)
+local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42, nil, "Bold")
 label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216))
 
 local wrongWayLabel = label(
@@ -92,7 +93,8 @@ local wrongWayLabel = label(
  UDim2.new(0, 20, 0.44, -27),
  "¡SENTIDO CONTRARIO!",
  27,
- Color3.fromRGB(255, 65, 65)
+ Color3.fromRGB(255, 65, 65),
+ "Bold"
 )
 wrongWayLabel.TextStrokeColor3 = Color3.fromRGB(35, 12, 12)
 wrongWayLabel.TextStrokeTransparency = 0.25
@@ -107,7 +109,7 @@ local renderConnection
 -- LEADERBOARD + MINIMAPA
 -- ==========================================================
 local leaderboard = panel("Leaderboard", UDim2.fromOffset(218, 250), UDim2.new(0, 18, 0, 22))
-label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 15, Color3.fromRGB(255, 220, 145))
+label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 15, Color3.fromRGB(255, 220, 145), "Bold")
 local leaderboardRows = {}
 for i = 1, 8 do
  local row = label(leaderboard, "Driver" .. i, UDim2.new(1, -18, 0, 23), UDim2.fromOffset(9, 35 + (i - 1) * 25), "", 12)
@@ -116,7 +118,7 @@ for i = 1, 8 do
 end
 
 local mapPanel = panel("MiniMap", UDim2.fromOffset(218, 190), UDim2.new(0, 18, 0, 284))
-label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 25), UDim2.fromOffset(8, 4), "MAPA DE PISTA", 13, Color3.fromRGB(255, 220, 145))
+label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 25), UDim2.fromOffset(8, 4), "MAPA DE PISTA", 13, Color3.fromRGB(255, 220, 145), "Bold")
 local mapArea = Instance.new("Frame")
 mapArea.Name = "MapArea"
 mapArea.Size = UDim2.new(1, -20, 1, -38)
@@ -232,7 +234,7 @@ local markerStroke = Instance.new("UIStroke")
 markerStroke.Color = Color3.fromRGB(255, 255, 255)
 markerStroke.Thickness = 2
 markerStroke.Parent = playerMarker
-local markerArrow = label(mapArea, "PlayerDirection", UDim2.fromOffset(22, 22), UDim2.fromOffset(0, 0), "▲", 15, Color3.fromRGB(255, 220, 90))
+local markerArrow = label(mapArea, "PlayerDirection", UDim2.fromOffset(22, 22), UDim2.fromOffset(0, 0), "▲", 15, Color3.fromRGB(255, 220, 90), "Bold")
 markerArrow.AnchorPoint = Vector2.new(0.5, 0.5)
 markerArrow.ZIndex = 11
 playerMarker.ZIndex = 10
