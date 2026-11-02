@@ -484,20 +484,6 @@ local function onDriveAction(_, inputState, inputObject)
 	return Enum.ContextActionResult.Sink
 end
 
-local function isDriveKey(keyCode)
-	return keyToControl[keyCode] ~= nil
-end
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if currentSeat and isDriveKey(input.KeyCode) then
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-	if currentSeat and isDriveKey(input.KeyCode) then
-	end
-end)
-
 local function clearDriveInput()
 	for key in pairs(held) do
 		held[key] = false
