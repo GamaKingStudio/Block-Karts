@@ -312,7 +312,6 @@ local function buildTestCourse()
 
 
 	-- ==========================================================
-	-- ==========================================================
 	-- BORDES DE PISTA: PIANOS Y DEFENSAS METÁLICAS
 	-- ==========================================================
 	local curbWidth = 1.8
@@ -329,6 +328,7 @@ local function buildTestCourse()
 	local C_GUARDRAIL = Color3.fromRGB(155, 165, 172)
 	local C_GUARDRAIL_DARK = Color3.fromRGB(95, 105, 112)
 
+	-- Pianos: conservan el diseño aprobado y quedan dentro del ancho de pista.
 	for i = 1, #waypoints - 1 do
 		local p1 = waypoints[i]
 		local p2 = waypoints[i + 1]
@@ -336,9 +336,6 @@ local function buildTestCourse()
 		local length = diff.Magnitude
 		local mid = (p1 + p2) / 2
 		local edgeCF = CFrame.lookAt(mid, p2)
-
-		-- Pianos: piezas separadas, sin prolongación ni solapamiento.
-		-- Se deja un pequeño margen al inicio y al final de cada tramo.
 		local usableCurbLength = math.max(0, length - 1.0)
 		local curbCount = math.floor(usableCurbLength / curbTileLength)
 		for sideIndex, side in ipairs({ -1, 1 }) do
@@ -355,43 +352,77 @@ local function buildTestCourse()
 				)
 				tile.CanCollide = false
 				tile.CanTouch = false
-				 tile.CanQuery = false
+				tile.CanQuery = false
 			end
 		end
+	end
 
-		-- Guardarraíl tipo carretera: postes y dos perfiles metálicos
-		-- longitudinales. Los extremos se retraen para que las defensas
-		-- de los segmentos contiguos no se atraviesen en las esquinas.
-		local endInset = math.min(2.0, length * 0.12)
-		local railLength = length - endInset * 2
-		if railLength > 2 then
-			local postCount = math.max(1, math.floor(railLength / guardrailPostSpacing))
-			local postStep = railLength / postCount
+	-- Calcula uma linha paralela à pista. Cada curva usa um único ponto
+	-- de encontro (miter), compartilhado pelos dois segmentos vizinhos.
+	local function horizontalDirection(a, b)
+		local v = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
+		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
+	end
 
-			for sideIndex, side in ipairs({ -1, 1 }) do
-				local sideOffset = side * guardrailOffset
+	local function sideNormal(direction)
+		return Vector3.new(-direction.Z, 0, direction.X)
+	end
 
+	for sideIndex, side in ipairs({ -1, 1 }) do
+		local railPoints = {}
+		for i = 1, #waypoints do
+			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
+			local nextIndex = (i == #waypoints) and 2 or (i + 1)
+			local incoming = horizontalDirection(waypoints[previousIndex], waypoints[i])
+			local outgoing = horizontalDirection(waypoints[i], waypoints[nextIndex])
+			local normalIn = sideNormal(incoming)
+			local normalOut = sideNormal(outgoing)
+			local bisector = normalIn + normalOut
+			if bisector.Magnitude < 0.001 then
+				bisector = normalOut
+			else
+				bisector = bisector.Unit
+			end
+			local denominator = math.abs(bisector:Dot(normalOut))
+			local miterDistance = guardrailOffset / math.max(denominator, 0.35)
+			miterDistance = math.min(miterDistance, guardrailOffset * 1.8)
+			railPoints[i] = waypoints[i] + bisector * (side * miterDistance)
+		end
+
+		-- O último waypoint repete o primeiro: força o fechamento exato do circuito.
+		railPoints[#waypoints] = railPoints[1]
+
+		for i = 1, #waypoints - 1 do
+			local a = railPoints[i]
+			local b = railPoints[i + 1]
+			local segment = b - a
+			local length = segment.Magnitude
+			if length > 0.5 then
+				local direction = segment.Unit
+				local mid = (a + b) / 2
+				local railCF = CFrame.lookAt(mid, b)
+				local postCount = math.max(1, math.ceil(length / guardrailPostSpacing))
 				for postIndex = 0, postCount do
-					local zOffset = -railLength / 2 + postIndex * postStep
-					local postCF = edgeCF * CFrame.new(sideOffset, guardrailPostHeight / 2, zOffset)
+					local t = postIndex / postCount
+					local postPosition = a:Lerp(b, t)
 					local post = makePart(
 						course,
 						("GuardrailPost_%d_%d_%d"):format(i, sideIndex, postIndex),
 						Vector3.new(guardrailPostWidth, guardrailPostHeight, guardrailPostWidth),
-						postCF,
+						CFrame.new(postPosition.X, yGround + guardrailPostHeight / 2, postPosition.Z) * CFrame.lookAt(Vector3.zero, direction),
 						C_GUARDRAIL_DARK,
 						Enum.Material.Metal
 					)
 					post.CanTouch = false
 				end
 
+				-- Os perfis terminam exatamente no ponto miter da curva seguinte.
 				for railIndex, railY in ipairs({ 1.05, 1.58 }) do
-					local railCF = edgeCF * CFrame.new(sideOffset, railY, 0)
 					local rail = makePart(
 						course,
 						("GuardrailBeam_%d_%d_%d"):format(i, sideIndex, railIndex),
-						Vector3.new(guardrailBeamThickness, guardrailBeamHeight, railLength),
-						railCF,
+						Vector3.new(guardrailBeamThickness, guardrailBeamHeight, length + 0.015),
+						CFrame.new(mid.X, yGround + railY, mid.Z) * CFrame.lookAt(Vector3.zero, direction),
 						C_GUARDRAIL,
 						Enum.Material.Metal
 					)
@@ -638,8 +669,17 @@ local function weldTo(root, part)
 	weld.Parent = root
 end
 
+local KART_VISUAL_SCALE = 0.85
+
+local function scaleVisualCFrame(cframe)
+	local position = cframe.Position * KART_VISUAL_SCALE
+	return CFrame.new(position) * (cframe - cframe.Position)
+end
+
 local function makeVisualPart(model, chassis, name, size, cframe, color, material, shapeOrClass)
-	local part = makePart(model, name, size, cframe, color, material, shapeOrClass)
+	local scaledSize = size * KART_VISUAL_SCALE
+	local scaledCFrame = scaleVisualCFrame(cframe)
+	local part = makePart(model, name, scaledSize, scaledCFrame, color, material, shapeOrClass)
 	part.CanCollide = false
 	part.CanTouch = false
 	part.CanQuery = false
