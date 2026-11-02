@@ -350,11 +350,11 @@ local function buildTestCourse()
 		end
 
 		for i = 1, #waypoints - 1 do
-			-- waypoints cierra el circuito repitiendo el primer punto al final.
-			-- Para la primera curva, el punto anterior real es el penúltimo,
-			-- no la copia del propio punto de salida.
-			local previousIndex = (i == 1) and (#waypoints - 2) or (i - 1)
-			local nextIndex = (i == #waypoints - 1) and 2 or (i + 1)
+			-- La lista de waypoints cierra el circuito repitiendo el primer
+			-- punto al final. La primera curva entra desde el punto 15 y la
+			-- última sale hacia el punto 16 (copia del punto 1).
+			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
+			local nextIndex = i + 1
 			local center = waypoints[i]
 			local incoming = curbDirection(waypoints[previousIndex], center)
 			local outgoing = curbDirection(center, waypoints[nextIndex])
