@@ -316,7 +316,7 @@ local function buildTestCourse()
 	local curbWidth = 1.6
 	local curbHeight = 0.14
 	local curbEdgeOffset = 1.0
-	local curbTileLength = 2.5
+	local curbTileLength = 1.25
 	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
 	local guardrailPostHeight = 1.75
@@ -384,8 +384,8 @@ local function buildTestCourse()
 				local curveStart = corner - incoming * tangentDistance
 				local curveEnd = corner + outgoing * tangentDistance
 				appendPoint(curveStart)
-				for step = 1, 8 do
-					local t = step / 8
+				for step = 1, 12 do
+					local t = step / 12
 					local oneMinusT = 1 - t
 					local point = curveStart * (oneMinusT * oneMinusT)
 						+ corner * (2 * oneMinusT * t)
@@ -426,7 +426,7 @@ local function buildTestCourse()
 			local tile = makePart(
 				course,
 				("Kerb_%d_%d"):format(sideIndex, tileIndex),
-				Vector3.new(curbWidth, curbHeight, actualTileLength - 0.06),
+				Vector3.new(curbWidth, curbHeight, math.max(0.1, actualTileLength - 0.025)),
 				CFrame.lookAt(center, center + direction),
 				guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
 				Enum.Material.SmoothPlastic
