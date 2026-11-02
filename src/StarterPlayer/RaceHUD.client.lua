@@ -192,12 +192,14 @@ local function refreshLeaderboard()
   end
  end
 end
-Players.PlayerAdded:Connect(refreshLeaderboard)
-Players.PlayerRemoving:Connect(refreshLeaderboard)
-for _, racer in ipairs(Players:GetPlayers()) do
+local function bindLeaderboardPlayer(racer)
  racer:GetAttributeChangedSignal("RaceLap"):Connect(refreshLeaderboard)
  racer:GetAttributeChangedSignal("RaceCheckpoint"):Connect(refreshLeaderboard)
+ refreshLeaderboard()
 end
+Players.PlayerAdded:Connect(bindLeaderboardPlayer)
+Players.PlayerRemoving:Connect(refreshLeaderboard)
+for _, racer in ipairs(Players:GetPlayers()) do bindLeaderboardPlayer(racer) end
 refreshLeaderboard()
 
 local function updateMiniMap()
