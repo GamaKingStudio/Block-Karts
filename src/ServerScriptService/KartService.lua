@@ -310,6 +310,68 @@ local function buildTestCourse()
 		end
 	end
 
+
+	-- ==========================================================
+	-- BORDES DE PISTA: PIANOS ROJO/BLANCO Y BARRERAS
+	-- ==========================================================
+	local curbWidth = 1.8
+	local curbHeight = 0.14
+	local curbOffset = trackWidth / 2 - curbWidth / 2
+	local curbTileLength = 4.0
+	local barrierOffset = trackWidth / 2 + 1.25
+	local barrierHeight = 2.4
+	local barrierThickness = 0.9
+	local barrierModuleLength = 8.0
+	local curbColors = { C_RED, C_WHITE }
+
+	for i = 1, #waypoints - 1 do
+		local p1 = waypoints[i]
+		local p2 = waypoints[i + 1]
+		local diff = p2 - p1
+		local length = diff.Magnitude
+		local mid = (p1 + p2) / 2
+		local edgeCF = CFrame.lookAt(mid, p2)
+
+		-- Pianos planos sobre el asfalto, alternando rojo y blanco.
+		local curbCount = math.floor(length / curbTileLength)
+		for sideIndex, side in ipairs({ -1, 1 }) do
+			for tileIndex = 1, curbCount do
+				local zOffset = -length / 2 + (tileIndex - 0.5) * curbTileLength
+				local tileCF = edgeCF * CFrame.new(side * curbOffset, 0.105, zOffset)
+				local tile = makePart(
+					course,
+					("Kerb_%d_%d_%d"):format(i, sideIndex, tileIndex),
+					Vector3.new(curbWidth, curbHeight, curbTileLength + 0.04),
+					tileCF,
+					curbColors[((tileIndex - 1) % #curbColors) + 1],
+					Enum.Material.SmoothPlastic
+				)
+				tile.CanCollide = false
+				tile.CanTouch = false
+			end
+		end
+
+		-- Barreras modulares sólidas por fuera de ambos bordes.
+		local barrierCount = math.max(1, math.ceil(length / barrierModuleLength))
+		local moduleLength = length / barrierCount + 0.12
+		for sideIndex, side in ipairs({ -1, 1 }) do
+			for moduleIndex = 1, barrierCount do
+				local zOffset = -length / 2 + (moduleIndex - 0.5) * (length / barrierCount)
+				local moduleCF = edgeCF * CFrame.new(side * barrierOffset, barrierHeight / 2, zOffset)
+				local barrier = makePart(
+					course,
+					("TrackBarrier_%d_%d_%d"):format(i, sideIndex, moduleIndex),
+					Vector3.new(barrierThickness, barrierHeight, moduleLength),
+					moduleCF,
+					curbColors[((moduleIndex - 1) % #curbColors) + 1],
+					Enum.Material.Concrete
+				)
+				barrier.CanCollide = true
+				barrier.CanTouch = false
+			end
+		end
+	end
+
 	local gantryX = 0
 	local postHeight = 15
 	local spanWidth = trackWidth + 6
