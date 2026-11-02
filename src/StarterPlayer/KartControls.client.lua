@@ -45,6 +45,7 @@ print(("[BLOXY-KART][CLIENT][START] script=%s parent=%s remote=%s class=%s"):for
 local camera = Workspace.CurrentCamera
 local currentSeat
 local cameraConnection
+local drivingBaseFieldOfView
 local shownEnterPrompt
 local enterPromptBillboard
 local held = { forward = false, reverse = false, left = false, right = false, brake = false }
@@ -165,6 +166,10 @@ local function stopDrivingCamera()
 			activeCamera.CameraSubject = humanoid
 		end
 		activeCamera.CameraType = Enum.CameraType.Custom
+		if drivingBaseFieldOfView then
+			activeCamera.FieldOfView = drivingBaseFieldOfView
+			drivingBaseFieldOfView = nil
+		end
 		if wasDrivingCamera then
 			print(("[BLOXY-KART][CLIENT][CAMERA-RESTORE] type=%s subject=%s"):format(
 				activeCamera.CameraType.Name, activeCamera.CameraSubject and activeCamera.CameraSubject:GetFullName() or "nil"
@@ -184,6 +189,9 @@ local function startDrivingCamera(kart)
 		return
 	end
 	camera.CameraType = Enum.CameraType.Scriptable
+	drivingBaseFieldOfView = camera.FieldOfView
+	local baseFieldOfView = drivingBaseFieldOfView
+	local smoothedFieldOfView = baseFieldOfView
 	local smoothedCFrame = camera.CFrame
 	print(("[BLOXY-KART][CLIENT][CAMERA-DRIVE] type=%s offset=%s lookAhead=%.1f"):format(
 		camera.CameraType.Name, tostring(KartConfig.CameraOffset), KartConfig.CameraLookAhead
@@ -199,6 +207,12 @@ local function startDrivingCamera(kart)
 		local desiredCFrame = CFrame.lookAt(desiredPosition, focus)
 		local alpha = 1 - math.exp(-6 * deltaTime)
 		smoothedCFrame = smoothedCFrame:Lerp(desiredCFrame, alpha)
+		local forwardSpeed = math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
+		local speedRatio = math.clamp(forwardSpeed / math.max(KartConfig.MaxForwardSpeed, 1), 0, 1)
+		local targetFieldOfView = baseFieldOfView + (6 * speedRatio)
+		local fovAlpha = 1 - math.exp(-3.5 * deltaTime)
+		smoothedFieldOfView = smoothedFieldOfView + (targetFieldOfView - smoothedFieldOfView) * fovAlpha
+		camera.FieldOfView = smoothedFieldOfView
 		camera.CFrame = smoothedCFrame
 		camera.Focus = CFrame.new(focus)
 	end)
@@ -320,8 +334,9 @@ local function sendDriveInput()
 	if not currentSeat then
 		return
 	end
-	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
-	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+	local canDrive = player:GetAttribute("RaceStarted") == true
+	local throttle = canDrive and ((held.forward and 1 or 0) - (held.reverse and 1 or 0)) or 0
+	local steering = canDrive and ((held.right and 1 or 0) - (held.left and 1 or 0)) or 0
 	print(("[BLOXY-KART][CLIENT][REMOTE-SEND] remote=%s seat=%s throttle=%.0f steering=%.0f brake=%s"):format(
 		controlRemote:GetFullName(), currentSeat:GetFullName(), throttle, steering, tostring(held.brake)
 	))
@@ -369,8 +384,9 @@ local function simulateOwnedKart()
 	end
 	local forwardSpeed = velocity:Dot(forward)
 	local lateralSpeed = velocity:Dot(right)
-	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
-	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+	local canDrive = player:GetAttribute("RaceStarted") == true
+	local throttle = canDrive and ((held.forward and 1 or 0) - (held.reverse and 1 or 0)) or 0
+	local steering = canDrive and ((held.right and 1 or 0) - (held.left and 1 or 0)) or 0
 	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
 	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
 	local travelDirection = forwardSpeed >= 0 and 1 or -1

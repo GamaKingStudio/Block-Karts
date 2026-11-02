@@ -41,6 +41,7 @@ local checkpointPassedRemote = getOrCreateRemote("CheckpointPassed")
 local lapCompletedRemote = getOrCreateRemote("LapCompleted")
 local wrongWayRemote = getOrCreateRemote("WrongWayStateChanged")
 local requestRespawnRemote = getOrCreateRemote("RequestRespawn")
+local raceCountdownRemote = getOrCreateRemote("RaceCountdown")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -309,6 +310,203 @@ local function buildTestCourse()
 		end
 	end
 
+
+	-- ==========================================================
+	-- PIANOS ROJO/BLANCO: rectas paralelas y arcos segmentados en curvas.
+	local curbWidth = 1.6
+	local curbHeight = 0.14
+	-- El piano queda completamente fuera del asfalto: su borde interior
+	-- mantiene 0.2 studs de separación respecto del límite de la pista.
+	local curbEdgeOffset = 1.0
+	local curbTileLength = 2.5
+	local guardrailOffset = trackWidth / 2 + 5.0
+	local guardrailPostSpacing = 8.0
+	local guardrailPostHeight = 1.75
+	local guardrailPostWidth = 0.32
+	local guardrailBeamThickness = 0.22
+	local guardrailBeamHeight = 0.24
+	local guardrailColors = { C_RED, C_WHITE }
+	local C_GUARDRAIL = Color3.fromRGB(155, 165, 172)
+	local C_GUARDRAIL_DARK = Color3.fromRGB(95, 105, 112)
+
+	local function curbDirection(a, b)
+		local v = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
+		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
+	end
+
+	local function curbNormal(direction)
+		return Vector3.new(-direction.Z, 0, direction.X)
+	end
+
+	-- Construye una única línea continua por lado y distribuye los colores
+	-- por distancia recorrida, no por cada pequeño segmento del arco.
+	for sideIndex, side in ipairs({ -1, 1 }) do
+		local pathPoints = {}
+		local function appendPoint(point)
+			local previous = pathPoints[#pathPoints]
+			if not previous or (point - previous).Magnitude > 0.01 then
+				pathPoints[#pathPoints + 1] = point
+			end
+		end
+
+		for i = 1, #waypoints - 1 do
+			-- La lista de waypoints cierra el circuito repitiendo el primer
+			-- punto al final. La primera curva entra desde el punto 15 y la
+			-- última sale hacia el punto 16 (copia del punto 1).
+			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
+			local nextIndex = i + 1
+			local center = waypoints[i]
+			local incoming = curbDirection(waypoints[previousIndex], center)
+			local outgoing = curbDirection(center, waypoints[nextIndex])
+			local radialStart = curbNormal(incoming) * side
+			local radialEnd = curbNormal(outgoing) * side
+			local startAngle = math.atan2(radialStart.Z, radialStart.X)
+			-- Usa el giro angular firmado más corto entre ambas normales.
+			-- Así cada lado sigue su propio arco y nunca intenta recorrer
+			-- media vuelta en sentido contrario en las curvas.
+			local delta = math.atan2(
+				radialStart.X * radialEnd.Z - radialStart.Z * radialEnd.X,
+				radialStart:Dot(radialEnd)
+			)
+
+			local radius = trackWidth / 2 + curbEdgeOffset
+			local arcLength = math.abs(delta) * radius
+			local steps = math.max(1, math.ceil(arcLength / 0.75))
+			for step = 0, steps do
+				local angle = startAngle + delta * (step / steps)
+				appendPoint(Vector3.new(
+					center.X + math.cos(angle) * radius,
+					yGround,
+					center.Z + math.sin(angle) * radius
+				))
+			end
+		end
+
+		-- Cierra la polilínea con el primer punto.
+		if #pathPoints > 2 then
+			appendPoint(pathPoints[1])
+		end
+
+		-- Longitud acumulada de la línea curva.
+		local cumulative = { 0 }
+		for i = 2, #pathPoints do
+			cumulative[i] = cumulative[i - 1] + (pathPoints[i] - pathPoints[i - 1]).Magnitude
+		end
+		local totalLength = cumulative[#cumulative]
+
+		local function pointAtDistance(distance)
+			distance = math.clamp(distance, 0, totalLength)
+			for i = 2, #cumulative do
+				if distance <= cumulative[i] then
+					local segmentLength = cumulative[i] - cumulative[i - 1]
+					local alpha = segmentLength > 0 and (distance - cumulative[i - 1]) / segmentLength or 0
+					return pathPoints[i - 1]:Lerp(pathPoints[i], alpha)
+				end
+			end
+			return pathPoints[#pathPoints]
+		end
+
+		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
+		local actualTileLength = totalLength / tileCount
+		for tileIndex = 1, tileCount do
+			local distance = (tileIndex - 0.5) * actualTileLength
+			local center = pointAtDistance(distance)
+			local before = pointAtDistance(math.max(0, distance - actualTileLength * 0.45))
+			local after = pointAtDistance(math.min(totalLength, distance + actualTileLength * 0.45))
+			local direction = (after - before).Unit
+			local tileCF = CFrame.lookAt(
+				Vector3.new(center.X, yGround + 0.13, center.Z),
+				Vector3.new(center.X, yGround + 0.13, center.Z) + direction
+			)
+			local tile = makePart(
+				course,
+				("Kerb_%d_%d"):format(sideIndex, tileIndex),
+				Vector3.new(curbWidth, curbHeight, actualTileLength - 0.04),
+				tileCF,
+				guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
+				Enum.Material.SmoothPlastic
+			)
+			tile.CanCollide = false
+			tile.CanTouch = false
+			tile.CanQuery = false
+		end
+	end
+
+	-- Calcula uma linha paralela à pista. Cada curva usa um único ponto
+	-- de encontro (miter), compartilhado pelos dois segmentos vizinhos.
+	local function horizontalDirection(a, b)
+		local v = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
+		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
+	end
+
+	local function sideNormal(direction)
+		return Vector3.new(-direction.Z, 0, direction.X)
+	end
+
+	for sideIndex, side in ipairs({ -1, 1 }) do
+		local railPoints = {}
+		for i = 1, #waypoints do
+			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
+			local nextIndex = (i == #waypoints) and 2 or (i + 1)
+			local incoming = horizontalDirection(waypoints[previousIndex], waypoints[i])
+			local outgoing = horizontalDirection(waypoints[i], waypoints[nextIndex])
+			local normalIn = sideNormal(incoming)
+			local normalOut = sideNormal(outgoing)
+			local bisector = normalIn + normalOut
+			if bisector.Magnitude < 0.001 then
+				bisector = normalOut
+			else
+				bisector = bisector.Unit
+			end
+			local denominator = math.abs(bisector:Dot(normalOut))
+			local miterDistance = guardrailOffset / math.max(denominator, 0.35)
+			miterDistance = math.min(miterDistance, guardrailOffset * 1.8)
+			railPoints[i] = waypoints[i] + bisector * (side * miterDistance)
+		end
+
+		-- O último waypoint repete o primeiro: força o fechamento exato do circuito.
+		railPoints[#waypoints] = railPoints[1]
+
+		for i = 1, #waypoints - 1 do
+			local a = railPoints[i]
+			local b = railPoints[i + 1]
+			local segment = b - a
+			local length = segment.Magnitude
+			if length > 0.5 then
+				local direction = segment.Unit
+				local mid = (a + b) / 2
+				local railCF = CFrame.lookAt(mid, b)
+				local postCount = math.max(1, math.ceil(length / guardrailPostSpacing))
+				for postIndex = 0, postCount do
+					local t = postIndex / postCount
+					local postPosition = a:Lerp(b, t)
+					local post = makePart(
+						course,
+						("GuardrailPost_%d_%d_%d"):format(i, sideIndex, postIndex),
+						Vector3.new(guardrailPostWidth, guardrailPostHeight, guardrailPostWidth),
+						CFrame.new(postPosition.X, yGround + guardrailPostHeight / 2, postPosition.Z) * CFrame.lookAt(Vector3.zero, direction),
+						C_GUARDRAIL_DARK,
+						Enum.Material.Metal
+					)
+					post.CanTouch = false
+				end
+
+				-- Os perfis terminam exatamente no ponto miter da curva seguinte.
+				for railIndex, railY in ipairs({ 1.05, 1.58 }) do
+					local rail = makePart(
+						course,
+						("GuardrailBeam_%d_%d_%d"):format(i, sideIndex, railIndex),
+						Vector3.new(guardrailBeamThickness, guardrailBeamHeight, length + 0.015),
+						CFrame.new(mid.X, yGround + railY, mid.Z) * CFrame.lookAt(Vector3.zero, direction),
+						C_GUARDRAIL,
+						Enum.Material.Metal
+					)
+					rail.CanTouch = false
+				end
+			end
+		end
+	end
+
 	local gantryX = 0
 	local postHeight = 15
 	local spanWidth = trackWidth + 6
@@ -382,8 +580,51 @@ local function buildTestCourse()
 		spawnTikiTorch(tp)
 	end
 
+	-- El asset FBX importado queda temporalmente desactivado: Roblox lo está
+	-- interpretando con dimensiones/pivots inconsistentes. Se conserva la
+	-- palmera procedural estable hasta validar el modelo publicado en Studio.
+	local importedPalmTemplate = nil
+
 	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
 		scale = scale or 1.0
+
+		if importedPalmTemplate and importedPalmTemplate:IsA("Model") then
+			local palm = importedPalmTemplate:Clone()
+			palm.Name = "PalmImported"
+
+			-- Ancla todas las piezas antes de entrar al Workspace para evitar que
+			-- cualquier pieza suelta caiga durante el primer paso de física.
+			for _, descendant in ipairs(palm:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = true
+					descendant.CanCollide = false
+					descendant.CanTouch = false
+					descendant.CanQuery = false
+				end
+			end
+
+			-- Solo reducimos modelos sobredimensionados. Algunos FBX llegan en
+			-- unidades pequeñas y ampliarlos automáticamente produce árboles gigantes.
+			local _, originalSize = palm:GetBoundingBox()
+			if originalSize.Y > 0 then
+				local desiredHeight = 14 * scale
+				local scaleFactor = math.clamp(desiredHeight / originalSize.Y, 0.01, 1)
+				if math.abs(scaleFactor - 1) > 0.001 then
+					palm:ScaleTo(scaleFactor)
+				end
+			end
+
+			palm.Parent = course
+
+			local yaw = CFrame.Angles(0, math.rad(tiltYaw or 0), 0)
+			palm:PivotTo(CFrame.new(pos) * yaw)
+			local boxCFrame, boxSize = palm:GetBoundingBox()
+			local bottomY = boxCFrame.Position.Y - boxSize.Y / 2
+			palm:PivotTo(palm:GetPivot() + Vector3.new(0, pos.Y - bottomY, 0))
+			return
+		end
+
+		-- Respaldo actual: mantiene la ambientación si todavía no se ha publicado el FBX.
 		local trunkH = 15 * scale
 		local palmBaseCF = CFrame.new(pos) * CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
 		makePart(course, "PalmTrunk", Vector3.new(1.8 * scale, trunkH, 1.8 * scale), palmBaseCF * CFrame.new(0, trunkH / 2, 0), C_WOOD, Enum.Material.Wood)
@@ -397,6 +638,7 @@ local function buildTestCourse()
 		for _, co in ipairs({ Vector3.new(0.6, -0.6, 0.6), Vector3.new(-0.6, -0.6, 0.6), Vector3.new(0, -0.7, -0.7) }) do
 			makePart(course, "Coconut", Vector3.new(0.9, 0.9, 0.9), crownCF * CFrame.new(co), C_DARKWOOD, Enum.Material.Wood, "Ball")
 		end
+
 	end
 
 	local palmData = {
@@ -502,8 +744,18 @@ local function weldTo(root, part)
 	weld.Parent = root
 end
 
+local KART_VISUAL_SCALE = 0.85
+
+local function scaleVisualCFrame(chassis, cframe)
+	local localCFrame = chassis.CFrame:ToObjectSpace(cframe)
+	local scaledPosition = localCFrame.Position * KART_VISUAL_SCALE
+	return chassis.CFrame * CFrame.new(scaledPosition) * (localCFrame - localCFrame.Position)
+end
+
 local function makeVisualPart(model, chassis, name, size, cframe, color, material, shapeOrClass)
-	local part = makePart(model, name, size, cframe, color, material, shapeOrClass)
+	local scaledSize = size * KART_VISUAL_SCALE
+	local scaledCFrame = scaleVisualCFrame(chassis, cframe)
+	local part = makePart(model, name, scaledSize, scaledCFrame, color, material, shapeOrClass)
 	part.CanCollide = false
 	part.CanTouch = false
 	part.CanQuery = false
@@ -708,6 +960,8 @@ end
 local TOTAL_INTERMEDIATE_CHECKPOINTS = 14
 
 local function initPlayerRaceData(player, spawnCFrame)
+	player:SetAttribute("RaceLap", 1)
+	player:SetAttribute("RaceCheckpoint", 0)
 	raceData[player] = {
 		CurrentLap = 1,
 		NextCheckpoint = 1,
@@ -763,6 +1017,8 @@ local function onCheckpointTouched(hitPart, triggerPart)
 
 			lapCompletedRemote:FireClient(player, pData.CurrentLap, lapTime, isBest)
 			pData.CurrentLap = pData.CurrentLap + 1
+			player:SetAttribute("RaceLap", pData.CurrentLap)
+			player:SetAttribute("RaceCheckpoint", 0)
 			pData.NextCheckpoint = 1
 			pData.CanFinishLap = false
 			pData.LapStartTime = now
@@ -780,6 +1036,7 @@ local function onCheckpointTouched(hitPart, triggerPart)
 		pData.LastTriggerTime = now
 		pData.LastValidCFrame = triggerPart.CFrame
 		pData.NextCheckpoint = pData.NextCheckpoint + 1
+		player:SetAttribute("RaceCheckpoint", cpIndex)
 		checkpointPassedRemote:FireClient(player, cpIndex, TOTAL_INTERMEDIATE_CHECKPOINTS)
 
 		if pData.NextCheckpoint > TOTAL_INTERMEDIATE_CHECKPOINTS then
@@ -823,6 +1080,8 @@ end)
 -- 4. GESTIÓN Y SPAWN DEL PILOTO
 -- ==========================================================
 local function spawnPlayerKart(player)
+	player:SetAttribute("RaceStarted", false)
+	player:SetAttribute("RaceCountdownActive", false)
 	local current = activeKarts[player]
 	if current then
 		current.model:Destroy()
@@ -846,6 +1105,20 @@ local function spawnPlayerKart(player)
 		if kart.seat.Parent and not kart.seat.Occupant then
 			kart.seat:Sit(humanoid)
 		end
+		if kart.seat.Occupant == humanoid and not player:GetAttribute("RaceCountdownActive") and not player:GetAttribute("RaceStarted") then
+			player:SetAttribute("RaceCountdownActive", true)
+			task.spawn(function()
+				for count = 3, 1, -1 do
+					if not player.Parent or not kart.seat.Parent or kart.seat.Occupant ~= humanoid then return end
+					raceCountdownRemote:FireClient(player, count)
+					task.wait(1)
+				end
+				if player.Parent and kart.seat.Parent and kart.seat.Occupant == humanoid then
+					player:SetAttribute("RaceStarted", true)
+					raceCountdownRemote:FireClient(player, 0)
+				end
+			end)
+		end
 	end
 
 	player.CharacterAdded:Connect(seatCharacter)
@@ -860,6 +1133,10 @@ remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
 	local occupant = kart and kart.seat.Occupant
 	local isAuthorizedDriver = occupant ~= nil and occupant.Parent == player.Character
 	if throttle ~= throttle or steering ~= steering or not isAuthorizedDriver then return end
+	if player:GetAttribute("RaceStarted") ~= true then
+		driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+		return
+	end
 	driverInputs[player] = {
 		throttle = math.clamp(throttle, -1, 1),
 		steering = math.clamp(steering, -1, 1),
