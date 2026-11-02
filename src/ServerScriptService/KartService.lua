@@ -319,7 +319,7 @@ local function buildTestCourse()
 	local curbHeight = 0.14
 	local curbOffset = trackWidth / 2 - curbWidth / 2
 	local curbTileLength = 4.0
-	local guardrailOffset = trackWidth / 2 + 1.8
+	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
 	local guardrailPostHeight = 1.75
 	local guardrailPostWidth = 0.32
