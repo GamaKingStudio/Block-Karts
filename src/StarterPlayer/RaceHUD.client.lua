@@ -141,11 +141,14 @@ end
 
 local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
  local delta = p2 - p1
+ local midpoint = (p1 + p2) * 0.5
  local line = Instance.new("Frame")
  line.Name = name
- line.AnchorPoint = Vector2.new(0, 0.5)
- line.Position = UDim2.fromOffset(p1.X, p1.Y)
- line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.35, thickness)
+ -- Roblox rota el GuiObject alrededor de su centro. Posicionarlo en el
+ -- punto medio evita el desplazamiento lateral que dejaba los tramos separados.
+ line.AnchorPoint = Vector2.new(0.5, 0.5)
+ line.Position = UDim2.fromOffset(midpoint.X, midpoint.Y)
+ line.Size = UDim2.fromOffset(delta.Magnitude, thickness)
  line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
  line.BackgroundColor3 = color
  line.BorderSizePixel = 0
