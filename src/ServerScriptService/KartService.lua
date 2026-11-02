@@ -414,32 +414,23 @@ local function buildTestCourse()
 			return pathPoints[1]
 		end
 
-		-- Rellena con arena la franja entre el asfalto y el borde interior del piano.
-		local sandShoulderWidth = math.max(0.15, curbOffset - trackWidth / 2 - curbWidth / 2)
-		if sandShoulderWidth > 0.05 then
-			local sandTileCount = math.max(1, math.floor(totalLength / curbTileLength))
-			local sandTileLength = totalLength / sandTileCount
-			for sandIndex = 1, sandTileCount do
-				local distance = (sandIndex - 0.5) * sandTileLength
-				local center = pointAtDistance(distance)
-				local before = pointAtDistance(distance - sandTileLength * 0.45)
-				local after = pointAtDistance(distance + sandTileLength * 0.45)
-				local direction = after - before
-				if direction.Magnitude > 0.001 then direction = direction.Unit else direction = Vector3.new(0, 0, -1) end
-				local inward = Vector3.new(-direction.Z, 0, direction.X) * side
-				local sandCenter = center - inward * (curbWidth / 2 + sandShoulderWidth / 2)
-				local sand = makePart(
-					course,
-					("SandShoulder_%d_%d"):format(sideIndex, sandIndex),
-					Vector3.new(sandShoulderWidth + 0.08, 0.055, math.max(0.1, sandTileLength - 0.025)),
-					CFrame.lookAt(Vector3.new(sandCenter.X, yGround + 0.045, sandCenter.Z), Vector3.new(sandCenter.X, yGround + 0.045, sandCenter.Z) + direction),
-					C_SAND,
-					Enum.Material.Sand
-				)
-				sand.CanCollide = false
-				sand.CanTouch = false
-				sand.CanQuery = false
-			end
+		-- Base de arena bajo las uniones de curva.
+		-- El asfalto y los pianos quedan por encima; la arena solo aparece
+		-- en los huecos irregulares que dejan los segmentos rectos al girar.
+		for cornerIndex = 1, uniqueCount do
+			local corner = waypoints[cornerIndex]
+			local sandHub = makePart(
+				course,
+				("SandCorner_%d_%d"):format(sideIndex, cornerIndex),
+				Vector3.new(0.035, trackWidth + 3.0, trackWidth + 3.0),
+				CFrame.new(corner.X, yGround - 0.012, corner.Z) * CFrame.Angles(0, 0, math.rad(90)),
+				C_SAND,
+				Enum.Material.Sand
+			)
+			sandHub.Shape = Enum.PartType.Cylinder
+			sandHub.CanCollide = false
+			sandHub.CanTouch = false
+			sandHub.CanQuery = false
 		end
 
 		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
