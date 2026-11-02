@@ -414,27 +414,6 @@ local function buildTestCourse()
 			return pathPoints[1]
 		end
 
-		-- Base de arena bajo las uniones de curva.
-		-- El asfalto y los pianos quedan por encima; la arena solo aparece
-		-- en los huecos irregulares que dejan los segmentos rectos al girar.
-		if sideIndex == 1 then
-		for cornerIndex = 1, uniqueCount do
-			local corner = waypoints[cornerIndex]
-			local sandHub = makePart(
-				course,
-				("SandCorner_%d_%d"):format(sideIndex, cornerIndex),
-				Vector3.new(0.04, trackWidth + 2.8, trackWidth + 2.8),
-				CFrame.new(corner.X, yGround + 0.02, corner.Z) * CFrame.Angles(0, 0, math.rad(90)),
-				C_SAND,
-				Enum.Material.Sand
-			)
-			sandHub.Shape = Enum.PartType.Cylinder
-			sandHub.CanCollide = false
-			sandHub.CanTouch = false
-			sandHub.CanQuery = false
-		end
-		end
-
 		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
 		local actualTileLength = totalLength / tileCount
 		for tileIndex = 1, tileCount do
