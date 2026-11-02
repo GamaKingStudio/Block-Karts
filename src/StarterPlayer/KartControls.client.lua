@@ -45,6 +45,7 @@ print(("[BLOXY-KART][CLIENT][START] script=%s parent=%s remote=%s class=%s"):for
 local camera = Workspace.CurrentCamera
 local currentSeat
 local cameraConnection
+local drivingBaseFieldOfView
 local shownEnterPrompt
 local enterPromptBillboard
 local held = { forward = false, reverse = false, left = false, right = false, brake = false }
@@ -165,6 +166,10 @@ local function stopDrivingCamera()
 			activeCamera.CameraSubject = humanoid
 		end
 		activeCamera.CameraType = Enum.CameraType.Custom
+		if drivingBaseFieldOfView then
+			activeCamera.FieldOfView = drivingBaseFieldOfView
+			drivingBaseFieldOfView = nil
+		end
 		if wasDrivingCamera then
 			print(("[BLOXY-KART][CLIENT][CAMERA-RESTORE] type=%s subject=%s"):format(
 				activeCamera.CameraType.Name, activeCamera.CameraSubject and activeCamera.CameraSubject:GetFullName() or "nil"
@@ -184,6 +189,9 @@ local function startDrivingCamera(kart)
 		return
 	end
 	camera.CameraType = Enum.CameraType.Scriptable
+	drivingBaseFieldOfView = camera.FieldOfView
+	local baseFieldOfView = drivingBaseFieldOfView
+	local smoothedFieldOfView = baseFieldOfView
 	local smoothedCFrame = camera.CFrame
 	print(("[BLOXY-KART][CLIENT][CAMERA-DRIVE] type=%s offset=%s lookAhead=%.1f"):format(
 		camera.CameraType.Name, tostring(KartConfig.CameraOffset), KartConfig.CameraLookAhead
@@ -199,6 +207,12 @@ local function startDrivingCamera(kart)
 		local desiredCFrame = CFrame.lookAt(desiredPosition, focus)
 		local alpha = 1 - math.exp(-6 * deltaTime)
 		smoothedCFrame = smoothedCFrame:Lerp(desiredCFrame, alpha)
+		local forwardSpeed = math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
+		local speedRatio = math.clamp(forwardSpeed / math.max(KartConfig.MaxForwardSpeed, 1), 0, 1)
+		local targetFieldOfView = baseFieldOfView + (6 * speedRatio)
+		local fovAlpha = 1 - math.exp(-3.5 * deltaTime)
+		smoothedFieldOfView = smoothedFieldOfView + (targetFieldOfView - smoothedFieldOfView) * fovAlpha
+		camera.FieldOfView = smoothedFieldOfView
 		camera.CFrame = smoothedCFrame
 		camera.Focus = CFrame.new(focus)
 	end)
