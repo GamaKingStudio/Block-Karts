@@ -57,9 +57,11 @@ local function label(parent, name, size, position, text, textSize, color)
  return item
 end
 
-local racePanel = panel("RacePanel", UDim2.fromOffset(270, 68), UDim2.new(0.5, -135, 0, 22))
-local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 31), UDim2.fromOffset(10, 5), "VUELTA 1 / 3", 20)
-local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 37), "CHECKPOINT 0 / 14", 12, Color3.fromRGB(190, 202, 216))
+local racePanel = panel("RacePanel", UDim2.fromOffset(300, 100), UDim2.new(0.5, -150, 0, 22))
+local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19)
+local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 18, Color3.fromRGB(255, 220, 145))
+local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 11, Color3.fromRGB(190, 202, 216))
+local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 12, Color3.fromRGB(190, 202, 216))
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -174, 1, -116))
 local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42)
@@ -78,12 +80,34 @@ local function setLap(lap)
  end
 end
 
+local lapStartedAt = nil
+local bestLapTime = nil
+
+local function formatTime(seconds)
+ local minutes = math.floor(seconds / 60)
+ local remainder = seconds - minutes * 60
+ return ("%02d:%05.2f"):format(minutes, remainder)
+end
+
 checkpointEvent.OnClientEvent:Connect(function(index, total)
  checkpointLabel.Text = ("CHECKPOINT %d / %d"):format(index, total)
+ if index == 0 then
+  lapStartedAt = os.clock()
+  timerLabel.Text = "00:00.00"
+ end
 end)
 
-lapEvent.OnClientEvent:Connect(function(lap)
+lapEvent.OnClientEvent:Connect(function(lap, lapTime, isBest)
  setLap(lap + 1)
+ lapStartedAt = nil
+ timerLabel.Text = formatTime(lapTime)
+ if isBest then
+  bestLapTime = lapTime
+  bestLabel.Text = "MEJOR " .. formatTime(bestLapTime)
+  bestLabel.TextColor3 = Color3.fromRGB(255, 220, 145)
+ elseif bestLapTime then
+  bestLabel.Text = "MEJOR " .. formatTime(bestLapTime)
+ end
 end)
 
 wrongWayEvent.OnClientEvent:Connect(function(isWrongWay)
@@ -101,6 +125,9 @@ local function updateSpeed()
  end
  local speed = math.abs(currentChassis.AssemblyLinearVelocity:Dot(currentChassis.CFrame.LookVector))
  speedValue.Text = tostring(math.floor(speed * 1.008 + 0.5))
+ if lapStartedAt then
+  timerLabel.Text = formatTime(os.clock() - lapStartedAt)
+ end
 end
 
 local function setDriving(seat)
@@ -112,6 +139,11 @@ local function setDriving(seat)
   hud.Enabled = true
   setLap(1)
   checkpointLabel.Text = "CHECKPOINT 0 / 14"
+  timerLabel.Text = "00:00.00"
+  lapStartedAt = nil
+  bestLapTime = nil
+  bestLabel.Text = "MEJOR --:--.--"
+  bestLabel.TextColor3 = Color3.fromRGB(190, 202, 216)
   wrongPanel.Visible = false
   updateSpeed()
   if renderConnection then renderConnection:Disconnect() end
