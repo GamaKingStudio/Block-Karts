@@ -586,7 +586,7 @@ local function buildTestCourse()
 	-- Modelo original de palmera importado en Roblox Studio.
 	-- Si el asset no está disponible para esta experiencia, se usa el modelo procedural como respaldo.
 	local InsertService = game:GetService("InsertService")
-	local PALM_ASSET_ID = 87753578406826
+	local PALM_ASSET_ID = 91776332943612
 	local importedPalmTemplate = nil
 	local palmLoadOk, palmAssetOrError = pcall(function()
 		return InsertService:LoadAsset(PALM_ASSET_ID)
@@ -642,14 +642,18 @@ local function buildTestCourse()
 		end
 
 		local boxCFrame, boxSize = palmModel:GetBoundingBox()
-		local boxBottomY = boxCFrame.Position.Y - boxSize.Y / 2
-		local boxTopY = boxCFrame.Position.Y + boxSize.Y / 2
 		local pivotToBox = palmModel:GetPivot():ToObjectSpace(boxCFrame)
 		local targetBox = CFrame.new(pos)
 			* CFrame.Angles(0, math.rad(tiltYaw or 0), 0)
 			* CFrame.Angles(0, 0, math.rad(tiltDeg or 0))
 			* CFrame.new(0, boxSize.Y / 2, 0)
 		palmModel:PivotTo(targetBox * pivotToBox:Inverse())
+
+		-- Recalcula los límites después de mover el modelo: las posiciones de
+		-- las piezas ya están en su ubicación final dentro del circuito.
+		local finalBoxCFrame, finalBoxSize = palmModel:GetBoundingBox()
+		local boxBottomY = finalBoxCFrame.Position.Y - finalBoxSize.Y / 2
+		local boxTopY = finalBoxCFrame.Position.Y + finalBoxSize.Y / 2
 
 		-- Recupera una paleta tropical si el FBX llega sin colores/materiales útiles.
 		for _, descendant in ipairs(palmModel:GetDescendants()) do

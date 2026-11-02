@@ -204,7 +204,16 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
 
-**Vegetación:** `KartService.lua` intenta cargar el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `87753578406826`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, evitando depender de la escala interna del FBX. Se colorean las partes con una paleta tropical (hojas verdes, tronco café y cocos oscuros), se apoya según el centro de su bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. Esta corrección está implementada, pero requiere validación visual en Roblox Studio. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración está implementada en código, pero aún requiere prueba en Roblox Studio para confirmar permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
+**Vegetación:** `KartService.lua` intenta cargar el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `91776332943612`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, evitando depender de la escala interna del FBX. Se colorean las partes con una paleta tropical (hojas verdes, tronco café y cocos oscuros), se apoya según el centro de su bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. La integración del nuevo modelo está implementada, pero requiere validación visual en Roblox Studio. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración está implementada en código, pero aún requiere prueba en Roblox Studio para confirmar permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
+
+### Registro de actualización de palmera (2 de noviembre de 2026)
+
+- Se sustituyó el FBX anterior por el nuevo `assets/models/import/palmera.fbx` procedente de `main` (sin modificar la rama `main`).
+- Se actualizó `PALM_ASSET_ID` en `KartService.lua` a `91776332943612`.
+- Se corrigió el cálculo de la altura relativa de las piezas para que utilice el bounding box después de posicionar el modelo.
+- El FBX contiene piezas nombradas `Palm_Trunk`, `Leaf_High_*` y `Leaf_Low_*`; el código puede reconocer las hojas por nombre y mantener la diferenciación cromática.
+- Pruebas realizadas: revisión del contenido FBX y comparación de la rama antes de publicar. No se ejecutó Roblox Studio ni se verificó la carga del asset dentro de la experiencia.
+- Estado: implementado en GitHub; pendiente prueba visual y de permisos en Roblox Studio.
 
 ## 7. Historial de problemas críticos resueltos
 
@@ -221,7 +230,7 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-- **Palmeras del Beach Resort:** integración del modelo original publicado (`87753578406826`) implementada con carga dinámica, normalización por altura real (objetivo aproximado 14–17 studs), recoloración tropical de respaldo, ajuste por bounding box y respaldo procedural. La primera prueba visual del usuario reportó palmeras gigantes y sin colores; se corrigió el cálculo de escala y se añadió coloración por nombre/altura de las piezas. Pendiente volver a probar en Roblox Studio para confirmar tamaño, colores, orientación y apoyo en el suelo.
+- **Palmeras del Beach Resort:** integración del nuevo modelo publicado (`91776332943612`) implementada con carga dinámica, normalización por altura real (objetivo aproximado 14–17 studs), recoloración tropical de respaldo, ajuste por bounding box y respaldo procedural. La primera prueba visual del usuario reportó palmeras gigantes y sin colores; se corrigió el cálculo de escala y se añadió coloración por nombre/altura de las piezas. Pendiente volver a probar en Roblox Studio para confirmar tamaño, colores, orientación y apoyo en el suelo.
 
 - Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
