@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
-local DIAGNOSTICS_ENABLED = true
+local DIAGNOSTICS_ENABLED = false
 local DIAGNOSTIC_INTERVAL = 2
 local COURSE_SURFACE_Y = 1.0
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
