@@ -41,6 +41,7 @@ local checkpointPassedRemote = getOrCreateRemote("CheckpointPassed")
 local lapCompletedRemote = getOrCreateRemote("LapCompleted")
 local wrongWayRemote = getOrCreateRemote("WrongWayStateChanged")
 local requestRespawnRemote = getOrCreateRemote("RequestRespawn")
+local raceCountdownRemote = getOrCreateRemote("RaceCountdown")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -872,6 +873,8 @@ end)
 -- 4. GESTIÓN Y SPAWN DEL PILOTO
 -- ==========================================================
 local function spawnPlayerKart(player)
+	player:SetAttribute("RaceStarted", false)
+	player:SetAttribute("RaceCountdownActive", false)
 	local current = activeKarts[player]
 	if current then
 		current.model:Destroy()
@@ -895,6 +898,20 @@ local function spawnPlayerKart(player)
 		if kart.seat.Parent and not kart.seat.Occupant then
 			kart.seat:Sit(humanoid)
 		end
+		if kart.seat.Occupant == humanoid and not player:GetAttribute("RaceCountdownActive") and not player:GetAttribute("RaceStarted") then
+			player:SetAttribute("RaceCountdownActive", true)
+			task.spawn(function()
+				for count = 3, 1, -1 do
+					if not player.Parent or not kart.seat.Parent or kart.seat.Occupant ~= humanoid then return end
+					raceCountdownRemote:FireClient(player, count)
+					task.wait(1)
+				end
+				if player.Parent and kart.seat.Parent and kart.seat.Occupant == humanoid then
+					player:SetAttribute("RaceStarted", true)
+					raceCountdownRemote:FireClient(player, 0)
+				end
+			end)
+		end
 	end
 
 	player.CharacterAdded:Connect(seatCharacter)
@@ -909,6 +926,10 @@ remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
 	local occupant = kart and kart.seat.Occupant
 	local isAuthorizedDriver = occupant ~= nil and occupant.Parent == player.Character
 	if throttle ~= throttle or steering ~= steering or not isAuthorizedDriver then return end
+	if player:GetAttribute("RaceStarted") ~= true then
+		driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+		return
+	end
 	driverInputs[player] = {
 		throttle = math.clamp(throttle, -1, 1),
 		steering = math.clamp(steering, -1, 1),
