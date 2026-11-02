@@ -382,30 +382,10 @@ local function buildTestCourse()
 		spawnTikiTorch(tp)
 	end
 
-	-- Carga la palmera publicada. Si Roblox no permite cargar el recurso (permisos,
-	-- moderación o ID incorrecto), se conserva la palmera procedural como respaldo.
-	local importedPalmTemplate = ReplicatedStorage:FindFirstChild("PalmImported")
-	if not importedPalmTemplate then
-		local InsertService = game:GetService("InsertService")
-		local assetId = 87753578406826
-		local ok, assetOrError = pcall(function()
-			return InsertService:LoadAsset(assetId)
-		end)
-		if ok and assetOrError then
-			local loadedAsset = assetOrError
-			local candidate = loadedAsset:FindFirstChildWhichIsA("Model", true)
-			if candidate then
-				importedPalmTemplate = candidate:Clone()
-				importedPalmTemplate.Name = "PalmImported"
-				importedPalmTemplate.Parent = ReplicatedStorage
-			else
-				warn("[BLOXY-KART][PALM] El recurso publicado no contiene un Model; se usará la palmera de respaldo.")
-			end
-			loadedAsset:Destroy()
-		else
-			warn(("[BLOXY-KART][PALM] No se pudo cargar el recurso %d: %s. Se usará la palmera de respaldo."):format(assetId, tostring(assetOrError)))
-		end
-	end
+	-- El asset FBX importado queda temporalmente desactivado: Roblox lo está
+	-- interpretando con dimensiones/pivots inconsistentes. Se conserva la
+	-- palmera procedural estable hasta validar el modelo publicado en Studio.
+	local importedPalmTemplate = nil
 
 	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
 		scale = scale or 1.0
@@ -446,20 +426,6 @@ local function buildTestCourse()
 			return
 		end
 
-		-- Respaldo actual: mantiene la ambientación si todavía no se ha publicado el FBX.
-		local trunkH = 15 * scale
-		local palmBaseCF = CFrame.new(pos) * CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
-		makePart(course, "PalmTrunk", Vector3.new(1.8 * scale, trunkH, 1.8 * scale), palmBaseCF * CFrame.new(0, trunkH / 2, 0), C_WOOD, Enum.Material.Wood)
-
-		local crownCF = palmBaseCF * CFrame.new(0, trunkH, 0)
-		for rot = 0, 315, 45 do
-			local leafMat = (rot % 90 == 0) and C_LEAVES or C_LEAVES_DARK
-			local leafCF = crownCF * CFrame.Angles(0, math.rad(rot), math.rad(-22)) * CFrame.new(0, 0, 4.5 * scale)
-			makePart(course, "PalmLeaf", Vector3.new(3.8 * scale, 0.4, 7.5 * scale), leafCF, leafMat)
-		end
-		for _, co in ipairs({ Vector3.new(0.6, -0.6, 0.6), Vector3.new(-0.6, -0.6, 0.6), Vector3.new(0, -0.7, -0.7) }) do
-			makePart(course, "Coconut", Vector3.new(0.9, 0.9, 0.9), crownCF * CFrame.new(co), C_DARKWOOD, Enum.Material.Wood, "Ball")
-		end
 	end
 
 	local palmData = {
