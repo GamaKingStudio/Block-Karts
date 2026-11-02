@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
-local DIAGNOSTICS_ENABLED = true
+local DIAGNOSTICS_ENABLED = false
 local DIAGNOSTIC_INTERVAL = 2
 local COURSE_SURFACE_Y = 1.0
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
@@ -312,13 +312,11 @@ local function buildTestCourse()
 
 
 	-- ==========================================================
-	-- PIANOS ROJO/BLANCO: rectas paralelas y arcos segmentados en curvas.
+	-- PIANOS ROJO/BLANCO: recorrido paralelo cerrado con esquinas redondeadas.
 	local curbWidth = 1.6
 	local curbHeight = 0.14
-	-- El piano queda completamente fuera del asfalto: su borde interior
-	-- mantiene 0.2 studs de separación respecto del límite de la pista.
 	local curbEdgeOffset = 1.0
-	local curbTileLength = 2.5
+	local curbTileLength = 1.25
 	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
 	local guardrailPostHeight = 1.75
@@ -334,60 +332,70 @@ local function buildTestCourse()
 		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
 	end
 
-	local function curbNormal(direction)
-		return Vector3.new(-direction.Z, 0, direction.X)
-	end
+	local uniqueCount = #waypoints - 1
+	local curbOffset = trackWidth / 2 + curbEdgeOffset
 
-	-- Construye una única línea continua por lado y distribuye los colores
-	-- por distancia recorrida, no por cada pequeño segmento del arco.
 	for sideIndex, side in ipairs({ -1, 1 }) do
+		local curbCorners = {}
+		for i = 1, uniqueCount do
+			local previousIndex = (i - 2) % uniqueCount + 1
+			local nextIndex = i % uniqueCount + 1
+			local incoming = curbDirection(waypoints[previousIndex], waypoints[i])
+			local outgoing = curbDirection(waypoints[i], waypoints[nextIndex])
+			local normalIn = Vector3.new(-incoming.Z, 0, incoming.X) * side
+			local normalOut = Vector3.new(-outgoing.Z, 0, outgoing.X) * side
+			local bisector = normalIn + normalOut
+			if bisector.Magnitude < 0.001 then bisector = normalOut else bisector = bisector.Unit end
+			local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.35)
+			local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.8)
+			local point = waypoints[i] + bisector * miterDistance
+			curbCorners[i] = Vector3.new(point.X, yGround + 0.13, point.Z)
+		end
+
+		-- Redondea cada vértice con una curva Bézier cuadrática.
+		-- Los tramos rectos se conservan entre la salida de una curva
+		-- y la entrada de la siguiente.
 		local pathPoints = {}
 		local function appendPoint(point)
 			local previous = pathPoints[#pathPoints]
-			if not previous or (point - previous).Magnitude > 0.01 then
+			if not previous or (point - previous).Magnitude > 0.015 then
 				pathPoints[#pathPoints + 1] = point
 			end
 		end
 
-		for i = 1, #waypoints - 1 do
-			-- La lista de waypoints cierra el circuito repitiendo el primer
-			-- punto al final. La primera curva entra desde el punto 15 y la
-			-- última sale hacia el punto 16 (copia del punto 1).
-			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
-			local nextIndex = i + 1
-			local center = waypoints[i]
-			local incoming = curbDirection(waypoints[previousIndex], center)
-			local outgoing = curbDirection(center, waypoints[nextIndex])
-			local radialStart = curbNormal(incoming) * side
-			local radialEnd = curbNormal(outgoing) * side
-			local startAngle = math.atan2(radialStart.Z, radialStart.X)
-			-- Usa el giro angular firmado más corto entre ambas normales.
-			-- Así cada lado sigue su propio arco y nunca intenta recorrer
-			-- media vuelta en sentido contrario en las curvas.
-			local delta = math.atan2(
-				radialStart.X * radialEnd.Z - radialStart.Z * radialEnd.X,
-				radialStart:Dot(radialEnd)
-			)
-
-			local radius = trackWidth / 2 + curbEdgeOffset
-			local arcLength = math.abs(delta) * radius
-			local steps = math.max(1, math.ceil(arcLength / 0.75))
-			for step = 0, steps do
-				local angle = startAngle + delta * (step / steps)
-				appendPoint(Vector3.new(
-					center.X + math.cos(angle) * radius,
-					yGround,
-					center.Z + math.sin(angle) * radius
-				))
+		for i = 1, uniqueCount do
+			local previousIndex = (i - 2) % uniqueCount + 1
+			local nextIndex = i % uniqueCount + 1
+			local corner = curbCorners[i]
+			local previousCorner = curbCorners[previousIndex]
+			local nextCorner = curbCorners[nextIndex]
+			local incomingVector = corner - previousCorner
+			local outgoingVector = nextCorner - corner
+			local incomingLength = incomingVector.Magnitude
+			local outgoingLength = outgoingVector.Magnitude
+			if incomingLength > 0.01 and outgoingLength > 0.01 then
+				local incoming = incomingVector.Unit
+				local outgoing = outgoingVector.Unit
+				local dot = math.clamp(incoming:Dot(outgoing), -0.999, 0.999)
+				local turnAngle = math.acos(dot)
+				local tangentDistance = 3.5 * math.tan(turnAngle / 2)
+				tangentDistance = math.min(tangentDistance, incomingLength * 0.35, outgoingLength * 0.35)
+				if turnAngle < math.rad(3) then tangentDistance = 0 end
+				local curveStart = corner - incoming * tangentDistance
+				local curveEnd = corner + outgoing * tangentDistance
+				appendPoint(curveStart)
+				for step = 1, 12 do
+					local t = step / 12
+					local oneMinusT = 1 - t
+					local point = curveStart * (oneMinusT * oneMinusT)
+						+ corner * (2 * oneMinusT * t)
+						+ curveEnd * (t * t)
+					appendPoint(point)
+				end
 			end
 		end
 
-		-- Cierra la polilínea con el primer punto.
-		if #pathPoints > 2 then
-			appendPoint(pathPoints[1])
-		end
-
-		-- Longitud acumulada de la línea curva.
+		if #pathPoints > 2 then appendPoint(pathPoints[1]) end
 		local cumulative = { 0 }
 		for i = 2, #pathPoints do
 			cumulative[i] = cumulative[i - 1] + (pathPoints[i] - pathPoints[i - 1]).Magnitude
@@ -395,15 +403,15 @@ local function buildTestCourse()
 		local totalLength = cumulative[#cumulative]
 
 		local function pointAtDistance(distance)
-			distance = math.clamp(distance, 0, totalLength)
+			distance = distance % totalLength
 			for i = 2, #cumulative do
 				if distance <= cumulative[i] then
 					local segmentLength = cumulative[i] - cumulative[i - 1]
-					local alpha = segmentLength > 0 and (distance - cumulative[i - 1]) / segmentLength or 0
+					local alpha = segmentLength > 0.001 and (distance - cumulative[i - 1]) / segmentLength or 0
 					return pathPoints[i - 1]:Lerp(pathPoints[i], alpha)
 				end
 			end
-			return pathPoints[#pathPoints]
+			return pathPoints[1]
 		end
 
 		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
@@ -411,18 +419,15 @@ local function buildTestCourse()
 		for tileIndex = 1, tileCount do
 			local distance = (tileIndex - 0.5) * actualTileLength
 			local center = pointAtDistance(distance)
-			local before = pointAtDistance(math.max(0, distance - actualTileLength * 0.45))
-			local after = pointAtDistance(math.min(totalLength, distance + actualTileLength * 0.45))
-			local direction = (after - before).Unit
-			local tileCF = CFrame.lookAt(
-				Vector3.new(center.X, yGround + 0.13, center.Z),
-				Vector3.new(center.X, yGround + 0.13, center.Z) + direction
-			)
+			local before = pointAtDistance(distance - actualTileLength * 0.45)
+			local after = pointAtDistance(distance + actualTileLength * 0.45)
+			local direction = after - before
+			if direction.Magnitude > 0.001 then direction = direction.Unit else direction = Vector3.new(0, 0, -1) end
 			local tile = makePart(
 				course,
 				("Kerb_%d_%d"):format(sideIndex, tileIndex),
-				Vector3.new(curbWidth, curbHeight, actualTileLength - 0.04),
-				tileCF,
+				Vector3.new(curbWidth, curbHeight, math.max(0.1, actualTileLength - 0.025)),
+				CFrame.lookAt(center, center + direction),
 				guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
 				Enum.Material.SmoothPlastic
 			)
@@ -432,9 +437,7 @@ local function buildTestCourse()
 		end
 	end
 
-	-- Calcula uma linha paralela à pista. Cada curva usa um único ponto
-	-- de encontro (miter), compartilhado pelos dois segmentos vizinhos.
-	local function horizontalDirection(a, b)
+		local function horizontalDirection(a, b)
 		local v = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
 		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
 	end

@@ -1,6 +1,6 @@
 # BLOXY KARTS - Project Context
 
-Última actualización: Noviembre de 2026
+Última actualización: 2 de noviembre de 2026
 
 Motor: Roblox Studio (Luau)
 
@@ -10,7 +10,7 @@ Estudio: GamaKingStudio
 
 Repositorio: https://github.com/GamaKingStudio/Block-Karts
 
-Rama de trabajo: `feature/kart-prototype`
+Rama de trabajo actual: `recovery/stable-handling` (rama aislada para correcciones y validación del manejo y circuito).
 
 Rama protegida: `main`
 
@@ -95,8 +95,8 @@ BLOXY KARTS es un juego de carreras arcade para Roblox, con estética low-poly i
 ### Reglas de trabajo
 
 - Extender el proyecto existente; evitar reescrituras completas de módulos funcionales.
-- Todo nuevo desarrollo debe integrarse en la rama `feature/kart-prototype`.
-- No realizar merges ni modificaciones en la rama `main` sin autorización explícita.
+- Todo nuevo desarrollo debe integrarse en la rama de trabajo autorizada para la tarea. Para la iteración actual de recuperación y estabilidad se utiliza `recovery/stable-handling`.
+- No realizar merges ni modificaciones en la rama `main` sin autorización explícita. Mantener los cambios de esta iteración exclusivamente en `recovery/stable-handling`.
 - Mantener estricta compatibilidad con Rojo (versión 7.7.1).
 - Limitar las tareas exploratorias autónomas para optimizar el consumo de recursos y tiempo de desarrollo.
 - Antes de modificar código, revisar la implementación existente y sus dependencias.
@@ -136,11 +136,18 @@ Servicios: Roblox Studio, VS Code, Git/GitHub, Rojo CLI 7.7.1.
 
 El proyecto se encuentra en fase de prototipo jugable, con un circuito base y un sistema de físicas de karts funcional, según el estado técnico documentado.
 
+### Tipografía e identidad visual del HUD
+
+- `src/ReplicatedStorage/BloxyTypography.lua`: módulo central de tipografía. Expone los roles `Bold` y `Light` para mantener una jerarquía consistente en la interfaz.
+- **Jerarquía prevista:** Bold para cuenta regresiva, vuelta actual, cronómetro, velocidad, avisos y títulos de panel; Light para etiquetas, unidades, checkpoints, mejor tiempo y filas informativas.
+- **Estado actual:** la integración del HUD utiliza temporalmente la familia nativa Gotham SSm con pesos Bold y Light mediante `FontFace`. Los archivos BLOXY `.ttf` del usuario aún no están incorporados como assets de Roblox; por tanto, la tipografía BLOXY real está pendiente de publicación/obtención de IDs y sustitución de la familia de respaldo. No se han inventado IDs ni se afirma que BLOXY esté aplicada.
+
 ### Archivos principales en uso
 
 - `src/ServerScriptService/KartService.lua`: Controlador del servidor. Gestiona la generación del entorno, spawn de jugadores y ensamblaje de los karts.
 - `src/ServerScriptService/KartBootstrap.server.lua`: Punto de entrada del servidor.
 - `src/ReplicatedStorage/KartConfig.lua`: Módulo de datos (parámetros físicos, multiplicadores, configuración de cámara).
+- `src/ReplicatedStorage/BloxyTypography.lua`: Roles tipográficos centralizados para el HUD (respaldo Gotham SSm hasta disponer de los assets BLOXY publicados).
 - `src/StarterPlayer/KartControls.client.lua`: Lógica del cliente. Captura de inputs y aplicación de fuerzas físicas.
 
 ### Sistemas implementados según el estado documentado
@@ -185,6 +192,10 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Mitigación de Z-Fighting:** Escalado micrométrico en el eje Y (deltas de ~0.02 studs) para separar arena, asfalto, marcas viales y límites de pista.
 
+**Pianos y guardarraíles (estado de la rama `recovery/stable-handling`):** Pianos alternados rojo/blanco de 1.6 studs de ancho, con recorrido redondeado mediante curvas Bézier y muestreo de 12 pasos; el usuario confirmó que su apariencia quedó correcta. Guardarraíles metálicos continuos con postes y dos perfiles horizontales; el usuario confirmó que quedaron perfectos. No modificar estos elementos aprobados sin una solicitud expresa.
+
+**Relleno de arena en uniones (pendiente):** Se probaron discos cilíndricos de arena centrados en los waypoints para cubrir huecos entre el asfalto y los pianos. La primera versión quedó oculta bajo `IslandSand`; al elevarla, produjo grandes círculos de arena e interferencia visual en las curvas, según la prueba del usuario. Se retiró por completo ese bloque de discos en el commit actual. El relleno correcto sigue pendiente y debe ajustarse a la geometría real del borde de pista, sin círculos completos ni solapamientos. No modificar los pianos ni guardarraíles aprobados.
+
 ### Elementos estructurales
 
 **Pit Lane (Calle de Boxes):** Carril paralelo al sur de la recta principal. Incluye muro divisor físico, cajones de detención, un WedgePart para sellar la geometría en la entrada y un carril de incorporación fluida a la vía principal.
@@ -208,12 +219,15 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ## 8. Próximos pasos (Roadmap técnico)
 
-### Fase actual: HUD y sistemas de lógica de carrera
+### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-**Implementación de la Interfaz de Usuario (HUD):**
-- Desarrollo de cronómetro.
-- Contador de vueltas.
-- Telemetría local (velocímetro).
+- Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
+- Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
+
+**Interfaz de Usuario (HUD):**
+- Cronómetro, contador de vueltas, telemetría local, clasificación y minimapa implementados en `RaceHUD.client.lua` según el código actual.
+- Jerarquía tipográfica Bold/Light centralizada e integrada con `FontFace`, usando Gotham SSm como respaldo temporal.
+- Pendiente: publicar/obtener los IDs de BLOXY Bold y BLOXY Light e incorporarlos en `BloxyTypography.lua`; validar visualmente el resultado en Roblox Studio.
 
 **Sistema de Checkpoints (Backend):**
 - Zonas de validación vectoriales (invisibles) para certificar vueltas válidas.
@@ -257,8 +271,8 @@ La prioridad es consolidar primero la experiencia de conducción y el ciclo prin
 ### Gemini Desarrollador
 
 - Revisar el estado real del repositorio antes de implementar una tarea.
-- Confirmar la rama activa `feature/kart-prototype`.
-- No modificar `main` ni realizar merges sin autorización explícita.
+- Confirmar la rama activa autorizada para la tarea; en la iteración actual es `recovery/stable-handling`.
+- No modificar `main` ni realizar merges sin autorización explícita. Para la iteración actual, trabajar solo en `recovery/stable-handling`.
 - Revisar los archivos y dependencias involucrados antes de realizar cambios.
 - Implementar únicamente el alcance aprobado.
 - Mantener compatibilidad con Rojo 7.7.1.

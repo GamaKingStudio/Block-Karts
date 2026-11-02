@@ -337,9 +337,6 @@ local function sendDriveInput()
 	local canDrive = player:GetAttribute("RaceStarted") == true
 	local throttle = canDrive and ((held.forward and 1 or 0) - (held.reverse and 1 or 0)) or 0
 	local steering = canDrive and ((held.right and 1 or 0) - (held.left and 1 or 0)) or 0
-	print(("[BLOXY-KART][CLIENT][REMOTE-SEND] remote=%s seat=%s throttle=%.0f steering=%.0f brake=%s"):format(
-		controlRemote:GetFullName(), currentSeat:GetFullName(), throttle, steering, tostring(held.brake)
-	))
 	controlRemote:FireServer(throttle, steering, held.brake)
 end
 
@@ -417,7 +414,7 @@ local function simulateOwnedKart()
 		chassis.AssemblyLinearVelocity = forward * clamped + right * lateralSpeed + Vector3.new(0, velocity.Y, 0)
 	end
 
-	if os.clock() >= physicsDiagnosticNext then
+	if false and os.clock() >= physicsDiagnosticNext then
 		physicsDiagnosticNext = os.clock() + 2
 		local root = chassis.AssemblyRootPart or chassis
 		local characterRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -476,9 +473,6 @@ local function onDriveAction(_, inputState, inputObject)
 		return Enum.ContextActionResult.Sink
 	end
 	local control = keyToControl[inputObject.KeyCode]
-	print(("[BLOXY-KART][CLIENT][ACTION] key=%s state=%s mapped=%s seated=%s"):format(
-		inputObject.KeyCode.Name, inputState.Name, tostring(control), tostring(currentSeat ~= nil)
-	))
 	if control then
 		if inputState == Enum.UserInputState.Begin then
 			held[control] = true
@@ -489,26 +483,6 @@ local function onDriveAction(_, inputState, inputObject)
 	end
 	return Enum.ContextActionResult.Sink
 end
-
-local function isDriveKey(keyCode)
-	return keyToControl[keyCode] ~= nil
-end
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if currentSeat and isDriveKey(input.KeyCode) then
-		print(("[BLOXY-KART][CLIENT][RAW-KEY] key=%s state=Begin gameProcessed=%s"):format(
-			input.KeyCode.Name, tostring(gameProcessed)
-		))
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-	if currentSeat and isDriveKey(input.KeyCode) then
-		print(("[BLOXY-KART][CLIENT][RAW-KEY] key=%s state=End gameProcessed=%s"):format(
-			input.KeyCode.Name, tostring(gameProcessed)
-		))
-	end
-end)
 
 local function clearDriveInput()
 	for key in pairs(held) do
