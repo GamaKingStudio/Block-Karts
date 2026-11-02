@@ -413,15 +413,9 @@ local function buildTestCourse()
 		if importedPalmTemplate and importedPalmTemplate:IsA("Model") then
 			local palm = importedPalmTemplate:Clone()
 			palm.Name = "PalmImported"
-			palm.Parent = course
 
-			-- Normaliza el alto del modelo a una palmera de aproximadamente 18 studs.
-			local _, originalSize = palm:GetBoundingBox()
-			if originalSize.Y > 0 then
-				palm:ScaleTo((18 * scale) / originalSize.Y)
-			end
-
-			-- Las palmeras son decoración: no deben interferir con los karts.
+			-- Ancla todas las piezas antes de entrar al Workspace para evitar que
+			-- cualquier pieza suelta caiga durante el primer paso de física.
 			for _, descendant in ipairs(palm:GetDescendants()) do
 				if descendant:IsA("BasePart") then
 					descendant.Anchored = true
@@ -430,6 +424,19 @@ local function buildTestCourse()
 					descendant.CanQuery = false
 				end
 			end
+
+			-- Solo reducimos modelos sobredimensionados. Algunos FBX llegan en
+			-- unidades pequeñas y ampliarlos automáticamente produce árboles gigantes.
+			local _, originalSize = palm:GetBoundingBox()
+			if originalSize.Y > 0 then
+				local desiredHeight = 14 * scale
+				local scaleFactor = math.clamp(desiredHeight / originalSize.Y, 0.01, 1)
+				if math.abs(scaleFactor - 1) > 0.001 then
+					palm:ScaleTo(scaleFactor)
+				end
+			end
+
+			palm.Parent = course
 
 			local yaw = CFrame.Angles(0, math.rad(tiltYaw or 0), 0)
 			palm:PivotTo(CFrame.new(pos) * yaw)
