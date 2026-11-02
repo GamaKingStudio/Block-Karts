@@ -583,61 +583,99 @@ local function buildTestCourse()
 		spawnTikiTorch(tp)
 	end
 
-	-- El asset FBX importado queda temporalmente desactivado: Roblox lo está
-	-- interpretando con dimensiones/pivots inconsistentes. Se conserva la
-	-- palmera procedural estable hasta validar el modelo publicado en Studio.
+	-- Modelo original de palmera importado en Roblox Studio.
+	-- Si el asset no está disponible para esta experiencia, se usa el modelo procedural como respaldo.
+	local InsertService = game:GetService("InsertService")
+	local PALM_ASSET_ID = 87753578406826
 	local importedPalmTemplate = nil
+	local palmLoadOk, palmAssetOrError = pcall(function()
+		return InsertService:LoadAsset(PALM_ASSET_ID)
+	end)
+	if palmLoadOk and palmAssetOrError then
+		local loadedAsset = palmAssetOrError
+		local candidate = loadedAsset
+		if not candidate:IsA("Model") then
+			candidate = loadedAsset:FindFirstChildWhichIsA("Model", true)
+		end
+		if candidate and #candidate:GetDescendants() > 0 then
+			importedPalmTemplate = candidate:Clone()
+			importedPalmTemplate.Name = "PalmTemplate"
+			for _, descendant in ipairs(importedPalmTemplate:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = true
+					descendant.CanCollide = false
+					descendant.CanTouch = false
+					descendant.CanQuery = false
+					descendant.Massless = true
+				end
+			end
+		else
+			warn("[BLOXY-KART][PALM] El asset cargó, pero no contiene un Model utilizable. Se usará el respaldo procedural.")
+		end
+		loadedAsset:Destroy()
+	else
+		warn(("[BLOXY-KART][PALM] No se pudo cargar el asset %d: %s. Se usará el respaldo procedural."):format(PALM_ASSET_ID, tostring(palmAssetOrError)))
+	end
 
-	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
-		-- Palmeras compactas y agrupadas: las piezas quedan ancladas y sin
-		-- colisión para evitar que la corona se desarme o impulse por contacto.
-		scale = math.clamp(scale or 1, 0.85, 1.05)
-		local palmModel = Instance.new("Model")
+	local function spawnImportedPalm(pos, tiltDeg, tiltYaw, scale)
+		local palmModel = importedPalmTemplate:Clone()
 		palmModel.Name = "Palm"
 		palmModel.Parent = course
+		local safeScale = math.clamp(scale or 1, 0.85, 1.2)
+		local scaled, scaleError = pcall(function()
+			palmModel:ScaleTo(safeScale)
+		end)
+		if not scaled then
+			warn("[BLOXY-KART][PALM] No se pudo escalar el modelo importado: " .. tostring(scaleError))
+			palmModel:Destroy()
+			return false
+		end
+		local boxCFrame, boxSize = palmModel:GetBoundingBox()
+		local pivotToBox = palmModel:GetPivot():ToObjectSpace(boxCFrame)
+		local targetBox = CFrame.new(pos)
+			* CFrame.Angles(0, math.rad(tiltYaw or 0), 0)
+			* CFrame.Angles(0, 0, math.rad(tiltDeg or 0))
+			* CFrame.new(0, boxSize.Y / 2, 0)
+		palmModel:PivotTo(targetBox * pivotToBox:Inverse())
+		for _, descendant in ipairs(palmModel:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				descendant.Anchored = true
+				descendant.CanCollide = false
+				descendant.CanTouch = false
+				descendant.CanQuery = false
+				descendant.Massless = true
+			end
+		end
+		return true
+	end
 
+	local function spawnProceduralPalm(pos, tiltDeg, tiltYaw, scale)
+		-- Respaldo visual estable si el asset publicado no puede cargarse.
+		scale = math.clamp(scale or 1, 0.85, 1.2)
+		local palmModel = Instance.new("Model")
+		palmModel.Name = "Palm_ProceduralFallback"
+		palmModel.Parent = course
 		local trunkH = 10.5 * scale
 		local palmBaseCF = CFrame.new(pos)
 			* CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
-		local trunk = makePart(
-			palmModel, "PalmTrunk",
-			Vector3.new(1.25 * scale, trunkH, 1.25 * scale),
-			palmBaseCF * CFrame.new(0, trunkH / 2, 0),
-			C_WOOD, Enum.Material.Wood
-		)
+		local trunk = makePart(palmModel, "PalmTrunk", Vector3.new(1.25 * scale, trunkH, 1.25 * scale), palmBaseCF * CFrame.new(0, trunkH / 2, 0), C_WOOD, Enum.Material.Wood)
 		trunk.CanCollide = false
 		trunk.CanTouch = false
 		trunk.CanQuery = false
 		trunk.Massless = true
-
 		local crownCF = palmBaseCF * CFrame.new(0, trunkH, 0)
 		for rot = 0, 300, 60 do
 			local leafMat = (rot % 120 == 0) and C_LEAVES or C_LEAVES_DARK
-			local leafCF = crownCF
-				* CFrame.Angles(0, math.rad(rot), math.rad(-18))
-				* CFrame.new(0, 0, 2.8 * scale)
-			local leaf = makePart(
-				palmModel, "PalmLeaf",
-				Vector3.new(2.6 * scale, 0.28 * scale, 5.4 * scale),
-				leafCF, leafMat
-			)
+			local leaf = makePart(palmModel, "PalmLeaf", Vector3.new(2.6 * scale, 0.28 * scale, 5.4 * scale),
+				crownCF * CFrame.Angles(0, math.rad(rot), math.rad(-18)) * CFrame.new(0, 0, 2.8 * scale), leafMat)
 			leaf.CanCollide = false
 			leaf.CanTouch = false
 			leaf.CanQuery = false
 			leaf.Massless = true
 		end
-
-		for _, offset in ipairs({
-			Vector3.new(0.35, -0.35, 0.35),
-			Vector3.new(-0.35, -0.35, 0.35),
-			Vector3.new(0, -0.4, -0.4),
-		}) do
-			local coconut = makePart(
-				palmModel, "Coconut",
-				Vector3.new(0.55, 0.55, 0.55) * scale,
-				crownCF * CFrame.new(offset * scale),
-				C_DARKWOOD, Enum.Material.Wood, "Ball"
-			)
+		for _, offset in ipairs({Vector3.new(0.35, -0.35, 0.35), Vector3.new(-0.35, -0.35, 0.35), Vector3.new(0, -0.4, -0.4)}) do
+			local coconut = makePart(palmModel, "Coconut", Vector3.new(0.55, 0.55, 0.55) * scale,
+				crownCF * CFrame.new(offset * scale), C_DARKWOOD, Enum.Material.Wood, "Ball")
 			coconut.CanCollide = false
 			coconut.CanTouch = false
 			coconut.CanQuery = false
@@ -659,7 +697,13 @@ local function buildTestCourse()
 		{ pos = Vector3.new(25, yGround, 38),    tilt = -6, yaw = 50,  scale = 0.95 },
 	}
 	for _, p in ipairs(palmData) do
-		spawnOrganicPalm(p.pos, p.tilt, p.yaw, p.scale)
+		local spawned = false
+		if importedPalmTemplate then
+			spawned = spawnImportedPalm(p.pos, p.tilt, p.yaw, p.scale)
+		end
+		if not spawned then
+			spawnProceduralPalm(p.pos, p.tilt, p.yaw, p.scale)
+		end
 	end
 
 	local function spawnBeachCluster(pos, umbrellaColor, towelColor, rot)

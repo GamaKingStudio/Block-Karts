@@ -144,7 +144,7 @@ El proyecto se encuentra en fase de prototipo jugable, con un circuito base y un
 
 ### Archivos principales en uso
 
-- `src/ServerScriptService/KartService.lua`: Controlador del servidor. Gestiona la generación del entorno, spawn de jugadores y ensamblaje de los karts; también genera las palmeras procedurales compactas del Beach Resort.
+- `src/ServerScriptService/KartService.lua`: Controlador del servidor. Gestiona la generación del entorno, spawn de jugadores y ensamblaje de los karts; carga el modelo original de palmera publicado en Roblox y conserva un respaldo procedural.
 - `src/ServerScriptService/KartBootstrap.server.lua`: Punto de entrada del servidor.
 - `src/ReplicatedStorage/KartConfig.lua`: Módulo de datos (parámetros físicos, multiplicadores, configuración de cámara).
 - `src/ReplicatedStorage/BloxyTypography.lua`: Roles tipográficos centralizados para el HUD (respaldo Gotham SSm hasta disponer de los assets BLOXY publicados).
@@ -204,7 +204,7 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
 
-**Vegetación:** Palmeras procedurales agrupadas en modelos, con tronco de aproximadamente 10.5 studs de alto antes de aplicar escala, seis hojas y cocos. Todas sus piezas se generan ancladas, sin colisión/contacto/consulta y como masa nula para evitar que la palmera se desarme, genere impulsos físicos o interfiera con los karts. Escala individual limitada entre 0.85 y 1.05. Ubicadas a un radio mínimo de exclusión de 20 studs respecto a la pista para evitar interferencias de oclusión visual con la cámara de seguimiento.
+**Vegetación:** `KartService.lua` intenta cargar el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `87753578406826`, mediante `InsertService:LoadAsset`. Cada instancia se clona, escala entre 0.85 y 1.2, se apoya según el centro de su bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración está implementada en código, pero aún requiere prueba en Roblox Studio para confirmar permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
 
 ## 7. Historial de problemas críticos resueltos
 
@@ -221,7 +221,7 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-- Ajustar las palmeras del Beach Resort: implementación procedural compacta y agrupada, con componentes anclados y sin colisión. Pendiente de prueba visual/física en Roblox Studio para confirmar tamaño y estabilidad.
+- **Palmeras del Beach Resort:** integración del modelo original publicado (`87753578406826`) implementada con carga dinámica, ajuste por bounding box y respaldo procedural. Pendiente probar en Roblox Studio que el asset pueda cargarse desde la experiencia y confirmar orientación, escala y apoyo en el suelo.
 
 - Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
