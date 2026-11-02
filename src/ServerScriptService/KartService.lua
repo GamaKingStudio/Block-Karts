@@ -312,11 +312,10 @@ local function buildTestCourse()
 
 
 	-- ==========================================================
-	-- BORDES DE PISTA: PIANOS Y DEFENSAS METÁLICAS
-	-- ==========================================================
+	-- PIANOS ROJO/BLANCO: trazado paralelo continuo al borde de pista.
 	local curbWidth = 1.8
 	local curbHeight = 0.14
-	local curbOffset = trackWidth / 2 - curbWidth / 2
+	local curbOffset = trackWidth / 2 + 0.85
 	local curbTileLength = 4.0
 	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
@@ -328,31 +327,64 @@ local function buildTestCourse()
 	local C_GUARDRAIL = Color3.fromRGB(155, 165, 172)
 	local C_GUARDRAIL_DARK = Color3.fromRGB(95, 105, 112)
 
-	-- Pianos: conservan el diseño aprobado y quedan dentro del ancho de pista.
-	for i = 1, #waypoints - 1 do
-		local p1 = waypoints[i]
-		local p2 = waypoints[i + 1]
-		local diff = p2 - p1
-		local length = diff.Magnitude
-		local mid = (p1 + p2) / 2
-		local edgeCF = CFrame.lookAt(mid, p2)
-		local usableCurbLength = math.max(0, length - 1.0)
-		local curbCount = math.floor(usableCurbLength / curbTileLength)
-		for sideIndex, side in ipairs({ -1, 1 }) do
-			for tileIndex = 1, curbCount do
-				local zOffset = -usableCurbLength / 2 + (tileIndex - 0.5) * curbTileLength
-				local tileCF = edgeCF * CFrame.new(side * curbOffset, 0.115, zOffset)
-				local tile = makePart(
-					course,
-					("Kerb_%d_%d_%d"):format(i, sideIndex, tileIndex),
-					Vector3.new(curbWidth, curbHeight, curbTileLength - 0.06),
-					tileCF,
-					guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
-					Enum.Material.SmoothPlastic
-				)
-				tile.CanCollide = false
-				tile.CanTouch = false
-				tile.CanQuery = false
+	local function curbDirection(a, b)
+		local v = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
+		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
+	end
+
+	local function curbNormal(direction)
+		return Vector3.new(-direction.Z, 0, direction.X)
+	end
+
+	for sideIndex, side in ipairs({ -1, 1 }) do
+		local curbPoints = {}
+		for i = 1, #waypoints do
+			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
+			local nextIndex = (i == #waypoints) and 2 or (i + 1)
+			local incoming = curbDirection(waypoints[previousIndex], waypoints[i])
+			local outgoing = curbDirection(waypoints[i], waypoints[nextIndex])
+			local normalIn = curbNormal(incoming)
+			local normalOut = curbNormal(outgoing)
+			local bisector = normalIn + normalOut
+			if bisector.Magnitude < 0.001 then
+				bisector = normalOut
+			else
+				bisector = bisector.Unit
+			end
+			local denominator = math.abs(bisector:Dot(normalOut))
+			local miterDistance = curbOffset / math.max(denominator, 0.5)
+			miterDistance = math.min(miterDistance, curbOffset * 1.6)
+			curbPoints[i] = waypoints[i] + bisector * (side * miterDistance)
+		end
+		curbPoints[#waypoints] = curbPoints[1]
+
+		for i = 1, #waypoints - 1 do
+			local a = curbPoints[i]
+			local b = curbPoints[i + 1]
+			local segment = b - a
+			local length = segment.Magnitude
+			if length > 0.5 then
+				local direction = segment.Unit
+				local tileCount = math.max(1, math.ceil(length / curbTileLength))
+				local tileLength = length / tileCount
+				for tileIndex = 1, tileCount do
+					local center = a + direction * ((tileIndex - 0.5) * tileLength)
+					local tileCF = CFrame.lookAt(
+						Vector3.new(center.X, yGround + 0.13, center.Z),
+						Vector3.new(center.X, yGround + 0.13, center.Z) + direction
+					)
+					local tile = makePart(
+						course,
+						("Kerb_%d_%d_%d"):format(i, sideIndex, tileIndex),
+						Vector3.new(curbWidth, curbHeight, tileLength - 0.015),
+						tileCF,
+						guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
+						Enum.Material.SmoothPlastic
+					)
+					tile.CanCollide = false
+					tile.CanTouch = false
+					tile.CanQuery = false
+				end
 			end
 		end
 	end
