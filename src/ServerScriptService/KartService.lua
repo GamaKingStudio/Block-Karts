@@ -312,7 +312,7 @@ local function buildTestCourse()
 
 
 	-- ==========================================================
-	-- PIANOS ROJO/BLANCO: recorrido paralelo cerrado con esquinas tipo miter.
+	-- PIANOS ROJO/BLANCO: recorrido paralelo cerrado con esquinas redondeadas.
 	local curbWidth = 1.6
 	local curbHeight = 0.14
 	local curbEdgeOffset = 1.0
@@ -332,8 +332,6 @@ local function buildTestCourse()
 		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
 	end
 
-	-- El último waypoint duplica el primero: se trabaja solo con los
-	-- puntos únicos y se cierra el recorrido de forma cíclica.
 	local uniqueCount = #waypoints - 1
 	local curbOffset = trackWidth / 2 + curbEdgeOffset
 
@@ -347,38 +345,73 @@ local function buildTestCourse()
 			local normalIn = Vector3.new(-incoming.Z, 0, incoming.X) * side
 			local normalOut = Vector3.new(-outgoing.Z, 0, outgoing.X) * side
 			local bisector = normalIn + normalOut
-			if bisector.Magnitude < 0.001 then
-				bisector = normalOut
-			else
-				bisector = bisector.Unit
-			end
+			if bisector.Magnitude < 0.001 then bisector = normalOut else bisector = bisector.Unit end
 			local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.35)
 			local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.8)
 			local point = waypoints[i] + bisector * miterDistance
 			curbCorners[i] = Vector3.new(point.X, yGround + 0.13, point.Z)
 		end
 
-		local segmentLengths = {}
-		local cumulative = { 0 }
-		for i = 1, uniqueCount do
-			local nextIndex = i % uniqueCount + 1
-			local length = (curbCorners[nextIndex] - curbCorners[i]).Magnitude
-			segmentLengths[i] = length
-			cumulative[i + 1] = cumulative[i] + length
+		-- Redondea cada vértice con una curva Bézier cuadrática.
+		-- Los tramos rectos se conservan entre la salida de una curva
+		-- y la entrada de la siguiente.
+		local pathPoints = {}
+		local function appendPoint(point)
+			local previous = pathPoints[#pathPoints]
+			if not previous or (point - previous).Magnitude > 0.015 then
+				pathPoints[#pathPoints + 1] = point
+			end
 		end
-		local totalLength = cumulative[uniqueCount + 1]
+
+		for i = 1, uniqueCount do
+			local previousIndex = (i - 2) % uniqueCount + 1
+			local nextIndex = i % uniqueCount + 1
+			local corner = curbCorners[i]
+			local previousCorner = curbCorners[previousIndex]
+			local nextCorner = curbCorners[nextIndex]
+			local incomingVector = corner - previousCorner
+			local outgoingVector = nextCorner - corner
+			local incomingLength = incomingVector.Magnitude
+			local outgoingLength = outgoingVector.Magnitude
+			if incomingLength > 0.01 and outgoingLength > 0.01 then
+				local incoming = incomingVector.Unit
+				local outgoing = outgoingVector.Unit
+				local dot = math.clamp(incoming:Dot(outgoing), -0.999, 0.999)
+				local turnAngle = math.acos(dot)
+				local tangentDistance = 3.5 * math.tan(turnAngle / 2)
+				tangentDistance = math.min(tangentDistance, incomingLength * 0.35, outgoingLength * 0.35)
+				if turnAngle < math.rad(3) then tangentDistance = 0 end
+				local curveStart = corner - incoming * tangentDistance
+				local curveEnd = corner + outgoing * tangentDistance
+				appendPoint(curveStart)
+				for step = 1, 8 do
+					local t = step / 8
+					local oneMinusT = 1 - t
+					local point = curveStart * (oneMinusT * oneMinusT)
+						+ corner * (2 * oneMinusT * t)
+						+ curveEnd * (t * t)
+					appendPoint(point)
+				end
+			end
+		end
+
+		if #pathPoints > 2 then appendPoint(pathPoints[1]) end
+		local cumulative = { 0 }
+		for i = 2, #pathPoints do
+			cumulative[i] = cumulative[i - 1] + (pathPoints[i] - pathPoints[i - 1]).Magnitude
+		end
+		local totalLength = cumulative[#cumulative]
 
 		local function pointAtDistance(distance)
 			distance = distance % totalLength
-			for i = 1, uniqueCount do
-				if distance <= cumulative[i + 1] then
-					local length = segmentLengths[i]
-					local alpha = length > 0.001 and (distance - cumulative[i]) / length or 0
-					local nextIndex = i % uniqueCount + 1
-					return curbCorners[i]:Lerp(curbCorners[nextIndex], alpha)
+			for i = 2, #cumulative do
+				if distance <= cumulative[i] then
+					local segmentLength = cumulative[i] - cumulative[i - 1]
+					local alpha = segmentLength > 0.001 and (distance - cumulative[i - 1]) / segmentLength or 0
+					return pathPoints[i - 1]:Lerp(pathPoints[i], alpha)
 				end
 			end
-			return curbCorners[1]
+			return pathPoints[1]
 		end
 
 		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
@@ -389,17 +422,12 @@ local function buildTestCourse()
 			local before = pointAtDistance(distance - actualTileLength * 0.45)
 			local after = pointAtDistance(distance + actualTileLength * 0.45)
 			local direction = after - before
-			if direction.Magnitude > 0.001 then
-				direction = direction.Unit
-			else
-				direction = curbDirection(curbCorners[1], curbCorners[2])
-			end
-			local tileCF = CFrame.lookAt(center, center + direction)
+			if direction.Magnitude > 0.001 then direction = direction.Unit else direction = Vector3.new(0, 0, -1) end
 			local tile = makePart(
 				course,
 				("Kerb_%d_%d"):format(sideIndex, tileIndex),
 				Vector3.new(curbWidth, curbHeight, actualTileLength - 0.06),
-				tileCF,
+				CFrame.lookAt(center, center + direction),
 				guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
 				Enum.Material.SmoothPlastic
 			)
