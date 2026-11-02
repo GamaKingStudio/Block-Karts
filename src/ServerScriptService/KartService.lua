@@ -671,14 +671,15 @@ end
 
 local KART_VISUAL_SCALE = 0.85
 
-local function scaleVisualCFrame(cframe)
-	local position = cframe.Position * KART_VISUAL_SCALE
-	return CFrame.new(position) * (cframe - cframe.Position)
+local function scaleVisualCFrame(chassis, cframe)
+	local localCFrame = chassis.CFrame:ToObjectSpace(cframe)
+	local scaledPosition = localCFrame.Position * KART_VISUAL_SCALE
+	return chassis.CFrame * CFrame.new(scaledPosition) * (localCFrame - localCFrame.Position)
 end
 
 local function makeVisualPart(model, chassis, name, size, cframe, color, material, shapeOrClass)
 	local scaledSize = size * KART_VISUAL_SCALE
-	local scaledCFrame = scaleVisualCFrame(cframe)
+	local scaledCFrame = scaleVisualCFrame(chassis, cframe)
 	local part = makePart(model, name, scaledSize, scaledCFrame, color, material, shapeOrClass)
 	part.CanCollide = false
 	part.CanTouch = false
