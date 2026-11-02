@@ -120,30 +120,60 @@ local mapPoints = {
  Vector2.new(125, -10), Vector2.new(125, 35), Vector2.new(105, 65),
  Vector2.new(80, 70)
 }
+
+-- Proyección uniforme: mantiene la geometría real del circuito sin deformarla.
 local minX, maxX, minZ, maxZ = -145, 155, -130, 95
+local mapPadding = 15
 local function mapPosition(point)
+ local size = mapArea.AbsoluteSize
+ local usableW = math.max(1, size.X - mapPadding * 2)
+ local usableH = math.max(1, size.Y - mapPadding * 2)
+ local scale = math.min(usableW / (maxX - minX), usableH / (maxZ - minZ))
+ local drawnW = (maxX - minX) * scale
+ local drawnH = (maxZ - minZ) * scale
+ local offsetX = (size.X - drawnW) * 0.5
+ local offsetY = (size.Y - drawnH) * 0.5
  return Vector2.new(
-  9 + ((point.X - minX) / (maxX - minX)) * (mapArea.AbsoluteSize.X - 18),
-  9 + ((maxZ - point.Y) / (maxZ - minZ)) * (mapArea.AbsoluteSize.Y - 18)
+  offsetX + (point.X - minX) * scale,
+  offsetY + (maxZ - point.Y) * scale
  )
 end
-local function drawMapSegment(a, b)
- local p1, p2 = mapPosition(a), mapPosition(b)
+
+local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
  local delta = p2 - p1
  local line = Instance.new("Frame")
- line.Name = "TrackSegment"
+ line.Name = name
  line.AnchorPoint = Vector2.new(0, 0.5)
  line.Position = UDim2.fromOffset(p1.X, p1.Y)
- line.Size = UDim2.fromOffset(delta.Magnitude, 7)
+ line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.35, thickness)
  line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
- line.BackgroundColor3 = Color3.fromRGB(205, 211, 219)
+ line.BackgroundColor3 = color
  line.BorderSizePixel = 0
+ line.ZIndex = zIndex
  line.Parent = mapArea
- local c = Instance.new("UICorner")
- c.CornerRadius = UDim.new(1, 0)
- c.Parent = line
+ local corner = Instance.new("UICorner")
+ corner.CornerRadius = UDim.new(1, 0)
+ corner.Parent = line
+ return line
 end
-for i = 1, #mapPoints - 1 do drawMapSegment(mapPoints[i], mapPoints[i + 1]) end
+
+local trackSegments = {}
+local function drawTrack()
+ for _, segment in ipairs(trackSegments) do
+  if segment.Parent then segment:Destroy() end
+ end
+ table.clear(trackSegments)
+
+ for i = 1, #mapPoints - 1 do
+  local p1, p2 = mapPosition(mapPoints[i]), mapPosition(mapPoints[i + 1])
+  -- Borde exterior + superficie de asfalto.
+  table.insert(trackSegments, makeTrackStroke("TrackBorder", p1, p2, 19, Color3.fromRGB(5, 9, 14), 1))
+  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", p1, p2, 14, Color3.fromRGB(105, 117, 130), 2))
+ end
+end
+
+drawTrack()
+mapArea:GetPropertyChangedSignal("AbsoluteSize"):Connect(drawTrack)
 
 local playerMarker = Instance.new("ImageLabel")
 playerMarker.Name = "PlayerMarker"
