@@ -589,59 +589,60 @@ local function buildTestCourse()
 	local importedPalmTemplate = nil
 
 	local function spawnOrganicPalm(pos, tiltDeg, tiltYaw, scale)
-		scale = scale or 1.0
+		-- Palmeras compactas y agrupadas: las piezas quedan ancladas y sin
+		-- colisión para evitar que la corona se desarme o impulse por contacto.
+		scale = math.clamp(scale or 1, 0.85, 1.05)
+		local palmModel = Instance.new("Model")
+		palmModel.Name = "Palm"
+		palmModel.Parent = course
 
-		if importedPalmTemplate and importedPalmTemplate:IsA("Model") then
-			local palm = importedPalmTemplate:Clone()
-			palm.Name = "PalmImported"
-
-			-- Ancla todas las piezas antes de entrar al Workspace para evitar que
-			-- cualquier pieza suelta caiga durante el primer paso de física.
-			for _, descendant in ipairs(palm:GetDescendants()) do
-				if descendant:IsA("BasePart") then
-					descendant.Anchored = true
-					descendant.CanCollide = false
-					descendant.CanTouch = false
-					descendant.CanQuery = false
-				end
-			end
-
-			-- Solo reducimos modelos sobredimensionados. Algunos FBX llegan en
-			-- unidades pequeñas y ampliarlos automáticamente produce árboles gigantes.
-			local _, originalSize = palm:GetBoundingBox()
-			if originalSize.Y > 0 then
-				local desiredHeight = 14 * scale
-				local scaleFactor = math.clamp(desiredHeight / originalSize.Y, 0.01, 1)
-				if math.abs(scaleFactor - 1) > 0.001 then
-					palm:ScaleTo(scaleFactor)
-				end
-			end
-
-			palm.Parent = course
-
-			local yaw = CFrame.Angles(0, math.rad(tiltYaw or 0), 0)
-			palm:PivotTo(CFrame.new(pos) * yaw)
-			local boxCFrame, boxSize = palm:GetBoundingBox()
-			local bottomY = boxCFrame.Position.Y - boxSize.Y / 2
-			palm:PivotTo(palm:GetPivot() + Vector3.new(0, pos.Y - bottomY, 0))
-			return
-		end
-
-		-- Respaldo actual: mantiene la ambientación si todavía no se ha publicado el FBX.
-		local trunkH = 15 * scale
-		local palmBaseCF = CFrame.new(pos) * CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
-		makePart(course, "PalmTrunk", Vector3.new(1.8 * scale, trunkH, 1.8 * scale), palmBaseCF * CFrame.new(0, trunkH / 2, 0), C_WOOD, Enum.Material.Wood)
+		local trunkH = 10.5 * scale
+		local palmBaseCF = CFrame.new(pos)
+			* CFrame.Angles(0, math.rad(tiltYaw or 0), math.rad(tiltDeg or 0))
+		local trunk = makePart(
+			palmModel, "PalmTrunk",
+			Vector3.new(1.25 * scale, trunkH, 1.25 * scale),
+			palmBaseCF * CFrame.new(0, trunkH / 2, 0),
+			C_WOOD, Enum.Material.Wood
+		)
+		trunk.CanCollide = false
+		trunk.CanTouch = false
+		trunk.CanQuery = false
+		trunk.Massless = true
 
 		local crownCF = palmBaseCF * CFrame.new(0, trunkH, 0)
-		for rot = 0, 315, 45 do
-			local leafMat = (rot % 90 == 0) and C_LEAVES or C_LEAVES_DARK
-			local leafCF = crownCF * CFrame.Angles(0, math.rad(rot), math.rad(-22)) * CFrame.new(0, 0, 4.5 * scale)
-			makePart(course, "PalmLeaf", Vector3.new(3.8 * scale, 0.4, 7.5 * scale), leafCF, leafMat)
-		end
-		for _, co in ipairs({ Vector3.new(0.6, -0.6, 0.6), Vector3.new(-0.6, -0.6, 0.6), Vector3.new(0, -0.7, -0.7) }) do
-			makePart(course, "Coconut", Vector3.new(0.9, 0.9, 0.9), crownCF * CFrame.new(co), C_DARKWOOD, Enum.Material.Wood, "Ball")
+		for rot = 0, 300, 60 do
+			local leafMat = (rot % 120 == 0) and C_LEAVES or C_LEAVES_DARK
+			local leafCF = crownCF
+				* CFrame.Angles(0, math.rad(rot), math.rad(-18))
+				* CFrame.new(0, 0, 2.8 * scale)
+			local leaf = makePart(
+				palmModel, "PalmLeaf",
+				Vector3.new(2.6 * scale, 0.28 * scale, 5.4 * scale),
+				leafCF, leafMat
+			)
+			leaf.CanCollide = false
+			leaf.CanTouch = false
+			leaf.CanQuery = false
+			leaf.Massless = true
 		end
 
+		for _, offset in ipairs({
+			Vector3.new(0.35, -0.35, 0.35),
+			Vector3.new(-0.35, -0.35, 0.35),
+			Vector3.new(0, -0.4, -0.4),
+		}) do
+			local coconut = makePart(
+				palmModel, "Coconut",
+				Vector3.new(0.55, 0.55, 0.55) * scale,
+				crownCF * CFrame.new(offset * scale),
+				C_DARKWOOD, Enum.Material.Wood, "Ball"
+			)
+			coconut.CanCollide = false
+			coconut.CanTouch = false
+			coconut.CanQuery = false
+			coconut.Massless = true
+		end
 	end
 
 	local palmData = {
