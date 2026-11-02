@@ -334,8 +334,9 @@ local function sendDriveInput()
 	if not currentSeat then
 		return
 	end
-	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
-	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+	local canDrive = player:GetAttribute("RaceStarted") == true
+	local throttle = canDrive and ((held.forward and 1 or 0) - (held.reverse and 1 or 0)) or 0
+	local steering = canDrive and ((held.right and 1 or 0) - (held.left and 1 or 0)) or 0
 	print(("[BLOXY-KART][CLIENT][REMOTE-SEND] remote=%s seat=%s throttle=%.0f steering=%.0f brake=%s"):format(
 		controlRemote:GetFullName(), currentSeat:GetFullName(), throttle, steering, tostring(held.brake)
 	))
@@ -383,8 +384,9 @@ local function simulateOwnedKart()
 	end
 	local forwardSpeed = velocity:Dot(forward)
 	local lateralSpeed = velocity:Dot(right)
-	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
-	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+	local canDrive = player:GetAttribute("RaceStarted") == true
+	local throttle = canDrive and ((held.forward and 1 or 0) - (held.reverse and 1 or 0)) or 0
+	local steering = canDrive and ((held.right and 1 or 0) - (held.left and 1 or 0)) or 0
 	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
 	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
 	local travelDirection = forwardSpeed >= 0 and 1 or -1
