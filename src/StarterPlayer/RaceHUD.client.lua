@@ -57,6 +57,24 @@ local function label(parent, name, size, position, text, textSize, color)
  return item
 end
 
+
+local countdownEvent = raceEvents:WaitForChild("RaceCountdown")
+local countdownLabel = label(hud, "RaceCountdown", UDim2.fromOffset(360, 150), UDim2.new(0.5, -180, 0.34, 0), "", 76, Color3.fromRGB(255, 205, 75))
+countdownLabel.TextStrokeTransparency = 0.35
+countdownLabel.Visible = false
+countdownEvent.OnClientEvent:Connect(function(value)
+ if value > 0 then
+  countdownLabel.Text = tostring(value)
+  countdownLabel.TextColor3 = Color3.fromRGB(255, 205, 75)
+  countdownLabel.Visible = true
+ else
+  countdownLabel.Text = "¡YA!"
+  countdownLabel.TextColor3 = Color3.fromRGB(100, 255, 145)
+  countdownLabel.Visible = true
+  task.delay(0.85, function() countdownLabel.Visible = false end)
+ end
+end)
+
 local racePanel = panel("RacePanel", UDim2.fromOffset(300, 100), UDim2.new(0.5, -150, 0, 22))
 local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19)
 local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 18, Color3.fromRGB(255, 220, 145))
