@@ -472,3 +472,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Alcance: solo se modificó el detector de interfaces heredadas en `RaceHUD.client.lua`; no se tocaron controles, física, cámara, circuito ni diseño del HUD oficial.
 - Estado: cambio publicado y verificado estáticamente en `recovery/stable-handling`. Falta la nueva prueba del usuario en Roblox Studio. Si el elemento se crea fuera de `PlayerGui` o no contiene el título mostrado en la captura, habría que localizar su origen por separado.
 - Commit de código: `760a6c3`.
+
+
+### Causa raíz del velocímetro central y corrección (3 de noviembre de 2026)
+
+- Causa identificada: el velocímetro central con título "Velocidad" y barra segmentada no era un ScreenGui creado por nuestros scripts. Era la interfaz nativa que Roblox muestra para un `VehicleSeat` cuando su propiedad `HeadsUpDisplay` está habilitada. Por eso no aparecía en `PlayerGui` como una GUI del proyecto y los detectores anteriores no podían eliminarlo de forma fiable.
+- Corrección definitiva aplicada en `src/ServerScriptService/KartService.lua`: al crear cada `DriverSeat`, establecer explícitamente `seat.HeadsUpDisplay = false`. Así se desactiva el velocímetro nativo de Roblox en el origen.
+- Se conserva el velocímetro propio de BLOXY, creado por `RaceHUD.client.lua` en la esquina inferior derecha. No se modificaron las físicas, los controles, la cámara ni la posición del HUD propio.
+- Las limpiezas preventivas de `RaceHUD.client.lua` quedan como defensa adicional para GUIs externas identificables; ya no son la solución principal al velocímetro central.
+- Estado: cambio publicado en `recovery/stable-handling` y verificado estáticamente en la creación de `DriverSeat`. Pendiente confirmar visualmente en Roblox Studio que el HUD nativo desapareció al ocupar el kart.
+- Commit de código: `a295c41`.
