@@ -857,12 +857,97 @@ local function buildTestCourse()
 		end
 	end
 
+	-- Reposeras importadas desde el asset del usuario. Se carga una plantilla
+	-- y se clona para cada puesto de playa, conservando colores y materiales.
+	local LOUNGER_ASSET_ID = 110854388215298
+	local loungerTemplate = nil
+	local loungerLoadOk, loungerAssetOrError = pcall(function()
+		return InsertService:LoadAsset(LOUNGER_ASSET_ID)
+	end)
+	if loungerLoadOk and loungerAssetOrError then
+		local loadedLoungerAsset = loungerAssetOrError
+		local candidate = loadedLoungerAsset
+		if not candidate:IsA("Model") then
+			candidate = loadedLoungerAsset:FindFirstChildWhichIsA("Model", true)
+		end
+		if candidate and #candidate:GetDescendants() > 0 then
+			loungerTemplate = candidate:Clone()
+			loungerTemplate.Name = "LoungerTemplate"
+			for _, descendant in ipairs(loungerTemplate:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = true
+					descendant.CanCollide = false
+					descendant.CanTouch = false
+					descendant.CanQuery = false
+					descendant.Massless = true
+				end
+			end
+		else
+			warn(("[BLOXY-KART][LOUNGER] El asset %d cargó, pero no contiene un Model utilizable."):format(LOUNGER_ASSET_ID))
+		end
+		loadedLoungerAsset:Destroy()
+	else
+		warn(("[BLOXY-KART][LOUNGER] No se pudo cargar el asset %d: %s"):format(LOUNGER_ASSET_ID, tostring(loungerAssetOrError)))
+	end
+
+	local function spawnLounger(pos, rotY)
+		if not loungerTemplate then
+			-- Respaldo procedural para no dejar vacíos los puestos si Roblox
+			-- no permite cargar el asset publicado.
+			local fallback = makePart(course, "Lounger_Fallback", Vector3.new(2.8, 0.6, 5.8),
+				CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), 0) * CFrame.new(0, 0.3, 0) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
+			fallback.CanCollide = false
+			fallback.CanTouch = false
+			fallback.CanQuery = false
+			return false
+		end
+
+		local lounger = loungerTemplate:Clone()
+		lounger.Name = "BeachLounger"
+		lounger.Parent = course
+
+		local _, originalBounds = lounger:GetBoundingBox()
+		local longestAxis = math.max(originalBounds.X, originalBounds.Y, originalBounds.Z)
+		if longestAxis <= 0.01 then
+			warn("[BLOXY-KART][LOUNGER] El modelo tiene dimensiones inválidas; se omite esta instancia.")
+			lounger:Destroy()
+			return false
+		end
+
+		local scaled, scaleError = pcall(function()
+			lounger:ScaleTo(5.8 / longestAxis)
+		end)
+		if not scaled then
+			warn("[BLOXY-KART][LOUNGER] No se pudo ajustar la escala: " .. tostring(scaleError))
+			lounger:Destroy()
+			return false
+		end
+
+		for _, descendant in ipairs(lounger:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				descendant.Anchored = true
+				descendant.CanCollide = false
+				descendant.CanTouch = false
+				descendant.CanQuery = false
+				descendant.Massless = true
+			end
+		end
+
+		local boxCFrame, boxSize = lounger:GetBoundingBox()
+		local pivotToBox = lounger:GetPivot():ToObjectSpace(boxCFrame)
+		local targetBox = CFrame.new(pos.X, pos.Y + boxSize.Y / 2, pos.Z)
+			* CFrame.Angles(0, math.rad(rotY or 0), 0)
+			* CFrame.Angles(math.rad(-8), 0, 0)
+		lounger:PivotTo(targetBox * pivotToBox:Inverse())
+		return true
+	end
+
 	local function spawnBeachCluster(pos, umbrellaColor, towelColor, rot)
 		local cf = CFrame.new(pos) * CFrame.Angles(0, math.rad(rot or 0), 0)
 		local function makeDecor(name, size, cframe, color, material, shape)
 			local part = makePart(course, name, size, cframe, color, material, shape)
-			-- Las reposeras, sombrillas y accesorios son solo decorativos:
-			-- los karts pueden pasar por encima sin engancharse ni perder velocidad.
+			-- Sombrillas y accesorios son solo decorativos; los karts pasan
+			-- por encima sin engancharse ni perder velocidad.
 			part.CanCollide = false
 			part.CanTouch = false
 			part.CanQuery = false
@@ -870,8 +955,8 @@ local function buildTestCourse()
 		end
 		makeDecor("UmbrellaPole", Vector3.new(0.4, 7.5, 0.4), cf * CFrame.new(0, 3.75, 0), C_WOOD)
 		makeDecor("UmbrellaCanopy", Vector3.new(1.8, 8.0, 8.0), cf * CFrame.new(0, 7.2, 0) * CFrame.Angles(0, 0, math.pi / 2), umbrellaColor, Enum.Material.SmoothPlastic, "Cylinder")
-		makeDecor("Lounger1", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(-3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
-		makeDecor("Lounger2", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
+		spawnLounger((cf * CFrame.new(-3.2, 0, 0.5)).Position, rot)
+		spawnLounger((cf * CFrame.new(3.2, 0, 0.5)).Position, rot)
 		makeDecor("BeachTowel", Vector3.new(3.2, 0.04, 6.0), cf * CFrame.new(0, 0.05, -3.2), towelColor)
 		makeDecor("BeachBall", Vector3.new(2.0, 2.0, 2.0), cf * CFrame.new(2.2, 1.0, -3.5), C_RED, Enum.Material.Plastic, "Ball")
 	end
