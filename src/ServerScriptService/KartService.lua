@@ -686,7 +686,7 @@ local function buildTestCourse()
 	-- Modelo original de palmera importado en Roblox Studio.
 	-- Si el asset no está disponible para esta experiencia, se usa el modelo procedural como respaldo.
 	local InsertService = game:GetService("InsertService")
-	local PALM_ASSET_ID = 139237715567825
+	local PALM_ASSET_ID = 135644677713727
 	local importedPalmTemplate = nil
 	local palmLoadOk, palmAssetOrError = pcall(function()
 		return InsertService:LoadAsset(PALM_ASSET_ID)
