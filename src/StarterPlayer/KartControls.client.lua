@@ -344,6 +344,61 @@ local function sendDriveInput()
 	controlRemote:FireServer(throttle, steering, held.brake)
 end
 
+local driftSmokeKart
+local driftSmokeEmitters = {}
+
+local function clearDriftSmoke()
+	for _, emitter in ipairs(driftSmokeEmitters) do
+		emitter.Enabled = false
+		emitter:Destroy()
+	end
+	table.clear(driftSmokeEmitters)
+	driftSmokeKart = nil
+end
+
+local function setupDriftSmoke(kart)
+	if driftSmokeKart == kart then return end
+	clearDriftSmoke()
+	driftSmokeKart = kart
+	for _, wheelName in ipairs({ "Wheel_RearL", "Wheel_RearR" }) do
+		local wheel = kart:FindFirstChild(wheelName, true)
+		if wheel and wheel:IsA("BasePart") then
+			local attachment = Instance.new("Attachment")
+			attachment.Name = "LocalDriftSmokeAttachment"
+			attachment.Position = Vector3.new(0, -wheel.Size.Y * 0.38, 0)
+			attachment.Parent = wheel
+			local emitter = Instance.new("ParticleEmitter")
+			emitter.Name = "LocalDriftSmoke"
+			emitter.Texture = "rbxasset://textures/particles/smoke_main.dds"
+			emitter.Enabled = false
+			emitter.Rate = 24
+			emitter.Lifetime = NumberRange.new(0.35, 0.65)
+			emitter.Speed = NumberRange.new(1.5, 3.5)
+			emitter.SpreadAngle = Vector2.new(28, 28)
+			emitter.EmissionDirection = Enum.NormalId.Top
+			emitter.Acceleration = Vector3.new(0, 1.5, 0)
+			emitter.Drag = 2
+			emitter.RotSpeed = NumberRange.new(-45, 45)
+			emitter.Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.35),
+				NumberSequenceKeypoint.new(0.45, 0.75),
+				NumberSequenceKeypoint.new(1, 1.05),
+			})
+			emitter.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.28),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			emitter.Color = ColorSequence.new(Color3.fromRGB(185, 188, 194), Color3.fromRGB(115, 119, 126))
+			emitter.LightInfluence = 0
+			emitter.Parent = attachment
+			table.insert(driftSmokeEmitters, emitter)
+		end
+	end
+	if #driftSmokeEmitters == 0 then
+		warn(("[BLOXY-KART][CLIENT][DRIFT-SMOKE-WHEELS-MISSING] kart=%s"):format(kart:GetFullName()))
+	end
+end
+
 local physicsDiagnosticNext = 0
 local lastPhysicsPosition = {}
 local function simulateOwnedKart()
@@ -351,6 +406,7 @@ local function simulateOwnedKart()
 		return
 	end
 	local kart = getKartFromSeat(currentSeat)
+	if kart then setupDriftSmoke(kart) end
 	if not kart or kart:GetAttribute("NetworkOwnerUserId") ~= player.UserId then
 		return
 	end
@@ -408,6 +464,9 @@ local function simulateOwnedKart()
 		end
 	end
 	local miniTurboActive = now < miniTurboEndTime
+	for _, emitter in ipairs(driftSmokeEmitters) do
+		emitter.Enabled = isDrifting and math.abs(lateralSpeed) > 1.5
+	end
 
 	local acceleration = 0
 	if held.brake then
@@ -522,6 +581,7 @@ local function onDriveAction(_, inputState, inputObject)
 end
 
 local function clearDriveInput()
+	clearDriftSmoke()
 	for key in pairs(held) do
 		held[key] = false
 	end
