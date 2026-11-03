@@ -649,3 +649,12 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - No se modifican pista, pianos, guardarraíles, props, físicas, controles ni interfaz de selección.
 - Estado: cambios implementados y revisados estáticamente en el código. Pendiente prueba visual del usuario en Roblox Studio; no se declara probado en Play.
 - Archivos modificados: `src/StarterPlayer/KartControls.client.lua`, `src/ReplicatedStorage/KartConfig.lua` y este documento.
+
+
+## Vista previa de cámaras en el menú de selección (3 de noviembre de 2026)
+
+- El menú de selección ahora muestra las imágenes proporcionadas por el usuario para identificar visualmente cada perspectiva: Clásica (107652293267576) e Isométrica (134848699353874).
+- Las imágenes se presentan dentro de cada tarjeta con esquinas redondeadas mediante UICorner, manteniendo el diseño, los textos, el flujo de selección y los controles existentes.
+- Importante: no se modificaron los parámetros ni la lógica de ninguna cámara. Se conservan exactamente los valores actuales que el usuario aprobó.
+- Archivo modificado: src/StarterPlayer/KartControls.client.lua.
+- Validación: revisión estática del cambio y publicación en GitHub; pendiente comprobar visualmente la carga de ambos assets en Roblox Studio/Play.
