@@ -628,3 +628,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Estado: corrección publicada; validación estática realizada. Pendiente de prueba manual en Roblox Studio.
 - Corrección adicional: al abrir la selección se eliminan todas las ScreenGui antiguas llamadas `BLOXYCameraSelection` que hayan quedado en PlayerGui tras reinicios/reconexiones de LocalScript. Se redujo la opacidad de la capa de fondo y se aumentó el contraste del panel y los botones para evitar la apariencia de pantalla negra.
 - Archivos: src/ServerScriptService/KartService.lua, src/StarterPlayer/KartControls.client.lua y PROJECT_CONTEXT.md.
+
+
+### Corrección del panel vacío de selección de cámara (3 de noviembre de 2026)
+
+- El usuario compartió una captura donde se veía el panel central oscuro, pero no aparecían el título ni las opciones de cámara.
+- Causa identificada en `KartControls.client.lua`: `BloxyTypography.getFont()` devuelve objetos `Font` (creados mediante `Font.fromEnum`), pero el panel asignaba esos objetos a la propiedad `.Font`, que espera un `Enum.Font`. La asignación incorrecta podía detener la ejecución del LocalScript después de crear el panel y antes de construir los botones.
+- Corrección: se cambiaron las cuatro asignaciones tipográficas del panel de selección (`heading`, `status`, `name` y `detail`) de `.Font` a `.FontFace`, que acepta los objetos `Font` devueltos por el módulo central. No se modificaron el sombreado, las dimensiones, los botones, la lógica de selección ni la cámara.
+- Estado: corrección publicada en `recovery/stable-handling` y verificada estáticamente contra el tipo devuelto por `BloxyTypography.lua`. No se ejecutó Roblox Studio; falta la prueba manual del usuario.
+- Commit de código: `12973126a9e1c9a10a8550373eae2dfd3811bb7f`.
+- Archivo de código modificado: `src/StarterPlayer/KartControls.client.lua`.
