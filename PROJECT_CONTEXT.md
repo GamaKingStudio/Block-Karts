@@ -539,3 +539,10 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Cojines y sombrillas: colores tropicales aleatorios por instancia, elegidos de una paleta de ocho tonos.
 - La asignación de color se basa en nombres de partes/modelos del asset. Las piezas no reconocidas conservan el color original para evitar teñir componentes incorrectos.
 - Código publicado en recovery/stable-handling. Pendiente validar en Roblox Studio que la jerarquía/nomenclatura del asset permita clasificar todas las piezas correctamente. No se modificaron ubicaciones, escala ni geometría.
+
+
+### Beach asset color mapping correction (2026-11-03)
+- Exact part names supplied by user: Reposera_B_Colchon, Reposera_A_Colchon, Reposera_A_Estructura, Reposera_B_Estructura, Sombrilla_Palo, Sombrilla_Toldo.
+- Replaced fuzzy name/parent classification with exact part-name matching to avoid recoloring unrelated model parts.
+- Both Reposera structure parts use medium gray. Sombrilla_Palo uses light gray. Each cushion receives an independent random tropical color. Sombrilla_Toldo receives a separate random tropical color.
+- All other parts preserve original appearance. Scale, placement and geometry unchanged. Published to recovery/stable-handling; visual Studio validation remains pending.
