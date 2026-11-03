@@ -1050,6 +1050,7 @@ local function createKart(player, spawnIndex)
 	seat.Anchored = false
 	seat.CanCollide = false
 	seat.Massless = true
+	seat.HeadsUpDisplay = false -- Desactiva el velocímetro nativo que Roblox muestra al ocupar el VehicleSeat.
 	seat.MaxSpeed = 0
 	seat.Torque = 0
 	seat.TurnSpeed = 0
