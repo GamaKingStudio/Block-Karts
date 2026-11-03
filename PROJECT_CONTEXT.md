@@ -138,8 +138,8 @@ El proyecto se encuentra en fase de prototipo jugable, con un circuito base y un
 
 ### Tipografía e identidad visual del HUD
 
-- `src/ReplicatedStorage/BloxyTypography.lua`: módulo central de tipografía. Expone los roles `Bold` y `Light` para mantener una jerarquía consistente en la interfaz.
-- **Jerarquía prevista:** Bold para cuenta regresiva, vuelta actual, cronómetro, velocidad, avisos y títulos de panel; Light para etiquetas, unidades, checkpoints, mejor tiempo y filas informativas.
+- `src/ReplicatedStorage/BloxyTypography.lua`: módulo central de tipografía. Expone los roles `Title` (Highway, alternativa condensada tipo Impact), `Bold` y `Light` para mantener una jerarquía consistente en la interfaz.
+- **Jerarquía vigente:** Title (Highway) para títulos principales de panel y avisos destacados; Bold para cronómetro, velocidad y datos con énfasis; Light para unidades, checkpoints, mejor tiempo y filas informativas.
 - **Estado actual:** la integración del HUD utiliza temporalmente la familia nativa Gotham SSm con pesos Bold y Light mediante `FontFace`. Los archivos BLOXY `.ttf` del usuario aún no están incorporados como assets de Roblox; por tanto, la tipografía BLOXY real está pendiente de publicación/obtención de IDs y sustitución de la familia de respaldo. No se han inventado IDs ni se afirma que BLOXY esté aplicada.
 
 ### Archivos principales en uso
@@ -396,3 +396,12 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 - HUD de velocidad: el usuario reportó que volvió a aparecer un velocímetro en el centro de la pantalla y pidió retirarlo, manteniendo/restaurando el indicador numérico con unidad KM/H en el lado derecho. La versión actual de `RaceHUD.client.lua` no contiene el panel ni el cálculo de velocidad; se identificó en el historial del propio archivo la implementación anterior del indicador en la esquina inferior derecha. Se restaura ese indicador lateral, calculado desde la velocidad longitudinal del chasis y convertido con el factor previamente utilizado (1.008).
 - Alcance de esta actualización: solo `KartService.lua`, `RaceHUD.client.lua` y este documento. No se modifican conducción, cámara, pista, barreras, checkpoints, minimapa ni leaderboard.
 - Estado: cambios de código publicados en la rama `recovery/stable-handling`; pendiente validación visual y funcional del usuario en Roblox Studio. No se declara probado en Play.
+
+
+### Corrección visual del HUD (3 de noviembre de 2026)
+
+- El usuario indicó que el velocímetro lateral había recuperado indebidamente el recuadro/fondo que ya se había eliminado.
+- Se deja `SpeedPanel` completamente transparente y sin esquinas ni borde. La lectura vuelve al formato horizontal `número /KMH`: valor numérico grande, unidad más pequeña a su derecha.
+- Se incorpora el rol tipográfico `Title` en `BloxyTypography.lua`, usando la fuente nativa `Highway` como alternativa condensada y pesada al estilo Impact. Se aplica a los títulos principales del HUD (vuelta, clasificación, mapa y aviso de sentido contrario).
+- Se mantienen intactos los paneles de carrera, clasificación y minimapa que ya eran transparentes; no se modifican conducción, cámara, circuito ni mecánicas.
+- Estado: código publicado; pendiente de validación visual en Roblox Studio. No se declara probado en Play.
