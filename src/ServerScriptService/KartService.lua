@@ -922,11 +922,36 @@ local function buildTestCourse()
 		warn(("[BLOXY-KART][SURFBOARD] No se pudo cargar el asset %d: %s"):format(SURFBOARD_ASSET_ID, tostring(surfAssetOrError)))
 	end
 
+	local surfboardRandom = Random.new()
+	local surfboardColors = {
+		Color3.fromRGB(255, 76, 76),   -- coral
+		Color3.fromRGB(255, 190, 55),  -- amarillo tropical
+		Color3.fromRGB(45, 190, 220),  -- turquesa
+		Color3.fromRGB(75, 125, 245),  -- azul
+		Color3.fromRGB(90, 205, 115),  -- verde
+		Color3.fromRGB(220, 105, 220), -- magenta
+		Color3.fromRGB(255, 130, 55),  -- naranja
+		Color3.fromRGB(245, 235, 205), -- crema
+	}
+
 	local function spawnSurfboard(pos, rotY, leanDeg, scale)
 		if not surfboardTemplate then return false end
 		local board = surfboardTemplate:Clone()
 		board.Name = "Surfboard"
 		board.Parent = course
+
+		local boardColor = surfboardColors[surfboardRandom:NextInteger(1, #surfboardColors)]
+		for _, descendant in ipairs(board:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				-- Un tinte por tabla para distinguirlas sin alterar la geometría del asset.
+				descendant.Color = boardColor
+				descendant.Anchored = true
+				descendant.CanCollide = false
+				descendant.CanTouch = false
+				descendant.CanQuery = false
+				descendant.Massless = true
+			end
+		end
 
 		local _, originalBounds = board:GetBoundingBox()
 		local longestAxis = math.max(originalBounds.X, originalBounds.Y, originalBounds.Z)
@@ -953,30 +978,36 @@ local function buildTestCourse()
 			* CFrame.Angles(0, 0, math.rad(leanDeg or 12))
 			* CFrame.new(0, boxSize.Y / 2, 0)
 		board:PivotTo(targetBox * pivotToBox:Inverse())
-
-		for _, descendant in ipairs(board:GetDescendants()) do
-			if descendant:IsA("BasePart") then
-				descendant.Anchored = true
-				descendant.CanCollide = false
-				descendant.CanTouch = false
-				descendant.CanQuery = false
-				descendant.Massless = true
-			end
-		end
 		return true
 	end
 
-	-- Grupo principal junto a la zona de playa existente y dos tablas adicionales
-	-- para dar más vida al sector sin acercarlas al asfalto ni a las barreras.
+	-- Centro de referencia del circuito Beach Resort (derivado del trazado de waypoints).
+	-- Las tablas se distribuyen en claros perimetrales visibles desde la pista, sin invadir asfalto ni barreras.
+	local TRACK_CENTER = Vector3.new(5, yGround, -15)
 	local surfboardPlacements = {
-		{ pos = Vector3.new(175, yGround, 165), rot = 30, lean = 12, scale = 1.00 },
-		{ pos = Vector3.new(180, yGround, 165), rot = -20, lean = 18, scale = 0.96 },
-		{ pos = Vector3.new(185, yGround, 165), rot = 45, lean = 8, scale = 1.04 },
-		{ pos = Vector3.new(190, yGround, 165), rot = -35, lean = 15, scale = 0.92 },
-		{ pos = Vector3.new(195, yGround, 165), rot = 18, lean = 10, scale = 1.02 },
+		-- Sector de playa oriental/suroriental.
+		{ offset = Vector3.new(170, 0, 180), rot = 30, lean = 12, scale = 1.00 },
+		{ offset = Vector3.new(178, 0, 165), rot = -20, lean = 18, scale = 0.96 },
+		{ offset = Vector3.new(185, 0, 150), rot = 45, lean = 8, scale = 1.04 },
+		{ offset = Vector3.new(192, 0, 178), rot = -35, lean = 15, scale = 0.92 },
+		{ offset = Vector3.new(158, 0, 195), rot = 18, lean = 10, scale = 1.02 },
+		-- Costado oriental, visibles desde las curvas del lado derecho.
+		{ offset = Vector3.new(185, 0, 75), rot = 65, lean = 14, scale = 0.98 },
+		{ offset = Vector3.new(185, 0, -5), rot = -55, lean = 9, scale = 1.06 },
+		{ offset = Vector3.new(170, 0, -95), rot = 25, lean = 16, scale = 0.94 },
+		-- Sector norte y noroeste, junto a los claros de arena.
+		{ offset = Vector3.new(95, 0, -175), rot = -30, lean = 12, scale = 1.00 },
+		{ offset = Vector3.new(5, 0, -185), rot = 50, lean = 7, scale = 0.95 },
+		{ offset = Vector3.new(-85, 0, -175), rot = -65, lean = 15, scale = 1.03 },
+		-- Sector sur, repartidas para que el atrezo se lea desde distintos tramos.
+		{ offset = Vector3.new(65, 0, 175), rot = -15, lean = 11, scale = 0.97 },
+		{ offset = Vector3.new(-35, 0, 175), rot = 40, lean = 17, scale = 1.05 },
+		{ offset = Vector3.new(-125, 0, 145), rot = -45, lean = 10, scale = 0.93 },
+		{ offset = Vector3.new(-155, 0, -105), rot = 20, lean = 13, scale = 1.01 },
 	}
 	for _, placement in ipairs(surfboardPlacements) do
-		spawnSurfboard(placement.pos, placement.rot, placement.lean, placement.scale)
+		local worldPos = TRACK_CENTER + placement.offset
+		spawnSurfboard(worldPos, placement.rot, placement.lean, placement.scale)
 	end
 
 	-- Checkpoints
