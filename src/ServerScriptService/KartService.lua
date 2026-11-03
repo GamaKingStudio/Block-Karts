@@ -905,32 +905,17 @@ local function buildTestCourse()
 	local UMBRELLA_STAND_COLOR = Color3.fromRGB(205, 208, 212)
 
 	local function getLoungerPartRole(part)
-		local name = string.lower(part.Name)
-		local parentName = part.Parent and string.lower(part.Parent.Name) or ""
-		local labels = name .. " " .. parentName
-
-		if string.find(labels, "umbrella") or string.find(labels, "parasol")
-			or string.find(labels, "canopy") or string.find(labels, "sombrilla")
-			or string.find(labels, "shade") then
-			return "umbrella"
-		end
-		if string.find(labels, "pole") or string.find(labels, "stand")
-			or string.find(labels, "shaft") or string.find(labels, "mast")
-			or string.find(labels, "atril") then
-			return "stand"
-		end
-		if string.find(labels, "cushion") or string.find(labels, "pillow")
-			or string.find(labels, "fabric") or string.find(labels, "mattress")
-			or string.find(labels, "seat") or string.find(labels, "cojin")
-			or string.find(labels, "cojín") then
-			return "cushion"
-		end
-		if string.find(labels, "frame") or string.find(labels, "metal")
-			or string.find(labels, "iron") or string.find(labels, "steel")
-			or string.find(labels, "leg") or string.find(labels, "support")
-			or string.find(labels, "structure") or string.find(labels, "fierr")
-			or string.find(labels, "base") then
+		-- Usar exclusivamente los nombres reales del asset; no inferir por
+		-- nombres de padres ni palabras genéricas para evitar teñir todo el modelo.
+		local name = part.Name
+		if name == "Reposera_A_Estructura" or name == "Reposera_B_Estructura" then
 			return "frame"
+		elseif name == "Reposera_A_Colchon" or name == "Reposera_B_Colchon" then
+			return "cushion"
+		elseif name == "Sombrilla_Palo" then
+			return "stand"
+		elseif name == "Sombrilla_Toldo" then
+			return "umbrella"
 		end
 		return nil
 	end
@@ -962,7 +947,6 @@ local function buildTestCourse()
 		end
 
 		local umbrellaColor = loungerColors[loungerRandom:NextInteger(1, #loungerColors)]
-		local cushionColor = loungerColors[loungerRandom:NextInteger(1, #loungerColors)]
 		for _, descendant in ipairs(lounger:GetDescendants()) do
 			if descendant:IsA("BasePart") then
 				descendant.Anchored = true
@@ -977,7 +961,7 @@ local function buildTestCourse()
 				elseif role == "stand" then
 					descendant.Color = UMBRELLA_STAND_COLOR
 				elseif role == "cushion" then
-					descendant.Color = cushionColor
+					descendant.Color = loungerColors[loungerRandom:NextInteger(1, #loungerColors)]
 				elseif role == "umbrella" then
 					descendant.Color = umbrellaColor
 				end
