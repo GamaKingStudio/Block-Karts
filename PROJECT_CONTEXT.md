@@ -638,3 +638,14 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Estado: corrección publicada en `recovery/stable-handling` y verificada estáticamente contra el tipo devuelto por `BloxyTypography.lua`. No se ejecutó Roblox Studio; falta la prueba manual del usuario.
 - Commit de código: `12973126a9e1c9a10a8550373eae2dfd3811bb7f`.
 - Archivo de código modificado: `src/StarterPlayer/KartControls.client.lua`.
+
+
+### Ajuste de encuadre de cámaras de carrera (3 de noviembre de 2026)
+
+- A partir de la revisión de las capturas del usuario, se ajusta el encuadre de ambas cámaras para dar mayor protagonismo visual al kart sin alterar el circuito ni sus elementos aprobados.
+- **Isométrica:** se acerca y baja la cámara, y se reduce moderadamente el desplazamiento lateral: `CameraOffset` pasa de `(16, 27, 21)` a `(12, 21, 17)`; `CameraLookAhead` pasa de 9 a 8.
+- **Clásica:** se acerca ligeramente la cámara: offset pasa de `(0, 12, 24)` a `(0, 10, 20)`; look-ahead pasa de 7 a 6.
+- Se reduce el aumento dinámico máximo del campo visual con la velocidad de 4 a 2.5 grados para evitar que el kart vuelva a verse pequeño al acelerar. Se conserva la interpolación suave y la selección de cámara CLÁSICA/ISOMÉTRICA.
+- No se modifican pista, pianos, guardarraíles, props, físicas, controles ni interfaz de selección.
+- Estado: cambios implementados y revisados estáticamente en el código. Pendiente prueba visual del usuario en Roblox Studio; no se declara probado en Play.
+- Archivos modificados: `src/StarterPlayer/KartControls.client.lua`, `src/ReplicatedStorage/KartConfig.lua` y este documento.
