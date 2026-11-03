@@ -86,14 +86,16 @@ countdownEvent.OnClientEvent:Connect(function(value)
 end)
 
 local racePanel = panel("RacePanel", UDim2.fromOffset(300, 100), UDim2.new(0.5, -150, 0, 22))
-local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19, nil, "Bold")
+local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19, nil, "Title")
 local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 22, Color3.fromRGB(255, 220, 145), "Light")
 local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 15, Color3.fromRGB(220, 226, 235), "Light")
 local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 15, Color3.fromRGB(220, 226, 235), "Light")
 
-local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -174, 1, -116))
-local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42, nil, "Bold")
-label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216), "Light")
+local speedPanel = panel("SpeedPanel", UDim2.fromOffset(180, 66), UDim2.new(1, -202, 1, -88))
+local speedValue = label(speedPanel, "SpeedValue", UDim2.fromOffset(108, 62), UDim2.fromOffset(0, 0), "0", 46, nil, "Bold")
+speedValue.TextXAlignment = Enum.TextXAlignment.Right
+local speedUnit = label(speedPanel, "SpeedUnit", UDim2.fromOffset(72, 28), UDim2.fromOffset(108, 24), "/KMH", 16, Color3.fromRGB(220, 226, 235), "Light")
+speedUnit.TextXAlignment = Enum.TextXAlignment.Left
 
 
 local wrongWayLabel = label(
@@ -104,7 +106,7 @@ local wrongWayLabel = label(
  "¡SENTIDO CONTRARIO!",
  27,
  Color3.fromRGB(255, 65, 65),
- "Bold"
+ "Title"
 )
 wrongWayLabel.TextStrokeColor3 = Color3.fromRGB(35, 12, 12)
 wrongWayLabel.TextStrokeTransparency = 0.25
@@ -119,7 +121,7 @@ local renderConnection
 -- LEADERBOARD + MINIMAPA
 -- ==========================================================
 local leaderboard = panel("Leaderboard", UDim2.fromOffset(218, 250), UDim2.new(0, 18, 0, 58))
-local leaderboardTitle = label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 18, Color3.fromRGB(255, 220, 145), "Bold")
+local leaderboardTitle = label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 18, Color3.fromRGB(255, 220, 145), "Title")
 local leaderboardRows = {}
 local leaderboardRanks = {}
 for i = 1, 8 do
@@ -133,7 +135,7 @@ for i = 1, 8 do
 end
 
 local mapPanel = panel("MiniMap", UDim2.fromOffset(218, 190), UDim2.new(0, 18, 0, 284))
-local mapTitle = label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 22), UDim2.fromOffset(8, 0), "MAPA DE PISTA", 17, Color3.fromRGB(255, 220, 145), "Bold")
+local mapTitle = label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 22), UDim2.fromOffset(8, 0), "MAPA DE PISTA", 17, Color3.fromRGB(255, 220, 145), "Title")
 
 -- HUD minimalista: solo texto, sin tarjetas ni fondos opacos.
 local function makeTextOnly(frame)
@@ -152,6 +154,9 @@ end
 makeTextOnly(racePanel)
 makeTextOnly(leaderboard)
 makeTextOnly(mapPanel)
+makeTextOnly(speedPanel)
+addTextOutline(speedValue)
+addTextOutline(speedUnit)
 for _, textObject in ipairs({
  lapLabel, timerLabel, bestLabel, checkpointLabel,
  leaderboardTitle, mapTitle,
