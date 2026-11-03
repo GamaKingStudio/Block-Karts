@@ -371,3 +371,12 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 - Estado: ID y estructura del asset confirmados por el usuario en Roblox Studio; integración de código publicada pendiente de prueba dentro de la experiencia. No se ha confirmado todavía que las dos piezas conserven sus materiales/texturas al cargar mediante `InsertService:LoadAsset`.
 - Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
 - Pruebas realizadas: inspección del código y confirmación del usuario sobre los nombres de las dos piezas en el modelo importado. No se ejecutó Roblox Studio ni una prueba de runtime.
+### Actualización de apariencia de palmera por piezas (2 de noviembre de 2026)
+
+- Se mantiene el asset Roblox `139237715567825`, cuyo modelo contiene dos piezas independientes confirmadas por el usuario: `Palm_Trunk` y `Palm_Leaves`.
+- Se modificó `src/ServerScriptService/KartService.lua` dentro de `spawnImportedPalm` para asignar al tronco color marrón (`Color3.fromRGB(126, 82, 48)`) y material `Wood`; a las hojas, verde (`Color3.fromRGB(48, 150, 58)`) y material `Grass`.
+- La asignación se aplica al clon creado en tiempo de ejecución, no al asset original publicado. Se mantienen las propiedades físicas anteriores.
+- Se añadieron contadores y una advertencia en Output si no se encuentran piezas con alguno de los nombres esperados.
+- Estado: cambio implementado y publicado en `recovery/stable-handling`. Pendiente validar en Roblox Studio que los nombres se preservan al cargar con `InsertService:LoadAsset` y que los colores/materiales se ven correctamente.
+- Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
+- Pruebas realizadas: inspección estática del bloque actualizado y comprobación de que el cambio apunta a los nombres confirmados por el usuario. No se ejecutó Roblox Studio ni pruebas de runtime.
