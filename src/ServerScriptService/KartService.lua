@@ -691,14 +691,14 @@ local function buildTestCourse()
 	end
 	-- Antorchas reubicadas en arena perimetral; no invaden pista ni barandas.
 	local torchPositions = {
-		Vector3.new(-145, yGround, -185),
-		Vector3.new(-75, yGround, -225),
-		Vector3.new(5, yGround, -225),
-		Vector3.new(85, yGround, -225),
-		Vector3.new(165, yGround, -190),
-		Vector3.new(205, yGround, -70),
-		Vector3.new(205, yGround, 65),
-		Vector3.new(125, yGround, 175),
+		Vector3.new(-165, yGround, -105),
+		Vector3.new(-165, yGround, -35),
+		Vector3.new(-165, yGround, 35),
+		Vector3.new(-165, yGround, 105),
+		Vector3.new(175, yGround, -105),
+		Vector3.new(175, yGround, -35),
+		Vector3.new(175, yGround, 35),
+		Vector3.new(125, yGround, 145),
 	}
 	for _, tp in ipairs(torchPositions) do
 		spawnTikiTorch(tp)
@@ -898,11 +898,12 @@ local function buildTestCourse()
 	end
 
 	-- Reposeras y sombrillas sobre arena abierta al norte del circuito.
-	spawnBeachCluster(Vector3.new(-105, yGround, -195), C_BLUE, C_YELLOW, 25)
-	spawnBeachCluster(Vector3.new(-50, yGround, -195), C_YELLOW, C_RED, -15)
-	spawnBeachCluster(Vector3.new(5, yGround, -195), C_RED, C_BLUE, 40)
-	spawnBeachCluster(Vector3.new(60, yGround, -195), C_TEAL, C_ORANGE, -30)
-	spawnBeachCluster(Vector3.new(115, yGround, -195), C_ORANGE, C_TEAL, 10)
+	-- Reposeras en la franja de arena al sur del circuito, dentro del área visible.
+	spawnBeachCluster(Vector3.new(-145, yGround, 155), C_BLUE, C_YELLOW, 25)
+	spawnBeachCluster(Vector3.new(-85, yGround, 155), C_YELLOW, C_RED, -15)
+	spawnBeachCluster(Vector3.new(-25, yGround, 155), C_RED, C_BLUE, 40)
+	spawnBeachCluster(Vector3.new(35, yGround, 155), C_TEAL, C_ORANGE, -30)
+	spawnBeachCluster(Vector3.new(95, yGround, 155), C_ORANGE, C_TEAL, 10)
 
 	local function spawnSurfboard(pos, color, rotY)
 		local sb = makePart(course, "Surfboard", Vector3.new(0.3, 8.0, 2.2), CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), math.rad(18)) * CFrame.new(0, 3.5, 0), color)
