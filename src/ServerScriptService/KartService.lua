@@ -689,15 +689,16 @@ local function buildTestCourse()
 		-- No sustituir por una antorcha genérica: si el asset original no carga,
 		-- se deja un aviso claro en Output en vez de mostrar un modelo incorrecto.
 	end
+	-- Antorchas reubicadas en arena perimetral; no invaden pista ni barandas.
 	local torchPositions = {
-		Vector3.new(-146, yGround, 20),
-		Vector3.new(-146, yGround, -40),
-		Vector3.new(-75, yGround, -135),
-		Vector3.new(-35, yGround, -135),
-		Vector3.new(20, yGround, -135),
-		Vector3.new(80, yGround, -115),
-		Vector3.new(150, yGround, 15),
-		Vector3.new(35, yGround, 95),
+		Vector3.new(-145, yGround, -185),
+		Vector3.new(-75, yGround, -225),
+		Vector3.new(5, yGround, -225),
+		Vector3.new(85, yGround, -225),
+		Vector3.new(165, yGround, -190),
+		Vector3.new(205, yGround, -70),
+		Vector3.new(205, yGround, 65),
+		Vector3.new(125, yGround, 175),
 	}
 	for _, tp in ipairs(torchPositions) do
 		spawnTikiTorch(tp)
@@ -853,18 +854,19 @@ local function buildTestCourse()
 		end
 	end
 
+	-- Palmeras agrupadas en la franja perimetral de arena, lejos del trazado.
 	local palmData = {
-		{ pos = Vector3.new(-150, yGround, 25),  tilt = 6,  yaw = 45,  scale = 1.1 },
-		{ pos = Vector3.new(-148, yGround, 95),  tilt = -8, yaw = 120, scale = 1.2 },
-		{ pos = Vector3.new(-150, yGround, -35), tilt = 5,  yaw = -30, scale = 0.95 },
-		{ pos = Vector3.new(-25, yGround, -50),  tilt = -7, yaw = 90,  scale = 1.1 },
-		{ pos = Vector3.new(-25, yGround, -70),  tilt = 6,  yaw = -45, scale = 1.0 },
-		{ pos = Vector3.new(20, yGround, -50),   tilt = 8,  yaw = 160, scale = 1.05 },
-		{ pos = Vector3.new(150, yGround, -10),  tilt = -6, yaw = 210, scale = 1.15 },
-		{ pos = Vector3.new(150, yGround, 45),   tilt = 7,  yaw = -60, scale = 1.05 },
-		{ pos = Vector3.new(85, yGround, -100),  tilt = -5, yaw = 30,  scale = 1.1 },
-		{ pos = Vector3.new(-45, yGround, 35),   tilt = 6,  yaw = -80, scale = 1.0 },
-		{ pos = Vector3.new(25, yGround, 38),    tilt = -6, yaw = 50,  scale = 0.95 },
+		{ pos = Vector3.new(-175, yGround, -245), tilt = 6, yaw = 45, scale = 1.1 },
+		{ pos = Vector3.new(-105, yGround, -245), tilt = -8, yaw = 120, scale = 1.2 },
+		{ pos = Vector3.new(-35, yGround, -245), tilt = 5, yaw = -30, scale = 0.95 },
+		{ pos = Vector3.new(35, yGround, -245), tilt = -7, yaw = 90, scale = 1.1 },
+		{ pos = Vector3.new(105, yGround, -245), tilt = 6, yaw = -45, scale = 1.0 },
+		{ pos = Vector3.new(175, yGround, -220), tilt = 8, yaw = 160, scale = 1.05 },
+		{ pos = Vector3.new(195, yGround, -130), tilt = -6, yaw = 210, scale = 1.15 },
+		{ pos = Vector3.new(195, yGround, -30), tilt = 7, yaw = -60, scale = 1.05 },
+		{ pos = Vector3.new(195, yGround, 70), tilt = -5, yaw = 30, scale = 1.1 },
+		{ pos = Vector3.new(115, yGround, 205), tilt = 6, yaw = -80, scale = 1.0 },
+		{ pos = Vector3.new(-35, yGround, 205), tilt = -6, yaw = 50, scale = 0.95 },
 	}
 	for _, p in ipairs(palmData) do
 		local spawned = false
@@ -895,19 +897,20 @@ local function buildTestCourse()
 		makeDecor("BeachBall", Vector3.new(2.0, 2.0, 2.0), cf * CFrame.new(2.2, 1.0, -3.5), C_RED, Enum.Material.Plastic, "Ball")
 	end
 
-	spawnBeachCluster(Vector3.new(-85, yGround, 18),  C_BLUE,   C_YELLOW, 25)
-	spawnBeachCluster(Vector3.new(-85, yGround, -25), C_YELLOW, C_RED,    -15)
-	spawnBeachCluster(Vector3.new(-25, yGround, -20), C_RED,    C_BLUE,   40)
-	spawnBeachCluster(Vector3.new(20, yGround, -30),  C_TEAL,   C_ORANGE, -30)
-	spawnBeachCluster(Vector3.new(50, yGround, 18),   C_ORANGE, C_TEAL,   10)
+	-- Reposeras y sombrillas sobre arena abierta al norte del circuito.
+	spawnBeachCluster(Vector3.new(-105, yGround, -195), C_BLUE, C_YELLOW, 25)
+	spawnBeachCluster(Vector3.new(-50, yGround, -195), C_YELLOW, C_RED, -15)
+	spawnBeachCluster(Vector3.new(5, yGround, -195), C_RED, C_BLUE, 40)
+	spawnBeachCluster(Vector3.new(60, yGround, -195), C_TEAL, C_ORANGE, -30)
+	spawnBeachCluster(Vector3.new(115, yGround, -195), C_ORANGE, C_TEAL, 10)
 
 	local function spawnSurfboard(pos, color, rotY)
 		local sb = makePart(course, "Surfboard", Vector3.new(0.3, 8.0, 2.2), CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), math.rad(18)) * CFrame.new(0, 3.5, 0), color)
 		sb.CanCollide = false
 	end
-	spawnSurfboard(Vector3.new(-145, yGround, 10), C_TEAL, 30)
-	spawnSurfboard(Vector3.new(-146, yGround, 14), C_ORANGE, -20)
-	spawnSurfboard(Vector3.new(-145, yGround, -20), C_YELLOW, 45)
+	spawnSurfboard(Vector3.new(175, yGround, 165), C_TEAL, 30)
+	spawnSurfboard(Vector3.new(180, yGround, 165), C_ORANGE, -20)
+	spawnSurfboard(Vector3.new(185, yGround, 165), C_YELLOW, 45)
 
 	-- Checkpoints
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
