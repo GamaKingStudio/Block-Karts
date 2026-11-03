@@ -492,3 +492,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Si el asset no está disponible o no contiene un modelo utilizable, se emite una advertencia en Output y se omiten las tablas importadas; no se afirma que el asset haya sido validado en runtime.
 - Archivo modificado: `src/ServerScriptService/KartService.lua`.
 - Estado: implementación publicada en `recovery/stable-handling`; pendiente comprobar en Roblox Studio permisos de carga, orientación, escala y apariencia del asset.
+
+
+### Color y redistribución de tablas de surf (3 de noviembre de 2026)
+
+- El usuario indicó que las tablas importadas se veían blancas y pidió aplicar colores aleatorios y aumentar su presencia visual alrededor del circuito.
+- En `src/ServerScriptService/KartService.lua`, cada tabla clonada recibe ahora un tinte aleatorio elegido de una paleta tropical de ocho colores. El color se aplica a todas las piezas `BasePart` del clon; el asset publicado no se modifica.
+- La distribución se amplió a 15 ubicaciones en claros perimetrales alrededor del Beach Resort, con posiciones calculadas como offsets respecto del centro de referencia del trazado (`TRACK_CENTER = Vector3.new(5, yGround, -15)`). Las ubicaciones se reparten entre sectores oriental, norte, noroeste y sur para que las tablas puedan verse desde distintos tramos de la pista.
+- Se mantienen escala aproximada de 8 studs, variaciones de inclinación/orientación y propiedades ancladas/sin colisión, contacto ni consulta.
+- Estado: implementación publicada en `recovery/stable-handling`; pendiente validar en Roblox Studio la visibilidad desde la pista, los colores y que ninguna tabla se superponga con otros props o invada el trazado. No se ha ejecutado Play desde este entorno.
+- Archivo modificado: `src/ServerScriptService/KartService.lua`.
