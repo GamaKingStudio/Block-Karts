@@ -202,7 +202,7 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Arco de Meta (Gantry):** Estructura en voladizo soportada por pilares exteriores (X=0), ubicada inmediatamente después de la reincorporación de la calle de boxes, impidiendo bloqueos del carril.
 
-**Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
+**Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki. Las reposeras de los puestos de playa se instancian desde el asset Roblox `110854388215298`; sombrillas, toallas y pelotas siguen siendo piezas procedurales.
 
 **Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `135644677713727`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El clon aplica color y material de forma explícita a tronco y hojas. La clasificación de respaldo por altura utiliza el eje vertical local de la palmera (`finalBoxCFrame:PointToObjectSpace`) para que la inclinación de cada instancia no confunda tronco y follaje. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
 
@@ -502,3 +502,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Se mantienen escala aproximada de 8 studs, variaciones de inclinación/orientación y propiedades ancladas/sin colisión, contacto ni consulta.
 - Estado: implementación publicada en `recovery/stable-handling`; pendiente validar en Roblox Studio la visibilidad desde la pista, los colores y que ninguna tabla se superponga con otros props o invada el trazado. No se ha ejecutado Play desde este entorno.
 - Archivo modificado: `src/ServerScriptService/KartService.lua`.
+
+
+### Actualización de reposeras de playa (3 de noviembre de 2026)
+
+- El usuario proporcionó el asset Roblox `110854388215298` para reemplazar las reposeras procedurales del Beach Resort.
+- `KartService.lua` ahora carga una plantilla mediante `InsertService:LoadAsset`, la clona para las 14 reposeras distribuidas en los siete puestos de playa y ajusta cada modelo a una longitud máxima aproximada de 5.8 studs.
+- Se conservan los colores, materiales y texturas publicados en el asset. Las piezas quedan ancladas y sin colisión, contacto ni consulta, para que los karts no se enganchen.
+- Sombrillas, postes, toallas, pelotas y ubicaciones de los puestos permanecen sin cambios. Si Roblox no permite cargar el asset, se mantiene un respaldo procedural para evitar que desaparezcan las reposeras.
+- Estado: integración implementada y publicada en `recovery/stable-handling`. Se verificó estáticamente el ID, el clonado, la escala y las propiedades físicas. No se ejecutó Roblox Studio; la apariencia, orientación y escala finales requieren validación visual en Play.
+- Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
