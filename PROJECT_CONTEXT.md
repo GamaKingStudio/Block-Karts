@@ -200,7 +200,7 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Pit Lane (Calle de Boxes):** Carril paralelo al sur de la recta principal. Incluye muro divisor físico, cajones de detención, un WedgePart para sellar la geometría en la entrada y un carril de incorporación fluida a la vía principal.
 
-**Arco de Meta (Gantry):** Estructura en voladizo soportada por pilares exteriores (X=0), ubicada inmediatamente después de la reincorporación de la calle de boxes, impidiendo bloqueos del carril.
+**Arco de Meta (Gantry):** Se reemplazó la estructura procedural completa (ambos postes, viga y panel/banner) por el modelo importado del usuario, asset Roblox `132205617373322`. El modelo se escala proporcionalmente para cubrir el ancho de la pista, se centra en la recta de meta y se apoya por su bounding box sobre el nivel del circuito. Sus piezas quedan ancladas y sin colisión, contacto ni consulta para no interferir con los karts. No se genera una línea de meta decorativa en el suelo con este asset; la lógica de carrera/checkpoints permanece separada.
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki. Los puestos de playa contienen únicamente reposeras instanciadas desde el asset Roblox `110854388215298`; las antiguas sombrillas, toallas y pelotas procedurales fueron retiradas.
 
@@ -552,3 +552,14 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Moved all three rows of the starting grandstand 8 studs backward along Z to create clearance from the barrier beside the start straight.
 - Preserved width, tier spacing, height, seats, colors and X coordinates. Only the Z reference changed from 52 to 44; rows remain spaced 3.5 studs apart.
 - Published to recovery/stable-handling. Static code check complete; visual validation in Roblox Studio remains pending.
+
+
+### Sustitución completa del arco de meta (3 de noviembre de 2026)
+
+- Se retiró la estructura procedural anterior del inicio de la pista: los dos postes, la viga roja superior y el panel/banner.
+- El asset Roblox `132205617373322`, proporcionado por el usuario, ahora se carga como modelo completo y se utiliza en su lugar con el nombre interno `ImportedFinishStructure`.
+- El modelo se escala proporcionalmente para abarcar el ancho definido para el arco, se centra en X=0/Z=70 y se posiciona con la base de su bounding box en el nivel del circuito. Las piezas importadas quedan ancladas y sin colisión, contacto ni consulta.
+- El cambio no crea una franja ni una línea decorativa en el suelo y no modifica la lógica de vueltas, checkpoints ni el resto del circuito.
+- Estado: implementación publicada en `recovery/stable-handling`; revisión estática del bloque realizada. La carga del asset, su orientación, escala y apoyo visual deben confirmarse en Roblox Studio. No se ha ejecutado Play desde este entorno.
+- Commit de código: `ee3bba8022557340311cfe1c143728296436e6fe`.
+- Archivo de código modificado: `src/ServerScriptService/KartService.lua`.
