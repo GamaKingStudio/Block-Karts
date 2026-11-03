@@ -506,6 +506,21 @@ local function buildTestCourse()
 					)
 					rail.CanTouch = false
 				end
+
+				-- Barrera invisible continua detrás de la baranda visual.
+				-- Evita que el chasis atraviese los huecos entre postes o los perfiles delgados.
+				local collisionBarrier = makePart(
+					course,
+					("GuardrailCollision_%d_%d"):format(i, sideIndex),
+					Vector3.new(0.9, 3.2, length + 0.35),
+					CFrame.new(mid.X, yGround + 1.65, mid.Z) * CFrame.lookAt(Vector3.zero, direction),
+					C_GUARDRAIL,
+					Enum.Material.SmoothPlastic
+				)
+				collisionBarrier.Transparency = 1
+				collisionBarrier.CanCollide = true
+				collisionBarrier.CanTouch = false
+				collisionBarrier.CanQuery = false
 			end
 		end
 	end
