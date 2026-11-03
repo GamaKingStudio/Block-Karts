@@ -38,19 +38,25 @@ local function removeLegacySpeedometer(instance)
   or string.find(guiName, "vehiclespeed", 1, true)
 
  local hasSpeedUnit = false
+ local hasSpeedTitle = false
  for _, descendant in ipairs(screenGui:GetDescendants()) do
   if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
    local normalizedText = string.upper(descendant.Text):gsub("[%s%p]", "")
+   if normalizedText == "VELOCIDAD" or normalizedText == "SPEED" then
+    hasSpeedTitle = true
+   end
    if string.find(normalizedText, "KMH", 1, true)
     or string.find(normalizedText, "KPH", 1, true)
     or string.find(normalizedText, "MPH", 1, true) then
     hasSpeedUnit = true
-    break
    end
   end
  end
 
- if namedSpeedGui or hasSpeedUnit then
+ -- El velocímetro heredado que aparece centrado usa el título "Velocidad"
+ -- y una barra segmentada, sin mostrar KMH/KPH/MPH. El título basta para
+ -- identificar y retirar su ScreenGui completo.
+ if namedSpeedGui or hasSpeedUnit or hasSpeedTitle then
   screenGui:Destroy()
  end
 end
