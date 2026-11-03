@@ -891,16 +891,9 @@ local function buildTestCourse()
 	end
 
 	local function spawnLounger(pos, rotY)
-		if not loungerTemplate then
-			-- Respaldo procedural para no dejar vacíos los puestos si Roblox
-			-- no permite cargar el asset publicado.
-			local fallback = makePart(course, "Lounger_Fallback", Vector3.new(2.8, 0.6, 5.8),
-				CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), 0) * CFrame.new(0, 0.3, 0) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
-			fallback.CanCollide = false
-			fallback.CanTouch = false
-			fallback.CanQuery = false
-			return false
-		end
+		-- No se genera ningún respaldo procedural: si el asset no carga,
+		-- se omite la reposera para evitar superponer el modelo antiguo. 
+		if not loungerTemplate then return false end
 
 		local lounger = loungerTemplate:Clone()
 		lounger.Name = "BeachLounger"
@@ -915,7 +908,7 @@ local function buildTestCourse()
 		end
 
 		local scaled, scaleError = pcall(function()
-			lounger:ScaleTo(5.8 / longestAxis)
+			lounger:ScaleTo(6.5 / longestAxis)
 		end)
 		if not scaled then
 			warn("[BLOXY-KART][LOUNGER] No se pudo ajustar la escala: " .. tostring(scaleError))
