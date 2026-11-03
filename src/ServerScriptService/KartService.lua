@@ -674,33 +674,8 @@ local function buildTestCourse()
 			return
 		end
 
-		-- Respaldo procedural solo si Roblox no permite cargar el modelo original.
-		local pole = makePart(course, "TikiPole", Vector3.new(0.62, 5.9, 0.62),
-			CFrame.new(pos + Vector3.new(0, 3.35, 0)), Color3.fromRGB(112, 70, 38), Enum.Material.Wood)
-		pole.CanCollide = false
-		local burner = makePart(course, "TikiBurner", Vector3.new(1.55, 0.62, 1.55),
-			CFrame.new(pos + Vector3.new(0, 6.35, 0)) * CFrame.Angles(0, 0, math.pi / 2),
-			Color3.fromRGB(112, 119, 127), Enum.Material.Metal, "Cylinder")
-		burner.CanCollide = false
-		local flameAnchor = Instance.new("Part")
-		flameAnchor.Name = "TorchFlame"
-		flameAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
-		flameAnchor.CFrame = CFrame.new(pos + Vector3.new(0, 7.05, 0))
-		flameAnchor.Transparency = 1
-		flameAnchor.Anchored = true
-		flameAnchor.CanCollide = false
-		flameAnchor.Parent = course
-		local fire = Instance.new("Fire")
-		fire.Color = Color3.fromRGB(255, 224, 95)
-		fire.SecondaryColor = Color3.fromRGB(255, 105, 24)
-		fire.Size = 4.2
-		fire.Heat = 7
-		fire.Parent = flameAnchor
-		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 164, 72)
-		light.Range = 24
-		light.Brightness = 2.4
-		light.Parent = flameAnchor
+		-- No sustituir por una antorcha genérica: si el asset original no carga,
+		-- se deja un aviso claro en Output en vez de mostrar un modelo incorrecto.
 	end
 	local torchPositions = {
 		Vector3.new(-146, yGround, 20),
@@ -1339,7 +1314,7 @@ local function spawnPlayerKart(player)
 		if kart.seat.Occupant == humanoid and not player:GetAttribute("RaceCountdownActive") and not player:GetAttribute("RaceStarted") then
 			player:SetAttribute("RaceCountdownActive", true)
 			task.spawn(function()
-				for count = 3, 1, -1 do
+				for count = 5, 1, -1 do
 					if not player.Parent or not kart.seat.Parent or kart.seat.Occupant ~= humanoid then return end
 					raceCountdownRemote:FireClient(player, count)
 					task.wait(1)
