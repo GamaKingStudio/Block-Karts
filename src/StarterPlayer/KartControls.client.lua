@@ -82,7 +82,11 @@ local function handleBrake(actionName, inputState, inputObject)
 end
 
 local function handleDrift(actionName, inputState, inputObject)
-	driftInput = inputState == Enum.UserInputState.Begin
+	if inputState == Enum.UserInputState.Begin then
+		driftInput = true
+	elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+		driftInput = false
+	end
 	return Enum.ContextActionResult.Sink
 end
 
@@ -118,6 +122,11 @@ local function onSeated(occupant)
 		brakeInput = false
 		driftInput = false
 		isDrifting = false
+		driftStartTime = 0
+		miniTurboEndTime = 0
+		if driveForce and driveForce.Parent then
+			driveForce.Force = Vector3.zero
+		end
 		lastSentThrottle = 0
 		lastSentSteer = 0
 		lastSentBrake = false
@@ -169,19 +178,23 @@ RunService.RenderStepped:Connect(function(dt)
 	local currentSpeed = forwardVector:Dot(velocity)
 
 	local now = os.clock()
-	if driftInput and math.abs(currentSpeed) > (KartConfig.DriftMinSpeed or 8) then
-		if not isDrifting then
+	local driftMinSpeed = KartConfig.DriftMinSpeed or 8
+
+	-- El drift se inicia al superar la velocidad mínima, pero queda activo
+	-- hasta soltar Shift. Así no se corta si la velocidad longitudinal cae
+	-- momentáneamente durante el derrape.
+	if driftInput then
+		if not isDrifting and math.abs(currentSpeed) > driftMinSpeed then
 			isDrifting = true
 			driftStartTime = now
 		end
-	else
-		if isDrifting then
-			local driftDuration = now - driftStartTime
-			if driftDuration >= (KartConfig.DriftMinDuration or 0.8) then
-				miniTurboEndTime = now + (KartConfig.MiniTurboDuration or 0.75)
-			end
-			isDrifting = false
+	elseif isDrifting then
+		local driftDuration = now - driftStartTime
+		if driftDuration >= (KartConfig.DriftMinDuration or 0.8) then
+			miniTurboEndTime = now + (KartConfig.MiniTurboDuration or 0.75)
 		end
+		isDrifting = false
+		driftStartTime = 0
 	end
 
 	local isTurboActive = now < miniTurboEndTime
@@ -208,7 +221,13 @@ RunService.RenderStepped:Connect(function(dt)
 	local lateralSpeed = rightVector:Dot(velocity)
 	local gripMult = isDrifting and (KartConfig.DriftGripMultiplier or 0.25) or 1.0
 	local maxLateralForce = currentChassis.AssemblyMass * 120 -- Tolerancia máxima
-	local rawGripForce = -lateralSpeed * (KartConfig.Grip or 18) * gripMult * currentChassis.AssemblyMass
+
+	-- En drift se busca una velocidad lateral controlada según la dirección
+	-- elegida. Esto produce un deslizamiento visible, en vez de limitarse a
+	-- dejar que el kart conserve una deriva residual.
+	local driftSlipRatio = isDrifting and (KartConfig.DriftLateralSpeedRatio or 0.22) or 0
+	local targetLateralSpeed = isDrifting and (steerInput * math.abs(currentSpeed) * driftSlipRatio) or 0
+	local rawGripForce = (targetLateralSpeed - lateralSpeed) * (KartConfig.Grip or 18) * gripMult * currentChassis.AssemblyMass
 	local safeGripForce = math.clamp(rawGripForce, -maxLateralForce, maxLateralForce)
 	targetForce = targetForce + (rightVector * safeGripForce)
 
