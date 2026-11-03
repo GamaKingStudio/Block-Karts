@@ -15,6 +15,7 @@ local KartConfig = {
 	-- Parámetros de Derrape y Mini-Turbo
 	DriftMinSpeed = 8,
 	DriftGripMultiplier = 0.25,
+	DriftLateralSpeedRatio = 0.22, -- Deslizamiento lateral objetivo como fracción de la velocidad frontal
 	DriftSteerMultiplier = 1.6,
 	DriftMinDuration = 0.8,
 	MiniTurboDuration = 0.75,
