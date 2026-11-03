@@ -26,7 +26,7 @@ Debe utilizarse como contexto del proyecto y no como una orden para modificar c�
 
 **Gemini Desarrollador:** Responsable de la implementación técnica. Revisa el código existente, modifica los archivos necesarios, ejecuta validaciones, prueba los cambios que estén a su alcance y publica commits en GitHub. Debe actualizar `PROJECT_CONTEXT.md` cuando existan cambios relevantes en el estado del proyecto.
 
-**ChatGPT:** Apoyo estratégico y segunda opinión. Ayuda a mantener la visión global, revisar decisiones de diseño y arquitectura, priorizar el desarrollo y resolver problemas complejos. No sustituye las responsabilidades de implementación y validación de Gemini Desarrollador.
+**ChatGPT:** Apoyo estratégico y técnico, incluida la implementación directa cuando se solicite. Antes de proponer o ejecutar cualquier cambio debe leer PROJECT_CONTEXT.md completo y revisar el código actual relacionado. Debe comprobar si la funcionalidad o corrección ya existe para evitar duplicar trabajo o revertir decisiones aprobadas. No debe afirmar pruebas en Studio que no haya realizado.
 
 **Usuario:** Director del proyecto y tester en Roblox Studio. Define las prioridades, aprueba las decisiones importantes y realiza las pruebas manuales necesarias. Requiere instrucciones claras y graduales para las tareas que impliquen acciones en su entorno local.
 
@@ -121,11 +121,11 @@ Servicios: Roblox Studio, VS Code, Git/GitHub, Rojo CLI 7.7.1.
 
 **Terminal 1 (Rojo):** Ejecución de `rojo serve` en localhost (puerto 34872) para sincronización en tiempo real.
 
-**Terminal 2 (Git):** Gestión de control de versiones (pull/push) en la rama `feature/kart-prototype`.
+**Terminal 2 (Git):** Gestión de control de versiones. La rama de trabajo vigente para esta iteración es `recovery/stable-handling`; no asumir que la rama local coincide sin verificarla.
 
 ### Regla de entorno
 
-- Verificar siempre la rama activa antes de realizar modificaciones.
+- Verificar siempre la rama activa antes de realizar modificaciones. Para las tareas actuales, utilizar `recovery/stable-handling`, salvo que el usuario autorice otra rama.
 - No trabajar accidentalmente sobre `main`.
 - Mantener Rojo en la versión 7.7.1.
 - Limpiar instancias como Baseplate o SpawnLocation genéricos de Roblox Studio antes de la generación del mapa para prevenir conflictos de físicas y superposición de mallas (Z-Fighting).
@@ -140,14 +140,14 @@ El proyecto se encuentra en fase de prototipo jugable, con un circuito base y un
 
 - `src/ReplicatedStorage/BloxyTypography.lua`: módulo central de tipografía. Expone los roles `Title` (Highway, alternativa condensada tipo Impact), `Bold` y `Light` para mantener una jerarquía consistente en la interfaz.
 - **Jerarquía vigente:** Title (Highway) para títulos principales de panel y avisos destacados; Bold para cronómetro, velocidad y datos con énfasis; Light para unidades, checkpoints, mejor tiempo y filas informativas.
-- **Estado actual:** la integración del HUD utiliza temporalmente la familia nativa Gotham SSm con pesos Bold y Light mediante `FontFace`. Los archivos BLOXY `.ttf` del usuario aún no están incorporados como assets de Roblox; por tanto, la tipografía BLOXY real está pendiente de publicación/obtención de IDs y sustitución de la familia de respaldo. No se han inventado IDs ni se afirma que BLOXY esté aplicada.
+- **Estado actual:** `Title` utiliza la fuente nativa `Highway` como alternativa condensada y pesada al estilo Impact; `Bold` utiliza GothamBold y `Light` utiliza GothamMedium. Los archivos BLOXY `.ttf` del usuario aún no están incorporados como assets de Roblox; la tipografía BLOXY propia sigue pendiente de publicación/obtención de IDs. No se han inventado IDs ni se afirma que BLOXY esté aplicada.
 
 ### Archivos principales en uso
 
 - `src/ServerScriptService/KartService.lua`: Controlador del servidor. Gestiona la generación del entorno, spawn de jugadores y ensamblaje de los karts; carga el modelo original de palmera publicado en Roblox y conserva un respaldo procedural.
 - `src/ServerScriptService/KartBootstrap.server.lua`: Punto de entrada del servidor.
 - `src/ReplicatedStorage/KartConfig.lua`: Módulo de datos (parámetros físicos, multiplicadores, configuración de cámara).
-- `src/ReplicatedStorage/BloxyTypography.lua`: Roles tipográficos centralizados para el HUD (respaldo Gotham SSm hasta disponer de los assets BLOXY publicados).
+- `src/ReplicatedStorage/BloxyTypography.lua`: Roles tipográficos centralizados para el HUD: `Title` (Highway), `Bold` (GothamBold) y `Light` (GothamMedium).
 - `src/StarterPlayer/KartControls.client.lua`: Lógica del cliente. Captura de inputs y aplicación de fuerzas físicas.
 
 ### Sistemas implementados según el estado documentado
@@ -236,9 +236,11 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
 
 **Interfaz de Usuario (HUD):**
-- Cronómetro, contador de vueltas, telemetría local, clasificación y minimapa implementados en `RaceHUD.client.lua` según el código actual.
-- Jerarquía tipográfica Bold/Light centralizada e integrada con `FontFace`, usando Gotham SSm como respaldo temporal.
-- Pendiente: publicar/obtener los IDs de BLOXY Bold y BLOXY Light e incorporarlos en `BloxyTypography.lua`; validar visualmente el resultado en Roblox Studio.
+- Cronómetro, contador de vueltas, telemetría local, clasificación y minimapa implementados en `RaceHUD.client.lua`.
+- El velocímetro está ubicado en el sector inferior derecho, sin tarjeta, fondo, borde ni esquinas. Muestra el número de velocidad grande y `/KMH` más pequeño, en la misma línea. La velocidad se calcula desde la componente longitudinal de la velocidad del chasis y utiliza el factor de conversión existente `1.008`.
+- Los paneles de carrera, clasificación y minimapa también son transparentes; el HUD mantiene texto con contorno para legibilidad.
+- Tipografía centralizada: `Title` = Highway para títulos principales; `Bold` = GothamBold; `Light` = GothamMedium.
+- Pendiente: validar visualmente el HUD actualizado en Roblox Studio. La tipografía BLOXY propia sigue pendiente de incorporar cuando estén disponibles sus assets/IDs.
 
 **Sistema de Checkpoints (Backend):**
 - Zonas de validación vectoriales (invisibles) para certificar vueltas válidas.
@@ -270,7 +272,7 @@ La prioridad es consolidar primero la experiencia de conducción y el ciclo prin
 
 ### Gemini Director
 
-- Leer el documento completo antes de proponer cambios.
+- Leer el documento completo antes de proponer cambios o implementar tareas. Revisar el estado actual del código y del contexto para no repetir cambios ya realizados ni deshacer decisiones aprobadas.
 - Mantener la visión global del proyecto y sus prioridades.
 - Analizar las solicitudes del usuario y convertirlas en tareas técnicas concretas.
 - Preparar instrucciones acotadas para Gemini Desarrollador.
@@ -327,7 +329,7 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 
 **Código formateado:** Los bloques de código deben ser provistos de forma íntegra y listos para sustituir archivos existentes cuando corresponda. No utilizar fragmentos inconexos que dificulten su implementación.
 
-**Gestión de entorno:** Exigir siempre la verificación de la rama activa (`feature/kart-prototype`). Proteger la integridad de la rama `main`.
+**Gestión de entorno:** Verificar la rama autorizada vigente (`recovery/stable-handling`) antes de modificar. Proteger la integridad de `main`.
 
 **Accesibilidad:** Documentar los cambios en el código sin abusar de tecnicismos innecesarios; mantener un tono directo.
 
@@ -405,3 +407,15 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 - Se incorpora el rol tipográfico `Title` en `BloxyTypography.lua`, usando la fuente nativa `Highway` como alternativa condensada y pesada al estilo Impact. Se aplica a los títulos principales del HUD (vuelta, clasificación, mapa y aviso de sentido contrario).
 - Se mantienen intactos los paneles de carrera, clasificación y minimapa que ya eran transparentes; no se modifican conducción, cámara, circuito ni mecánicas.
 - Estado: código publicado; pendiente de validación visual en Roblox Studio. No se declara probado en Play.
+
+
+### Consolidación del estado vigente de HUD y antorchas (3 de noviembre de 2026)
+
+Esta sección resume el estado actual para evitar que futuras iteraciones repitan o reviertan correcciones recientes.
+
+- **Antorchas Tiki:** se utiliza el modelo procedural de piezas nativas aceptado por el usuario, no el asset anterior `139155803475453`. El poste fue adelgazado a 0.42 studs y su realce a 0.10 studs. Se conservan altura, brasero, fuego, decoración y ubicaciones.
+- **Velocímetro:** se mantiene exclusivamente el diseño lateral inferior derecho: sin recuadro/fondo/borde, número grande y `/KMH` pequeño a la derecha. No reintroducir un velocímetro central ni una tarjeta opaca.
+- **Títulos del HUD:** usar el rol `Title` (Highway) para títulos principales y avisos destacados; no reemplazarlo por Gotham Bold sin una solicitud expresa. Mantener `Bold` y `Light` para los demás niveles de información.
+- **Alcance protegido:** estas correcciones no autorizan cambios en conducción, cámara, trazado, pianos, guardarraíles, checkpoints, minimapa, leaderboard ni ubicación de props.
+- **Commits recientes en `recovery/stable-handling`:** HUD y velocímetro `408c94a`; rol tipográfico `96b830e`; documentación de corrección previa `2be93b5`. La corrección de antorchas y el primer retorno del velocímetro lateral se encuentran registrados en los commits anteriores de esta misma rama.
+- **Validación:** se verificó que los archivos publicados contienen el panel transparente, el formato horizontal de velocidad y el rol `Title`. No se ejecutó Roblox Studio después de estos commits; la apariencia final queda pendiente de la prueba manual del usuario.
