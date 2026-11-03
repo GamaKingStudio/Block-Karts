@@ -626,4 +626,5 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Si un jugador sale durante la cuenta regresiva, se invalida esa cuenta y se vuelve a evaluar a los participantes restantes.
 - Corrección del 3 de noviembre: se eliminó ViewportFrame y se sustituyó por botones TextButton visibles, con iconos, descripciones y confirmación de selección. La interfaz se adapta al ancho disponible y conserva el flujo de selección sincronizada.
 - Estado: corrección publicada; validación estática realizada. Pendiente de prueba manual en Roblox Studio.
+- Corrección adicional: al abrir la selección se eliminan todas las ScreenGui antiguas llamadas `BLOXYCameraSelection` que hayan quedado en PlayerGui tras reinicios/reconexiones de LocalScript. Se redujo la opacidad de la capa de fondo y se aumentó el contraste del panel y los botones para evitar la apariencia de pantalla negra.
 - Archivos: src/ServerScriptService/KartService.lua, src/StarterPlayer/KartControls.client.lua y PROJECT_CONTEXT.md.
