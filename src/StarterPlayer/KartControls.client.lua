@@ -198,7 +198,7 @@ local function startDrivingCamera(kart)
 	local baseFieldOfView = drivingBaseFieldOfView
 	local smoothedFieldOfView = baseFieldOfView
 	local smoothedCFrame = camera.CFrame
-	print(("[BLOXY-KART][CLIENT][CAMERA-DRIVE] type=%s offset=%s lookAhead=%.1f"):format(
+	print(("[BLOXY-KART][CLIENT][CAMERA-DRIVE] mode=experimental-isometric type=%s offset=%s lookAhead=%.1f"):format(
 		camera.CameraType.Name, tostring(KartConfig.CameraOffset), KartConfig.CameraLookAhead
 	))
 	cameraConnection = RunService.RenderStepped:Connect(function(deltaTime)
@@ -207,14 +207,16 @@ local function startDrivingCamera(kart)
 			return
 		end
 		local chassis = kart.PrimaryPart
+		-- Elevated three-quarter view: follow the kart from above and slightly
+		-- off its rear quarter, keeping the track ahead visible.
 		local focus = chassis.Position + chassis.CFrame.LookVector * KartConfig.CameraLookAhead + Vector3.new(0, 1.5, 0)
 		local desiredPosition = (chassis.CFrame * CFrame.new(KartConfig.CameraOffset)).Position
 		local desiredCFrame = CFrame.lookAt(desiredPosition, focus)
-		local alpha = 1 - math.exp(-6 * deltaTime)
+		local alpha = 1 - math.exp(-5 * deltaTime)
 		smoothedCFrame = smoothedCFrame:Lerp(desiredCFrame, alpha)
 		local forwardSpeed = math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
 		local speedRatio = math.clamp(forwardSpeed / math.max(KartConfig.MaxForwardSpeed, 1), 0, 1)
-		local targetFieldOfView = baseFieldOfView + (6 * speedRatio)
+		local targetFieldOfView = baseFieldOfView + (4 * speedRatio)
 		local fovAlpha = 1 - math.exp(-3.5 * deltaTime)
 		smoothedFieldOfView = smoothedFieldOfView + (targetFieldOfView - smoothedFieldOfView) * fovAlpha
 		camera.FieldOfView = smoothedFieldOfView
@@ -222,7 +224,6 @@ local function startDrivingCamera(kart)
 		camera.Focus = CFrame.new(focus)
 	end)
 end
-
 local function formatVector(vector)
 	if not vector then
 		return "nil"
