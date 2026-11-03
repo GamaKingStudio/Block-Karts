@@ -1,11 +1,7 @@
--- Centralized typography roles for the BLOXY KARTS interface.
--- Font assets are installed from the Roblox Creator Store.
--- Londrina Solid is used for display/headline text.
--- Rajdhani is used for readable HUD text and supporting information.
-
+-- Built-in Roblox fonts keep the HUD readable even if uploaded font assets are unavailable.
 local Fonts = {
-	Bold = Font.fromId(113086061264643, Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-	Light = Font.fromId(12187375422, Enum.FontWeight.Light, Enum.FontStyle.Normal),
+	Bold = Font.fromEnum(Enum.Font.GothamBold),
+	Light = Font.fromEnum(Enum.Font.GothamMedium),
 }
 
 local Typography = {}
