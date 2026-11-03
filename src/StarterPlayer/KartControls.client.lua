@@ -314,15 +314,21 @@ local function showCameraSelection()
 		outline.Thickness = 2
 		outline.Parent = button
 
-		local icon = Instance.new("TextLabel")
-		icon.Size = UDim2.new(1, 0, 0, 62)
-		icon.Position = UDim2.fromOffset(0, 12)
-		icon.BackgroundTransparency = 1
-		icon.Text = symbol
-		icon.TextColor3 = Color3.fromRGB(255, 197, 72)
-		icon.Font = Enum.Font.GothamBlack
-		icon.TextSize = 48
-		icon.Parent = button
+		local preview = Instance.new("ImageLabel")
+		preview.Name = "CameraPreview"
+		preview.Position = UDim2.fromOffset(10, 8)
+		preview.Size = UDim2.new(1, -20, 0, 64)
+		preview.BackgroundColor3 = Color3.fromRGB(35, 46, 60)
+		preview.BackgroundTransparency = 0
+		preview.BorderSizePixel = 0
+		preview.Image = mode == "Classic"
+			and "rbxassetid://107652293267576"
+			or "rbxassetid://134848699353874"
+		preview.ScaleType = Enum.ScaleType.Crop
+		preview.Parent = button
+		local previewCorner = Instance.new("UICorner")
+		previewCorner.CornerRadius = UDim.new(0, 9)
+		previewCorner.Parent = preview
 
 		local name = Instance.new("TextLabel")
 		name.Position = UDim2.fromOffset(6, 78)
