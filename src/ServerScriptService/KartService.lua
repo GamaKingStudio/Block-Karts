@@ -583,115 +583,80 @@ local function buildTestCourse()
 		spawnTireStack(tPos)
 	end
 
-	-- Antorcha original del creador: conservar su geometría y aplicar materiales nativos.
-	local InsertService = game:GetService("InsertService")
-	local TORCH_ASSET_ID = 139155803475453
-	local torchTemplate = nil
-	local torchLoadOk, torchAssetOrError = pcall(function()
-		return InsertService:LoadAsset(TORCH_ASSET_ID)
-	end)
-	if torchLoadOk and torchAssetOrError then
-		local loadedTorchAsset = torchAssetOrError
-		local candidate = loadedTorchAsset:IsA("Model") and loadedTorchAsset
-			or loadedTorchAsset:FindFirstChildWhichIsA("Model", true)
-		if candidate then
-			torchTemplate = candidate:Clone()
-			torchTemplate.Name = "OriginalTorchTemplate"
-		else
-			warn(("[BLOXY-KART][TORCH] El asset %d no contiene un Model utilizable."):format(TORCH_ASSET_ID))
-		end
-		loadedTorchAsset:Destroy()
-	else
-		warn(("[BLOXY-KART][TORCH] No se pudo cargar el asset %d: %s"):format(TORCH_ASSET_ID, tostring(torchAssetOrError)))
-	end
-
+	-- Antorchas tiki construidas con piezas nativas para evitar el asset gris sin textura.
+	-- Se mantienen intactas todas las posiciones existentes.
 	local function spawnTikiTorch(pos)
-		if torchTemplate then
-			local torch = torchTemplate:Clone()
-			torch.Name = "TrackTorch"
-			torch.Parent = course
-			local _, originalBounds = torch:GetBoundingBox()
-			if originalBounds.Y > 0.01 then
-				pcall(function() torch:ScaleTo(8 / originalBounds.Y) end)
-			end
-			torch:PivotTo(CFrame.new(pos))
-			local boxCFrame, boxSize = torch:GetBoundingBox()
-			local bottom = boxCFrame.Position.Y - boxSize.Y / 2
-			torch:PivotTo(CFrame.new(pos.X - boxCFrame.Position.X, pos.Y - bottom, pos.Z - boxCFrame.Position.Z) * torch:GetPivot())
+		local torchModel = Instance.new("Model")
+		torchModel.Name = "TrackTorch"
+		torchModel.Parent = course
 
-			-- Quitar únicamente la llama geométrica original y sus efectos.
-			-- No tocar MeshPart.TextureID, SurfaceAppearance, Decal, Texture, Color ni Material:
-			-- el soporte y el quemador deben conservar el aspecto original del asset.
-			local descendants = torch:GetDescendants()
-			for index = #descendants, 1, -1 do
-				local descendant = descendants[index]
-				local lowerName = string.lower(descendant.Name)
-				local flameName = string.find(lowerName, "flame", 1, true)
-					or string.find(lowerName, "fire", 1, true)
-					or string.find(lowerName, "llama", 1, true)
-					or string.find(lowerName, "fuego", 1, true)
-				local flameEffect = descendant:IsA("Fire")
-					or descendant:IsA("ParticleEmitter")
-					or descendant:IsA("Beam")
-					or descendant:IsA("Trail")
-				if flameName and (descendant:IsA("Model") or descendant:IsA("BasePart") or descendant:IsA("Folder")) then
-					descendant:Destroy()
-				elseif flameEffect then
-					descendant:Destroy()
-				end
-			end
+		local wood = Color3.fromRGB(126, 76, 39)
+		local woodLight = Color3.fromRGB(166, 105, 55)
+		local woodDark = Color3.fromRGB(75, 45, 27)
+		local metal = Color3.fromRGB(65, 58, 48)
 
-			-- Mantener intactas las texturas/materiales del modelo original.
-			-- Solo fijar las piezas para que la decoración no interfiera con los karts.
-			for _, descendant in ipairs(torch:GetDescendants()) do
-				if descendant:IsA("BasePart") then
-					descendant.Anchored = true
-					descendant.CanCollide = false
-					descendant.CanTouch = false
-					descendant.CanQuery = false
-					descendant.Massless = true
-				end
-			end
-
-			local finalBox, finalSize = torch:GetBoundingBox()
-			local topY = finalBox.Position.Y + finalSize.Y / 2
-
-			-- Nuestra llama nace pegada al quemador, no por encima de la llama original.
-			local flameAnchor = Instance.new("Part")
-			flameAnchor.Name = "TorchFlame"
-			flameAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
-			flameAnchor.CFrame = CFrame.new(finalBox.Position.X, topY + 0.04, finalBox.Position.Z)
-			flameAnchor.Transparency = 1
-			flameAnchor.Anchored = true
-			flameAnchor.CanCollide = false
-			flameAnchor.CanTouch = false
-			flameAnchor.CanQuery = false
-			flameAnchor.Parent = torch
-
-			local fire = Instance.new("Fire")
-			fire.Name = "TorchFire"
-			fire.Color = Color3.fromRGB(255, 224, 95)
-			fire.SecondaryColor = Color3.fromRGB(255, 105, 24)
-			fire.Size = 3.8
-			fire.Heat = 7
-			fire.Parent = flameAnchor
-
-			local light = Instance.new("PointLight")
-			light.Name = "TorchGlow"
-			light.Color = Color3.fromRGB(255, 164, 72)
-			light.Range = 24
-			light.Brightness = 2.4
-			light.Shadows = true
-			light.Parent = flameAnchor
-			return
+		local function torchPart(name, size, offset, color, material, shape)
+			local part = makePart(
+				torchModel,
+				name,
+				size,
+				CFrame.new(pos + offset),
+				color,
+				material,
+				shape
+			)
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			return part
 		end
 
-		-- No sustituir por una antorcha genérica: si el asset original no carga,
-		-- se deja un aviso claro en Output en vez de mostrar un modelo incorrecto.
+		-- Poste de madera con vetas/bandas oscuras y un pequeño soporte superior.
+		torchPart("WoodenPole", Vector3.new(0.62, 6.7, 0.62), Vector3.new(0, 3.35, 0), wood, Enum.Material.Wood, "Cylinder")
+		torchPart("PoleHighlight", Vector3.new(0.16, 5.9, 0.16), Vector3.new(-0.2, 3.35, -0.24), woodLight, Enum.Material.Wood, "Cylinder")
+		torchPart("LowerBinding", Vector3.new(0.78, 0.18, 0.78), Vector3.new(0, 1.0, 0), woodDark, Enum.Material.Wood, "Cylinder")
+		torchPart("UpperBinding", Vector3.new(0.82, 0.2, 0.82), Vector3.new(0, 6.15, 0), metal, Enum.Material.Metal, "Cylinder")
+
+		-- Copa/cestillo superior que sostiene el fuego.
+		torchPart("BrazierBase", Vector3.new(1.15, 0.28, 1.15), Vector3.new(0, 6.75, 0), woodDark, Enum.Material.Wood, "Cylinder")
+		torchPart("BrazierRim", Vector3.new(1.35, 0.18, 1.35), Vector3.new(0, 6.95, 0), metal, Enum.Material.Metal, "Cylinder")
+		for angle = 0, 3 do
+			local a = angle * math.pi / 2
+			local x = math.cos(a) * 0.48
+			local z = math.sin(a) * 0.48
+			torchPart("BrazierSlat", Vector3.new(0.16, 0.65, 0.16), Vector3.new(x, 7.22, z), woodLight, Enum.Material.Wood, "Cylinder")
+		end
+
+		local flameAnchor = Instance.new("Part")
+		flameAnchor.Name = "TorchFlame"
+		flameAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
+		flameAnchor.CFrame = CFrame.new(pos + Vector3.new(0, 7.35, 0))
+		flameAnchor.Transparency = 1
+		flameAnchor.Anchored = true
+		flameAnchor.CanCollide = false
+		flameAnchor.CanTouch = false
+		flameAnchor.CanQuery = false
+		flameAnchor.Parent = torchModel
+
+		local fire = Instance.new("Fire")
+		fire.Name = "TorchFire"
+		fire.Color = Color3.fromRGB(255, 224, 105)
+		fire.SecondaryColor = Color3.fromRGB(255, 105, 24)
+		fire.Size = 4.2
+		fire.Heat = 8
+		fire.Parent = flameAnchor
+
+		local light = Instance.new("PointLight")
+		light.Name = "TorchGlow"
+		light.Color = Color3.fromRGB(255, 164, 72)
+		light.Range = 24
+		light.Brightness = 2.4
+		light.Shadows = true
+		light.Parent = flameAnchor
 	end
-	-- Antorchas reubicadas en arena perimetral; no invaden pista ni barandas.
+
+	-- Mismas ubicaciones: perímetro y claros de arena interiores.
 	local torchPositions = {
-		-- Antorchas del perímetro.
 		Vector3.new(-165, yGround, -105),
 		Vector3.new(-165, yGround, -35),
 		Vector3.new(-165, yGround, 35),
@@ -700,7 +665,6 @@ local function buildTestCourse()
 		Vector3.new(175, yGround, -35),
 		Vector3.new(175, yGround, 35),
 		Vector3.new(125, yGround, 145),
-		-- Antorchas bajas en los claros de arena interiores.
 		Vector3.new(28, yGround, 25),
 		Vector3.new(67, yGround, 25),
 		Vector3.new(28, yGround, -45),
