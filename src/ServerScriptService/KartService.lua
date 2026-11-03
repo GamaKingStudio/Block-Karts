@@ -623,6 +623,31 @@ local function buildTestCourse()
 			local bottom = boxCFrame.Position.Y - boxSize.Y / 2
 			local correction = Vector3.new(pos.X - boxCFrame.Position.X, pos.Y - bottom, pos.Z - boxCFrame.Position.Z)
 			torch:PivotTo(CFrame.new(correction) * torch:GetPivot())
+
+			-- Luz cálida desde la zona superior de la antorcha, como una lámpara real.
+			local finalBoxCFrame, finalBoxSize = torch:GetBoundingBox()
+			local lightAnchor = Instance.new("Part")
+			lightAnchor.Name = "TorchLightSource"
+			lightAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
+			lightAnchor.CFrame = CFrame.new(
+				finalBoxCFrame.Position.X,
+				finalBoxCFrame.Position.Y + finalBoxSize.Y * 0.39,
+				finalBoxCFrame.Position.Z
+			)
+			lightAnchor.Transparency = 1
+			lightAnchor.Anchored = true
+			lightAnchor.CanCollide = false
+			lightAnchor.CanTouch = false
+			lightAnchor.CanQuery = false
+			lightAnchor.Parent = torch
+
+			local torchLight = Instance.new("PointLight")
+			torchLight.Name = "TorchGlow"
+			torchLight.Color = Color3.fromRGB(255, 174, 92)
+			torchLight.Range = 24
+			torchLight.Brightness = 2.4
+			torchLight.Shadows = true
+			torchLight.Parent = lightAnchor
 			return
 		end
 
