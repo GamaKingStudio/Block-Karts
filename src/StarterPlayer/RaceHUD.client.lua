@@ -108,8 +108,16 @@ end
 
 makeTextOnly(racePanel)
 makeTextOnly(speedPanel)
-for _, textObject in ipairs({lapLabel, timerLabel, bestLabel, checkpointLabel, speedValue, speedUnit}) do
+makeTextOnly(leaderboard)
+makeTextOnly(mapPanel)
+for _, textObject in ipairs({
+ lapLabel, timerLabel, bestLabel, checkpointLabel, speedValue, speedUnit,
+ leaderboardTitle, mapTitle,
+}) do
  addTextOutline(textObject)
+end
+for _, row in ipairs(leaderboardRows) do
+ addTextOutline(row)
 end
 
 local wrongWayLabel = label(
@@ -135,7 +143,7 @@ local renderConnection
 -- LEADERBOARD + MINIMAPA
 -- ==========================================================
 local leaderboard = panel("Leaderboard", UDim2.fromOffset(218, 250), UDim2.new(0, 18, 0, 22))
-label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 15, Color3.fromRGB(255, 220, 145), "Bold")
+local leaderboardTitle = label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 15, Color3.fromRGB(255, 220, 145), "Bold")
 local leaderboardRows = {}
 for i = 1, 8 do
  local row = label(leaderboard, "Driver" .. i, UDim2.new(1, -18, 0, 23), UDim2.fromOffset(9, 35 + (i - 1) * 25), "", 12)
@@ -144,13 +152,13 @@ for i = 1, 8 do
 end
 
 local mapPanel = panel("MiniMap", UDim2.fromOffset(218, 190), UDim2.new(0, 18, 0, 284))
-label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 25), UDim2.fromOffset(8, 4), "MAPA DE PISTA", 13, Color3.fromRGB(255, 220, 145), "Bold")
+local mapTitle = label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 25), UDim2.fromOffset(8, 4), "MAPA DE PISTA", 13, Color3.fromRGB(255, 220, 145), "Bold")
 local mapArea = Instance.new("Frame")
 mapArea.Name = "MapArea"
 mapArea.Size = UDim2.new(1, -20, 1, -38)
 mapArea.Position = UDim2.fromOffset(10, 31)
 mapArea.BackgroundColor3 = Color3.fromRGB(10, 15, 21)
-mapArea.BackgroundTransparency = 0.15
+mapArea.BackgroundTransparency = 1
 mapArea.BorderSizePixel = 0
 mapArea.ClipsDescendants = true
 mapArea.Parent = mapPanel
@@ -196,6 +204,7 @@ local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
  line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.6, thickness)
  line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
  line.BackgroundColor3 = color
+ line.BackgroundTransparency = 0.3
  line.BorderSizePixel = 0
  line.ZIndex = zIndex
  line.Parent = mapArea
@@ -233,6 +242,7 @@ local function drawTrack()
  finishLine.Position = UDim2.fromOffset(finishCenter.X, finishCenter.Y)
  finishLine.Size = UDim2.fromOffset(3, 20)
  finishLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ finishLine.BackgroundTransparency = 0.3
  finishLine.BorderSizePixel = 0
  finishLine.ZIndex = 5
  finishLine.Parent = mapArea
