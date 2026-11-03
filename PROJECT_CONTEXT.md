@@ -380,3 +380,11 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 - Estado: cambio implementado y publicado en `recovery/stable-handling`. Pendiente validar en Roblox Studio que los nombres se preservan al cargar con `InsertService:LoadAsset` y que los colores/materiales se ven correctamente.
 - Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
 - Pruebas realizadas: inspección estática del bloque actualizado y comprobación de que el cambio apunta a los nombres confirmados por el usuario. No se ejecutó Roblox Studio ni pruebas de runtime.
+### Corrección de detección de piezas de palmera (2 de noviembre de 2026)
+
+- La prueba del usuario en Roblox Studio mostró que `LoadAsset` devuelve piezas, pero ninguna conserva los nombres `Palm_Trunk` y `Palm_Leaves`: el Output reportó 0 coincidencias de ambos nombres en 11 palmeras.
+- Se corrigió `spawnImportedPalm`: ahora identifica primero nombres que contengan `trunk`/`stem` o `leaf`/`leaves`/`foliage`; si el importador cambió los nombres, clasifica las piezas por su altura respecto al centro del bounding box (parte inferior como tronco y superior como hojas).
+- Se añadieron mensajes de Output para informar cuántas piezas se colorearon o advertir si el modelo no contiene `BasePart`.
+- Estado: corrección implementada y publicada en `recovery/stable-handling`; requiere una nueva prueba Play del usuario. La clasificación por altura es una alternativa para el FBX con nombres alterados, no una validación visual ya confirmada.
+- Archivos modificados en esta corrección: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
+- Pruebas realizadas: revisión estática del bloque de clasificación y publicación/verificación del archivo. No se ejecutó Roblox Studio desde este entorno.
