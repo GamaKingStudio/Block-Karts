@@ -213,7 +213,7 @@ local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
  line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.35, thickness)
  line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
  line.BackgroundColor3 = color
- line.BackgroundTransparency = 0.3
+ line.BackgroundTransparency = 0
  line.BorderSizePixel = 0
  line.ZIndex = zIndex
  line.Parent = mapArea
@@ -249,7 +249,7 @@ local function drawTrack()
   borderJoin.Position = UDim2.fromOffset(point.X, point.Y)
   borderJoin.Size = UDim2.fromOffset(20, 20)
   borderJoin.BackgroundColor3 = borderColor
-  borderJoin.BackgroundTransparency = 0.3
+  borderJoin.BackgroundTransparency = 0
   borderJoin.BorderSizePixel = 0
   borderJoin.ZIndex = 1
   borderJoin.Parent = mapArea
@@ -261,7 +261,7 @@ local function drawTrack()
   asphaltJoin.Position = UDim2.fromOffset(point.X, point.Y)
   asphaltJoin.Size = UDim2.fromOffset(14, 14)
   asphaltJoin.BackgroundColor3 = asphaltColor
-  asphaltJoin.BackgroundTransparency = 0.3
+  asphaltJoin.BackgroundTransparency = 0
   asphaltJoin.BorderSizePixel = 0
   asphaltJoin.ZIndex = 2
   asphaltJoin.Parent = mapArea
@@ -276,7 +276,7 @@ local function drawTrack()
  finishLine.Position = UDim2.fromOffset(finishCenter.X, finishCenter.Y)
  finishLine.Size = UDim2.fromOffset(3, 20)
  finishLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
- finishLine.BackgroundTransparency = 0.3
+ finishLine.BackgroundTransparency = 0
  finishLine.BorderSizePixel = 0
  finishLine.ZIndex = 5
  finishLine.Parent = mapArea
@@ -388,7 +388,10 @@ lapEvent.OnClientEvent:Connect(function(lap, lapTime, isBest)
  timerLabel.Text = formatTime(lapTime)
  -- Si queda otra vuelta, iniciar su contador inmediatamente.
  if lap + 1 <= totalLaps then
+  -- Reinicio inmediato al comenzar la siguiente vuelta.
+  -- No dejamos visible el tiempo de la vuelta anterior entre frames.
   lapStartedAt = os.clock()
+  timerLabel.Text = "00:00.00"
  else
   lapStartedAt = nil
  end
