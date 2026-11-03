@@ -59,6 +59,10 @@ local function label(parent, name, size, position, text, textSize, color, fontRo
 end
 
 
+-- Estado del cronómetro declarado antes de conectar los eventos.
+local lapStartedAt = nil
+local bestLapTime = nil
+
 local countdownEvent = raceEvents:WaitForChild("RaceCountdown")
 local countdownLabel = label(hud, "RaceCountdown", UDim2.fromOffset(360, 150), UDim2.new(0.5, -180, 0.34, 0), "", 76, Color3.fromRGB(255, 205, 75), "Bold")
 countdownLabel.TextStrokeTransparency = 0.35
@@ -297,9 +301,6 @@ local function setLap(lap)
   lapLabel.Text = ("VUELTA %d / %d"):format(math.max(1, lap), totalLaps)
  end
 end
-
-local lapStartedAt = nil
-local bestLapTime = nil
 
 local function formatTime(seconds)
  local minutes = math.floor(seconds / 60)
