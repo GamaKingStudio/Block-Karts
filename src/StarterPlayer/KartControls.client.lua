@@ -16,6 +16,9 @@ local checkpointPassedRemote = raceEvents:WaitForChild("CheckpointPassed")
 local lapCompletedRemote = raceEvents:WaitForChild("LapCompleted")
 local wrongWayRemote = raceEvents:WaitForChild("WrongWayStateChanged")
 local requestRespawnRemote = raceEvents:WaitForChild("RequestRespawn")
+local cameraSelectionRemote = raceEvents:WaitForChild("SelectRaceCamera")
+local selectionStateRemote = raceEvents:WaitForChild("RaceSelectionState")
+local raceCountdownRemote = raceEvents:WaitForChild("RaceCountdown")
 
 checkpointPassedRemote.OnClientEvent:Connect(function(cpIndex, totalCps)
 	print(("[BLOXY-KART][RACE] Checkpoint %d / %d"):format(cpIndex, totalCps))
@@ -184,46 +187,69 @@ local function stopDrivingCamera()
 end
 
 local function startDrivingCamera(kart)
-	if cameraConnection then
-		cameraConnection:Disconnect()
-		cameraConnection = nil
-	end
-	camera = Workspace.CurrentCamera
-	if not camera then
-		warn("[BLOXY-KART][CLIENT][CAMERA-MISSING] Workspace.CurrentCamera no está disponible.")
-		return
-	end
-	camera.CameraType = Enum.CameraType.Scriptable
-	drivingBaseFieldOfView = camera.FieldOfView
-	local baseFieldOfView = drivingBaseFieldOfView
-	local smoothedFieldOfView = baseFieldOfView
-	local smoothedCFrame = camera.CFrame
-	print(("[BLOXY-KART][CLIENT][CAMERA-DRIVE] mode=experimental-isometric type=%s offset=%s lookAhead=%.1f"):format(
-		camera.CameraType.Name, tostring(KartConfig.CameraOffset), KartConfig.CameraLookAhead
-	))
-	cameraConnection = RunService.RenderStepped:Connect(function(deltaTime)
-		if not kart.Parent or not kart.PrimaryPart then
-			stopDrivingCamera()
-			return
-		end
-		local chassis = kart.PrimaryPart
-		-- Elevated three-quarter view: follow the kart from above and slightly
-		-- off its rear quarter, keeping the track ahead visible.
-		local focus = chassis.Position + chassis.CFrame.LookVector * KartConfig.CameraLookAhead + Vector3.new(0, 1.5, 0)
-		local desiredPosition = (chassis.CFrame * CFrame.new(KartConfig.CameraOffset)).Position
-		local desiredCFrame = CFrame.lookAt(desiredPosition, focus)
-		local alpha = 1 - math.exp(-5 * deltaTime)
-		smoothedCFrame = smoothedCFrame:Lerp(desiredCFrame, alpha)
-		local forwardSpeed = math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
-		local speedRatio = math.clamp(forwardSpeed / math.max(KartConfig.MaxForwardSpeed, 1), 0, 1)
-		local targetFieldOfView = baseFieldOfView + (4 * speedRatio)
-		local fovAlpha = 1 - math.exp(-3.5 * deltaTime)
-		smoothedFieldOfView = smoothedFieldOfView + (targetFieldOfView - smoothedFieldOfView) * fovAlpha
-		camera.FieldOfView = smoothedFieldOfView
-		camera.CFrame = smoothedCFrame
-		camera.Focus = CFrame.new(focus)
-	end)
+ if cameraConnection then cameraConnection:Disconnect(); cameraConnection=nil end
+ camera=Workspace.CurrentCamera; if not camera then return end
+ local mode=player:GetAttribute("RaceCamera") or "Classic"
+ local offset=mode=="Isometric" and KartConfig.CameraOffset or Vector3.new(0,12,24)
+ local ahead=mode=="Isometric" and KartConfig.CameraLookAhead or 7
+ camera.CameraType=Enum.CameraType.Scriptable; drivingBaseFieldOfView=camera.FieldOfView
+ local baseFov,smoothFov,smoothCFrame=camera.FieldOfView,camera.FieldOfView,camera.CFrame
+ cameraConnection=RunService.RenderStepped:Connect(function(dt)
+  if not kart.Parent or not kart.PrimaryPart then stopDrivingCamera(); return end
+  local chassis=kart.PrimaryPart; local focus=chassis.Position+chassis.CFrame.LookVector*ahead+Vector3.new(0,1.5,0)
+  local desired=CFrame.lookAt((chassis.CFrame*CFrame.new(offset)).Position,focus)
+  smoothCFrame=smoothCFrame:Lerp(desired,1-math.exp(-5*dt))
+  local speed=math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
+  local target=baseFov+4*math.clamp(speed/math.max(KartConfig.MaxForwardSpeed,1),0,1)
+  smoothFov+=(target-smoothFov)*(1-math.exp(-3.5*dt))
+  camera.FieldOfView=smoothFov; camera.CFrame=smoothCFrame; camera.Focus=CFrame.new(focus)
+ end)
 end
+local selectionGui
+local function showCameraSelection()
+ if selectionGui then selectionGui:Destroy() end
+ selectionGui=Instance.new("ScreenGui"); selectionGui.Name="BLOXYCameraSelection"; selectionGui.IgnoreGuiInset=true; selectionGui.ResetOnSpawn=false; selectionGui.Parent=player:WaitForChild("PlayerGui")
+ local shade=Instance.new("Frame"); shade.Size=UDim2.fromScale(1,1); shade.BackgroundColor3=Color3.fromRGB(10,15,24); shade.BackgroundTransparency=.18; shade.Parent=selectionGui
+ local panel=Instance.new("Frame"); panel.AnchorPoint=Vector2.new(.5,.5); panel.Position=UDim2.fromScale(.5,.5); panel.Size=UDim2.fromOffset(570,300); panel.BackgroundColor3=Color3.fromRGB(22,29,40); panel.Parent=shade
+ local pc=Instance.new("UICorner"); pc.CornerRadius=UDim.new(0,16); pc.Parent=panel
+ local heading=Instance.new("TextLabel"); heading.Position=UDim2.fromOffset(20,14); heading.Size=UDim2.new(1,-40,0,34); heading.BackgroundTransparency=1; heading.Text="ELIGE TU CÁMARA"; heading.TextColor3=Color3.new(1,1,1); heading.Font=typography.getFont("Title"); heading.TextSize=28; heading.Parent=panel
+ local cards=Instance.new("Frame"); cards.AnchorPoint=Vector2.new(.5,0); cards.Position=UDim2.new(.5,0,0,58); cards.Size=UDim2.fromOffset(520,190); cards.BackgroundTransparency=1; cards.Parent=panel
+ local layout=Instance.new("UIListLayout"); layout.FillDirection=Enum.FillDirection.Horizontal; layout.HorizontalAlignment=Enum.HorizontalAlignment.Center; layout.Padding=UDim.new(0,20); layout.Parent=cards
+ local function addCard(mode,title,desc)
+  local card=Instance.new("TextButton"); card.Size=UDim2.fromOffset(250,190); card.BackgroundColor3=Color3.fromRGB(34,42,54); card.Text=""; card.Parent=cards
+  local cr=Instance.new("UICorner"); cr.CornerRadius=UDim.new(0,12); cr.Parent=card
+  local stroke=Instance.new("UIStroke"); stroke.Color=Color3.fromRGB(95,110,130); stroke.Thickness=2; stroke.Parent=card
+  local view=Instance.new("ViewportFrame"); view.Position=UDim2.fromOffset(10,10); view.Size=UDim2.new(1,-20,0,125); view.BackgroundColor3=Color3.fromRGB(95,155,190); view.Parent=card
+  local world=Instance.new("WorldModel"); world.Parent=view
+  local folder=Workspace:FindFirstChild("PlayerKarts"); local source=folder and folder:FindFirstChild("Kart_"..tostring(player.UserId))
+  if source then
+   local clone=source:Clone(); for _,obj in ipairs(clone:GetDescendants()) do if obj:IsA("Script") or obj:IsA("LocalScript") then obj:Destroy() end end; clone.Parent=world
+   local cf,size=clone:GetBoundingBox(); local d=math.max(size.X,size.Y,size.Z)*2.2
+   local off=mode=="Isometric" and Vector3.new(d*.8,d*1.1,d*.8) or Vector3.new(0,d*.45,d*1.8)
+   local pcamera=Instance.new("Camera"); pcamera.FieldOfView=38; pcamera.CFrame=CFrame.lookAt(cf.Position+off,cf.Position); pcamera.Parent=view; view.CurrentCamera=pcamera
+  end
+  local label=Instance.new("TextLabel"); label.Position=UDim2.fromOffset(10,140); label.Size=UDim2.new(1,-20,0,24); label.BackgroundTransparency=1; label.Text=title; label.TextColor3=Color3.new(1,1,1); label.Font=typography.getFont("Bold"); label.TextSize=18; label.Parent=card
+  local sub=Instance.new("TextLabel"); sub.Position=UDim2.fromOffset(10,164); sub.Size=UDim2.new(1,-20,0,18); sub.BackgroundTransparency=1; sub.Text=desc; sub.TextColor3=Color3.fromRGB(195,205,218); sub.Font=typography.getFont("Light"); sub.TextSize=12; sub.Parent=card
+  card.Activated:Connect(function()
+   cameraSelectionRemote:FireServer(mode)
+   for _,other in ipairs(cards:GetChildren()) do if other:IsA("TextButton") then local line=other:FindFirstChildOfClass("UIStroke"); if line then line.Color=other==card and Color3.fromRGB(255,197,72) or Color3.fromRGB(95,110,130); line.Thickness=other==card and 4 or 2 end end end
+  end)
+ end
+ addCard("Classic","CLÁSICA","Seguimiento desde atrás"); addCard("Isometric","ISOMÉTRICA","Vista elevada en diagonal")
+ local status=Instance.new("TextLabel"); status.Name="ReadyStatus"; status.Position=UDim2.fromOffset(20,258); status.Size=UDim2.new(1,-40,0,26); status.BackgroundTransparency=1; status.Text="Elige una cámara para quedar listo"; status.TextColor3=Color3.fromRGB(255,205,95); status.Font=typography.getFont("Bold"); status.TextSize=16; status.Parent=panel
+end
+selectionStateRemote.OnClientEvent:Connect(function(ready,total,chosen)
+ if selectionGui then local status=selectionGui:FindFirstChild("ReadyStatus",true); if status then status.Text=chosen and ("¡Listo! "..ready.." / "..total.." jugadores") or ("Esperando selección "..ready.." / "..total.." jugadores") end end
+ if chosen and currentSeat then local kart=getKartFromSeat(currentSeat); if kart then startDrivingCamera(kart) end end
+end)
+raceCountdownRemote.OnClientEvent:Connect(function(count)
+ if selectionGui then selectionGui:Destroy(); selectionGui=nil end
+ local gui=player:FindFirstChild("PlayerGui"); if not gui then return end
+ if count>0 then
+  local screen=gui:FindFirstChild("BLOXYRaceCountdown") or Instance.new("ScreenGui"); screen.Name="BLOXYRaceCountdown"; screen.Parent=gui
+  local label=screen:FindFirstChild("Count") or Instance.new("TextLabel"); label.Name="Count"; label.AnchorPoint=Vector2.new(.5,.5); label.Position=UDim2.fromScale(.5,.38); label.Size=UDim2.fromOffset(180,120); label.BackgroundTransparency=1; label.TextColor3=Color3.new(1,1,1); label.Font=typography.getFont("Title"); label.TextScaled=true; label.Text=tostring(count); label.Parent=screen
+ else local screen=gui:FindFirstChild("BLOXYRaceCountdown"); if screen then screen:Destroy() end end
+end)
 local function formatVector(vector)
 	if not vector then
 		return "nil"
@@ -623,7 +649,7 @@ local function bindCharacter(character)
 			)
 			print(("[BLOXY-KART][CLIENT][BIND] action=%s keys=W,A,S,D,Up,Down,Left,Right,Space"):format(driveActionName))
 			sendDriveInput()
-			startDrivingCamera(kart)
+			if player:GetAttribute("RaceCamera") then startDrivingCamera(kart) else stopDrivingCamera(); showCameraSelection() end
 			task.delay(0.4, function()
 				if currentSeat == seat and humanoid.Parent == character then
 					logSeatedAvatar(humanoid, seat)
@@ -635,6 +661,7 @@ local function bindCharacter(character)
 			))
 			clearDriveInput()
 			currentSeat = nil
+			if selectionGui then selectionGui:Destroy(); selectionGui=nil end
 			stopDrivingCamera()
 		end
 	end
