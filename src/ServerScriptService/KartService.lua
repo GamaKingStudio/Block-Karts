@@ -553,7 +553,7 @@ local function buildTestCourse()
 			local isWhite = (r + c) % 2 == 0
 			local posX = (gantryX - 1.5) + (r - 1) * 3.0
 			local posZ = (70 - trackWidth / 2 + sqSize / 2) + (c - 1) * sqSize
-			local tileColor = isWhite and Color3.fromRGB(91, 95, 101) or Color3.fromRGB(48, 52, 58)
+			local tileColor = isWhite and C_WHITE or C_BLACK
 			local tile = makePart(course, "CheckTile", Vector3.new(2.8, 0.025, sqSize - 0.2),
 				CFrame.new(posX, yGround + 0.065, posZ), tileColor, Enum.Material.Asphalt)
 			tile.CanCollide = false
@@ -618,12 +618,28 @@ local function buildTestCourse()
 			local bottom = boxCFrame.Position.Y - boxSize.Y / 2
 			torch:PivotTo(CFrame.new(pos.X - boxCFrame.Position.X, pos.Y - bottom, pos.Z - boxCFrame.Position.Z) * torch:GetPivot())
 
-			-- Se conserva el modelo y sus piezas; solo se sustituyen mapas externos por color/material.
+			-- Eliminar solo la llama que viene dentro del asset; conservar soporte y quemador.
+			for _, descendant in ipairs(torch:GetDescendants()) do
+				local lowerName = string.lower(descendant.Name)
+				local isFlameNamed = string.find(lowerName, "flame", 1, true) ~= nil
+					or string.find(lowerName, "fire", 1, true) ~= nil
+				local isBuiltInEffect = descendant:IsA("Fire")
+					or descendant:IsA("ParticleEmitter")
+					or descendant:IsA("Beam")
+					or descendant:IsA("Trail")
+				if isFlameNamed or isBuiltInEffect then
+					descendant:Destroy()
+				end
+			end
+
+			-- Recalcular la parte superior ahora que la llama original ya no existe:
+			-- este punto corresponde al quemador que queda en el modelo.
 			local finalBox, finalSize = torch:GetBoundingBox()
+			local bottomY = finalBox.Position.Y - finalSize.Y / 2
 			local topY = finalBox.Position.Y + finalSize.Y / 2
 			for _, descendant in ipairs(torch:GetDescendants()) do
 				if descendant:IsA("BasePart") then
-					local heightRatio = (descendant.Position.Y - (finalBox.Position.Y - finalSize.Y / 2)) / math.max(finalSize.Y, 0.01)
+					local heightRatio = (descendant.Position.Y - bottomY) / math.max(finalSize.Y, 0.01)
 					descendant.Anchored = true
 					descendant.CanCollide = false
 					descendant.CanTouch = false
@@ -644,11 +660,11 @@ local function buildTestCourse()
 				end
 			end
 
-			-- Fuego y luz sobre el quemador del modelo original.
+			-- Nuestra llama nace pegada al quemador, no por encima de la llama original.
 			local flameAnchor = Instance.new("Part")
 			flameAnchor.Name = "TorchFlame"
 			flameAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
-			flameAnchor.CFrame = CFrame.new(finalBox.Position.X, topY + 0.25, finalBox.Position.Z)
+			flameAnchor.CFrame = CFrame.new(finalBox.Position.X, topY + 0.04, finalBox.Position.Z)
 			flameAnchor.Transparency = 1
 			flameAnchor.Anchored = true
 			flameAnchor.CanCollide = false
@@ -660,7 +676,7 @@ local function buildTestCourse()
 			fire.Name = "TorchFire"
 			fire.Color = Color3.fromRGB(255, 224, 95)
 			fire.SecondaryColor = Color3.fromRGB(255, 105, 24)
-			fire.Size = 4.2
+			fire.Size = 3.8
 			fire.Heat = 7
 			fire.Parent = flameAnchor
 
