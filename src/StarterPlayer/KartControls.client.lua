@@ -187,23 +187,42 @@ local function stopDrivingCamera()
 end
 
 local function startDrivingCamera(kart)
- if cameraConnection then cameraConnection:Disconnect(); cameraConnection=nil end
- camera=Workspace.CurrentCamera; if not camera then return end
- local mode=player:GetAttribute("RaceCamera") or "Classic"
- local offset=mode=="Isometric" and KartConfig.CameraOffset or Vector3.new(0,12,24)
- local ahead=mode=="Isometric" and KartConfig.CameraLookAhead or 7
- camera.CameraType=Enum.CameraType.Scriptable; drivingBaseFieldOfView=camera.FieldOfView
- local baseFov,smoothFov,smoothCFrame=camera.FieldOfView,camera.FieldOfView,camera.CFrame
- cameraConnection=RunService.RenderStepped:Connect(function(dt)
-  if not kart.Parent or not kart.PrimaryPart then stopDrivingCamera(); return end
-  local chassis=kart.PrimaryPart; local focus=chassis.Position+chassis.CFrame.LookVector*ahead+Vector3.new(0,1.5,0)
-  local desired=CFrame.lookAt((chassis.CFrame*CFrame.new(offset)).Position,focus)
-  smoothCFrame=smoothCFrame:Lerp(desired,1-math.exp(-5*dt))
-  local speed=math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
-  local target=baseFov+4*math.clamp(speed/math.max(KartConfig.MaxForwardSpeed,1),0,1)
-  smoothFov+=(target-smoothFov)*(1-math.exp(-3.5*dt))
-  camera.FieldOfView=smoothFov; camera.CFrame=smoothCFrame; camera.Focus=CFrame.new(focus)
- end)
+	if cameraConnection then
+		cameraConnection:Disconnect()
+		cameraConnection = nil
+	end
+	camera = Workspace.CurrentCamera
+	if not camera then return end
+
+	local mode = player:GetAttribute("RaceCamera") or "Classic"
+	-- Keep the two camera styles distinct while framing the kart more prominently.
+	local offset = mode == "Isometric" and KartConfig.CameraOffset or Vector3.new(0, 10, 20)
+	local ahead = mode == "Isometric" and KartConfig.CameraLookAhead or 6
+
+	camera.CameraType = Enum.CameraType.Scriptable
+	drivingBaseFieldOfView = camera.FieldOfView
+	local baseFov = camera.FieldOfView
+	local smoothFov = baseFov
+	local smoothCFrame = camera.CFrame
+
+	cameraConnection = RunService.RenderStepped:Connect(function(dt)
+		if not kart.Parent or not kart.PrimaryPart then
+			stopDrivingCamera()
+			return
+		end
+
+		local chassis = kart.PrimaryPart
+		local focus = chassis.Position + chassis.CFrame.LookVector * ahead + Vector3.new(0, 1.5, 0)
+		local desired = CFrame.lookAt((chassis.CFrame * CFrame.new(offset)).Position, focus)
+		smoothCFrame = smoothCFrame:Lerp(desired, 1 - math.exp(-5 * dt))
+
+		local speed = math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
+		local target = baseFov + 2.5 * math.clamp(speed / math.max(KartConfig.MaxForwardSpeed, 1), 0, 1)
+		smoothFov += (target - smoothFov) * (1 - math.exp(-3.5 * dt))
+		camera.FieldOfView = smoothFov
+		camera.CFrame = smoothCFrame
+		camera.Focus = CFrame.new(focus)
+	end)
 end
 local selectionGui
 local function showCameraSelection()
