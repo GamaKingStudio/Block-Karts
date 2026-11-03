@@ -65,7 +65,7 @@ local bestLapTime = nil
 
 local countdownEvent = raceEvents:WaitForChild("RaceCountdown")
 local countdownLabel = label(hud, "RaceCountdown", UDim2.fromOffset(360, 150), UDim2.new(0.5, -180, 0.34, 0), "", 76, Color3.fromRGB(255, 205, 75), "Bold")
-countdownLabel.TextStrokeTransparency = 0.35
+countdownLabel.TextStrokeTransparency = 0.06
 countdownLabel.Visible = false
 countdownEvent.OnClientEvent:Connect(function(value)
  if value > 3 then
@@ -148,7 +148,7 @@ end
 
 local function addTextOutline(textObject, color)
  textObject.TextStrokeColor3 = color or Color3.fromRGB(12, 16, 24)
- textObject.TextStrokeTransparency = 0.18
+ textObject.TextStrokeTransparency = 0.06
 end
 
 makeTextOnly(racePanel)
