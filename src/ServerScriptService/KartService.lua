@@ -528,6 +528,24 @@ local function buildTestCourse()
 				collisionBarrier.CanCollide = true
 				collisionBarrier.CanTouch = false
 				collisionBarrier.CanQuery = false
+
+				-- Segunda barrera invisible, continua y situada POR FUERA de la baranda.
+				-- Esta es el límite real del circuito: impide que los karts crucen
+				-- por huecos, esquinas o extremos de los tramos de protección.
+				local outward = sideNormal(direction) * side
+				local safetyMid = mid + outward * 2.4
+				local safetyBarrier = makePart(
+					course,
+					("OuterSafetyBarrier_%d_%d"):format(i, sideIndex),
+					Vector3.new(2.4, 12, length + 1.0),
+					CFrame.new(safetyMid.X, yGround + 6, safetyMid.Z) * CFrame.lookAt(Vector3.zero, direction),
+					C_GUARDRAIL,
+					Enum.Material.SmoothPlastic
+				)
+				safetyBarrier.Transparency = 1
+				safetyBarrier.CanCollide = true
+				safetyBarrier.CanTouch = false
+				safetyBarrier.CanQuery = false
 			end
 		end
 	end
