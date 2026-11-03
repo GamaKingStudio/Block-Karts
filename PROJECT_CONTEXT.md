@@ -427,3 +427,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Se conserva la lógica existente de carga mediante `InsertService:LoadAsset`, normalización de altura, posicionamiento por bounding box, inclinación, tratamiento visual por piezas y respaldo procedural. No se modificaron ubicaciones ni cantidades de palmeras.
 - Estado: ID actualizado en el código y documentado. La estructura, apariencia, escala y carga del nuevo asset deben comprobarse en Roblox Studio; no se ha ejecutado una prueba de runtime desde este entorno.
 - Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
+
+
+### Actualización de validación de palmera y regresión del velocímetro (3 de noviembre de 2026)
+
+- **Palmera:** el usuario confirmó en Roblox Studio que la corrección del tronco verde quedó resuelta. La apariencia del tronco y las hojas se considera probada visualmente por el usuario; no requiere más cambios por ahora.
+- **Velocímetro central:** el usuario reportó que volvió a aparecer un velocímetro en el centro de la pantalla. Esto contradice el diseño aprobado, que mantiene únicamente el indicador inferior derecho, transparente y sin tarjeta ni fondo.
+- **Inspección realizada en `recovery/stable-handling`:** `RaceHUD.client.lua` contiene un solo indicador de velocidad (`SpeedPanel`), posicionado en la esquina inferior derecha mediante `UDim2.new(1, -202, 1, -88)`, y lo vuelve transparente con `makeTextOnly`. `KartControls.client.lua` no crea un velocímetro; sus referencias a velocidad corresponden a físicas/cámara y a la indicación de entrada al kart. La búsqueda del árbol completo de `src` no mostró otro LocalScript de HUD o velocímetro.
+- **Estado del problema:** regresión reportada por el usuario, origen todavía no identificado. La inspección del código versionado no explica por sí sola el elemento central que aparece en Studio. No se debe mover, duplicar ni recrear el velocímetro lateral a ciegas. Antes de otro cambio, revisar la sincronización Rojo/instancias de Studio y localizar la instancia o script que realmente dibuja el indicador central.
+- **Pruebas:** el usuario confirmó visualmente la corrección de la palmera. El velocímetro central sigue pendiente de diagnóstico en Studio; no se declara resuelto ni se afirma que el código actual haya sido probado en Play tras esta inspección.
+- **Archivos de código revisados sin modificarlos:** `src/StarterPlayer/RaceHUD.client.lua`, `src/StarterPlayer/KartControls.client.lua`, `src/ReplicatedFirst/LoadingScreen.client.lua`, `src/ServerScriptService/KartBootstrap.server.lua` y `src/ServerScriptService/KartService.lua`.
