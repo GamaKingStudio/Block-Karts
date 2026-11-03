@@ -531,3 +531,11 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Se mantienen las posiciones y rotaciones de los puestos y la escala actual de las reposeras (6.5 studs). No se modificaron tablas de surf, palmeras, pista ni otros elementos del mapa.
 - Estado: cambio implementado y publicado en `recovery/stable-handling`. La revisión estática confirma que las cuatro piezas procedurales antiguas ya no se generan. Pendiente comprobar visualmente en Roblox Studio.
 - Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
+
+
+### Colores de reposeras (3 de noviembre de 2026)
+
+- Estructura metalica: gris medio. Mástil/soporte de sombrilla: gris claro.
+- Cojines y sombrillas: colores tropicales aleatorios por instancia, elegidos de una paleta de ocho tonos.
+- La asignación de color se basa en nombres de partes/modelos del asset. Las piezas no reconocidas conservan el color original para evitar teñir componentes incorrectos.
+- Código publicado en recovery/stable-handling. Pendiente validar en Roblox Studio que la jerarquía/nomenclatura del asset permita clasificar todas las piezas correctamente. No se modificaron ubicaciones, escala ni geometría.
