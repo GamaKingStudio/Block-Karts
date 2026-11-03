@@ -935,37 +935,26 @@ local function buildTestCourse()
 		return true
 	end
 
-	local function spawnBeachCluster(pos, umbrellaColor, towelColor, rot)
+	local function spawnBeachCluster(pos, rot)
+		-- Cada puesto contiene únicamente las dos reposeras importadas.
+		-- Las sombrillas, toallas y pelotas procedurales antiguas se retiraron.
 		local cf = CFrame.new(pos) * CFrame.Angles(0, math.rad(rot or 0), 0)
-		local function makeDecor(name, size, cframe, color, material, shape)
-			local part = makePart(course, name, size, cframe, color, material, shape)
-			-- Sombrillas y accesorios son solo decorativos; los karts pasan
-			-- por encima sin engancharse ni perder velocidad.
-			part.CanCollide = false
-			part.CanTouch = false
-			part.CanQuery = false
-			return part
-		end
-		makeDecor("UmbrellaPole", Vector3.new(0.4, 7.5, 0.4), cf * CFrame.new(0, 3.75, 0), C_WOOD)
-		makeDecor("UmbrellaCanopy", Vector3.new(1.8, 8.0, 8.0), cf * CFrame.new(0, 7.2, 0) * CFrame.Angles(0, 0, math.pi / 2), umbrellaColor, Enum.Material.SmoothPlastic, "Cylinder")
 		spawnLounger((cf * CFrame.new(-3.2, 0, 0.5)).Position, rot)
 		spawnLounger((cf * CFrame.new(3.2, 0, 0.5)).Position, rot)
-		makeDecor("BeachTowel", Vector3.new(3.2, 0.04, 6.0), cf * CFrame.new(0, 0.05, -3.2), towelColor)
-		makeDecor("BeachBall", Vector3.new(2.0, 2.0, 2.0), cf * CFrame.new(2.2, 1.0, -3.5), C_RED, Enum.Material.Plastic, "Ball")
 	end
 
 	-- Reposeras y sombrillas sobre arena abierta al norte del circuito.
 	-- Reposeras en la franja de arena al sur del circuito, dentro del área visible.
-	spawnBeachCluster(Vector3.new(-145, yGround, 155), C_BLUE, C_YELLOW, 25)
-	spawnBeachCluster(Vector3.new(-85, yGround, 155), C_YELLOW, C_RED, -15)
-	spawnBeachCluster(Vector3.new(-25, yGround, 155), C_RED, C_BLUE, 40)
-	spawnBeachCluster(Vector3.new(35, yGround, 155), C_TEAL, C_ORANGE, -30)
-	spawnBeachCluster(Vector3.new(95, yGround, 155), C_ORANGE, C_TEAL, 10)
+	spawnBeachCluster(Vector3.new(-145, yGround, 155), 25)
+	spawnBeachCluster(Vector3.new(-85, yGround, 155), -15)
+	spawnBeachCluster(Vector3.new(-25, yGround, 155), 40)
+	spawnBeachCluster(Vector3.new(35, yGround, 155), -30)
+	spawnBeachCluster(Vector3.new(95, yGround, 155), 10)
 
 	-- Dos rincones de playa en los claros interiores de arena.
 	-- Se mantienen separados del asfalto y de las barreras.
-	spawnBeachCluster(Vector3.new(45, yGround, 20), C_BLUE, C_WHITE, 18)
-	spawnBeachCluster(Vector3.new(48, yGround, -45), C_TEAL, C_YELLOW, -22)
+	spawnBeachCluster(Vector3.new(45, yGround, 20), 18)
+	spawnBeachCluster(Vector3.new(48, yGround, -45), -22)
 
 	-- Tablas de surf importadas desde el asset del usuario.
 	-- Se carga una sola plantilla y se clona para cada punto decorativo.
