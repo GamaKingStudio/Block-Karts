@@ -482,3 +482,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Las limpiezas preventivas de `RaceHUD.client.lua` quedan como defensa adicional para GUIs externas identificables; ya no son la solución principal al velocímetro central.
 - Estado: cambio publicado en `recovery/stable-handling` y verificado estáticamente en la creación de `DriverSeat`. Pendiente confirmar visualmente en Roblox Studio que el HUD nativo desapareció al ocupar el kart.
 - Commit de código: `a295c41`.
+
+
+### Actualización de tablas de surf decorativas (3 de noviembre de 2026)
+
+- Se reemplazó el grupo anterior de tres tablas procedurales por clones del modelo publicado por el usuario, asset Roblox `109207384771697`.
+- La plantilla se carga una sola vez mediante `InsertService:LoadAsset`; cada tabla se clona, se escala proporcionalmente a una longitud objetivo cercana a 8 studs y se posiciona usando su bounding box.
+- Se amplió el grupo de tres a cinco tablas, manteniéndolas en la zona de arena sur/oriental ya utilizada para este atrezo. Se conservan ancladas y sin colisión, contacto ni consulta para que no interfieran con los karts.
+- Si el asset no está disponible o no contiene un modelo utilizable, se emite una advertencia en Output y se omiten las tablas importadas; no se afirma que el asset haya sido validado en runtime.
+- Archivo modificado: `src/ServerScriptService/KartService.lua`.
+- Estado: implementación publicada en `recovery/stable-handling`; pendiente comprobar en Roblox Studio permisos de carga, orientación, escala y apariencia del asset.
