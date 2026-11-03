@@ -84,9 +84,9 @@ end)
 
 local racePanel = panel("RacePanel", UDim2.fromOffset(300, 100), UDim2.new(0.5, -150, 0, 22))
 local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19, nil, "Bold")
-local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 18, Color3.fromRGB(255, 220, 145), "Bold")
-local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 11, Color3.fromRGB(190, 202, 216))
-local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 12, Color3.fromRGB(190, 202, 216))
+local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 18, Color3.fromRGB(255, 220, 145), "Light")
+local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 11, Color3.fromRGB(190, 202, 216), "Light")
+local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 12, Color3.fromRGB(190, 202, 216), "Light")
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -174, 1, -116))
 local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42, nil, "Bold")
@@ -118,8 +118,13 @@ local renderConnection
 local leaderboard = panel("Leaderboard", UDim2.fromOffset(218, 250), UDim2.new(0, 18, 0, 22))
 local leaderboardTitle = label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 15, Color3.fromRGB(255, 220, 145), "Bold")
 local leaderboardRows = {}
+local leaderboardRanks = {}
 for i = 1, 8 do
- local row = label(leaderboard, "Driver" .. i, UDim2.new(1, -18, 0, 23), UDim2.fromOffset(9, 35 + (i - 1) * 25), "", 12)
+ local y = 35 + (i - 1) * 25
+ local rank = label(leaderboard, "DriverRank" .. i, UDim2.fromOffset(22, 23), UDim2.fromOffset(9, y), "", 12, Color3.fromRGB(255, 220, 145), "Bold")
+ rank.TextXAlignment = Enum.TextXAlignment.Left
+ leaderboardRanks[i] = rank
+ local row = label(leaderboard, "Driver" .. i, UDim2.new(1, -48, 0, 23), UDim2.fromOffset(31, y), "", 12, nil, "Light")
  row.TextXAlignment = Enum.TextXAlignment.Left
  leaderboardRows[i] = row
 end
@@ -153,6 +158,9 @@ for _, textObject in ipairs({
 end
 for _, row in ipairs(leaderboardRows) do
  addTextOutline(row)
+end
+for _, rank in ipairs(leaderboardRanks) do
+ addTextOutline(rank)
 end
 local mapArea = Instance.new("Frame")
 mapArea.Name = "MapArea"
@@ -201,17 +209,14 @@ local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
  line.Name = name
  line.AnchorPoint = Vector2.new(0.5, 0.5)
  line.Position = UDim2.fromOffset(midpoint.X, midpoint.Y)
- -- Un pequeño solapamiento evita huecos entre tramos consecutivos.
- line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.6, thickness)
+ -- Extremos rectos: las uniones cuadradas evitan los "círculos" visibles.
+ line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.35, thickness)
  line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
  line.BackgroundColor3 = color
  line.BackgroundTransparency = 0.3
  line.BorderSizePixel = 0
  line.ZIndex = zIndex
  line.Parent = mapArea
- local corner = Instance.new("UICorner")
- corner.CornerRadius = UDim.new(1, 0)
- corner.Parent = line
  return line
 end
 
@@ -233,6 +238,34 @@ local function drawTrack()
   local p1, p2 = mappedPoints[i], mappedPoints[i + 1]
   table.insert(trackSegments, makeTrackStroke("TrackBorder", p1, p2, 20, borderColor, 1))
   table.insert(trackSegments, makeTrackStroke("TrackAsphalt", p1, p2, 14, asphaltColor, 2))
+ end
+
+ -- Rellenos cuadrados en cada vértice: conectan los tramos sin formar círculos.
+ for i = 1, #mappedPoints - 1 do
+  local point = mappedPoints[i]
+  local borderJoin = Instance.new("Frame")
+  borderJoin.Name = "TrackBorderJoin"
+  borderJoin.AnchorPoint = Vector2.new(0.5, 0.5)
+  borderJoin.Position = UDim2.fromOffset(point.X, point.Y)
+  borderJoin.Size = UDim2.fromOffset(20, 20)
+  borderJoin.BackgroundColor3 = borderColor
+  borderJoin.BackgroundTransparency = 0.3
+  borderJoin.BorderSizePixel = 0
+  borderJoin.ZIndex = 1
+  borderJoin.Parent = mapArea
+  table.insert(trackSegments, borderJoin)
+
+  local asphaltJoin = Instance.new("Frame")
+  asphaltJoin.Name = "TrackAsphaltJoin"
+  asphaltJoin.AnchorPoint = Vector2.new(0.5, 0.5)
+  asphaltJoin.Position = UDim2.fromOffset(point.X, point.Y)
+  asphaltJoin.Size = UDim2.fromOffset(14, 14)
+  asphaltJoin.BackgroundColor3 = asphaltColor
+  asphaltJoin.BackgroundTransparency = 0.3
+  asphaltJoin.BorderSizePixel = 0
+  asphaltJoin.ZIndex = 2
+  asphaltJoin.Parent = mapArea
+  table.insert(trackSegments, asphaltJoin)
  end
 
  -- Meta: la pista cruza la recta principal en X=0, Z=70.
@@ -296,9 +329,12 @@ local function refreshLeaderboard()
   if racer then
    local lap = racer:GetAttribute("RaceLap") or 1
    local cp = racer:GetAttribute("RaceCheckpoint") or 0
-   row.Text = string.format("%d. %s   V%d · CP%d", i, racer.DisplayName, lap, cp)
+   leaderboardRanks[i].Text = tostring(i) .. "."
+   leaderboardRanks[i].TextColor3 = Color3.fromRGB(255, 220, 145)
+   row.Text = string.format("%s   V%d · CP%d", racer.DisplayName, lap, cp)
    row.TextColor3 = racer == player and Color3.fromRGB(255, 220, 145) or Color3.fromRGB(235, 240, 245)
   else
+   leaderboardRanks[i].Text = ""
    row.Text = ""
   end
  end
