@@ -22,6 +22,52 @@ hud.DisplayOrder = 20
 hud.Enabled = false
 hud.Parent = playerGui
 
+-- BLOXY usa un único velocímetro: el indicador lateral de este HUD.
+-- Limpia interfaces heredadas/externas que vuelvan a crear un velocímetro
+-- central dentro de PlayerGui, sin tocar este HUD ni el resto de la interfaz.
+local function removeLegacySpeedometer(instance)
+ if not instance or not instance.Parent then return end
+
+ local screenGui = instance:IsA("ScreenGui") and instance
+  or instance:FindFirstAncestorOfClass("ScreenGui")
+ if not screenGui or screenGui == hud or not screenGui.Parent then return end
+
+ local guiName = string.lower(screenGui.Name)
+ local namedSpeedGui = string.find(guiName, "speedometer", 1, true)
+  or string.find(guiName, "speedhud", 1, true)
+  or string.find(guiName, "vehiclespeed", 1, true)
+
+ local hasSpeedUnit = false
+ for _, descendant in ipairs(screenGui:GetDescendants()) do
+  if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+   local normalizedText = string.upper(descendant.Text):gsub("[%s%p]", "")
+   if string.find(normalizedText, "KMH", 1, true)
+    or string.find(normalizedText, "KPH", 1, true)
+    or string.find(normalizedText, "MPH", 1, true) then
+    hasSpeedUnit = true
+    break
+   end
+  end
+ end
+
+ if namedSpeedGui or hasSpeedUnit then
+  screenGui:Destroy()
+ end
+end
+
+-- Limpieza inicial y vigilancia de interfaces que aparezcan después.
+for _, descendant in ipairs(playerGui:GetDescendants()) do
+ removeLegacySpeedometer(descendant)
+end
+playerGui.DescendantAdded:Connect(function(descendant)
+ task.defer(removeLegacySpeedometer, descendant)
+ if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+  descendant:GetPropertyChangedSignal("Text"):Connect(function()
+   removeLegacySpeedometer(descendant)
+  end)
+ end
+end)
+
 local function panel(name, size, position)
  local frame = Instance.new("Frame")
  frame.Name = name
