@@ -546,3 +546,9 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Replaced fuzzy name/parent classification with exact part-name matching to avoid recoloring unrelated model parts.
 - Both Reposera structure parts use medium gray. Sombrilla_Palo uses light gray. Each cushion receives an independent random tropical color. Sombrilla_Toldo receives a separate random tropical color.
 - All other parts preserve original appearance. Scale, placement and geometry unchanged. Published to recovery/stable-handling; visual Studio validation remains pending.
+
+
+### Starting grandstand reposition (2026-11-03)
+- Moved all three rows of the starting grandstand 8 studs backward along Z to create clearance from the barrier beside the start straight.
+- Preserved width, tier spacing, height, seats, colors and X coordinates. Only the Z reference changed from 52 to 44; rows remain spaced 3.5 studs apart.
+- Published to recovery/stable-handling. Static code check complete; visual validation in Roblox Studio remains pending.
