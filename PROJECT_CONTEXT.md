@@ -616,3 +616,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - El cambio se limita a la cámara cliente y sus parámetros; no altera físicas, controles, derrape, HUD, geometría ni lógica de carrera.
 - Estado: implementación experimental publicada en `recovery/stable-handling`. No se ha ejecutado Roblox Studio desde este entorno; el usuario debe evaluar encuadre, visibilidad de la pista en curvas y sensación de conducción. Ajustar o revertir según su prueba.
 - Archivos modificados: `src/StarterPlayer/KartControls.client.lua`, `src/ReplicatedStorage/KartConfig.lua` y `PROJECT_CONTEXT.md`.
+
+
+## Selección de cámara previa a la carrera (3 de noviembre de 2026)
+
+- Al sentarse en su kart, cada jugador elige cámara clásica (trasera) o isométrica (elevada en diagonal) mediante dos tarjetas con previsualización 3D del kart en ViewportFrame.
+- El servidor valida la selección y espera a que todos los jugadores conectados estén sentados y hayan elegido. Después envía una cuenta regresiva global de cinco segundos y habilita RaceStarted de forma sincronizada.
+- Cada cámara se aplica localmente; físicas y controles son iguales. La selección no altera el circuito ni los elementos aprobados.
+- Si un jugador sale durante la cuenta regresiva, se invalida esa cuenta y se vuelve a evaluar a los participantes restantes.
+- Estado: código publicado, pendiente de prueba multijugador en Roblox Studio. Las vistas previas muestran el kart desde cada ángulo, no una captura completa del circuito.
+- Archivos: src/ServerScriptService/KartService.lua, src/StarterPlayer/KartControls.client.lua y PROJECT_CONTEXT.md.
