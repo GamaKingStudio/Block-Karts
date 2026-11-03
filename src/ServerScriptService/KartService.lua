@@ -889,13 +889,95 @@ local function buildTestCourse()
 	spawnBeachCluster(Vector3.new(45, yGround, 20), C_BLUE, C_WHITE, 18)
 	spawnBeachCluster(Vector3.new(48, yGround, -45), C_TEAL, C_YELLOW, -22)
 
-	local function spawnSurfboard(pos, color, rotY)
-		local sb = makePart(course, "Surfboard", Vector3.new(0.3, 8.0, 2.2), CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), math.rad(18)) * CFrame.new(0, 3.5, 0), color)
-		sb.CanCollide = false
+	-- Tablas de surf importadas desde el asset del usuario.
+	-- Se carga una sola plantilla y se clona para cada punto decorativo.
+	local SURFBOARD_ASSET_ID = 109207384771697
+	local surfboardTemplate = nil
+	local surfLoadOk, surfAssetOrError = pcall(function()
+		return InsertService:LoadAsset(SURFBOARD_ASSET_ID)
+	end)
+	if surfLoadOk and surfAssetOrError then
+		local loadedSurfAsset = surfAssetOrError
+		local candidate = loadedSurfAsset
+		if not candidate:IsA("Model") then
+			candidate = loadedSurfAsset:FindFirstChildWhichIsA("Model", true)
+		end
+		if candidate and #candidate:GetDescendants() > 0 then
+			surfboardTemplate = candidate:Clone()
+			surfboardTemplate.Name = "SurfboardTemplate"
+			for _, descendant in ipairs(surfboardTemplate:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = true
+					descendant.CanCollide = false
+					descendant.CanTouch = false
+					descendant.CanQuery = false
+					descendant.Massless = true
+				end
+			end
+		else
+			warn(("[BLOXY-KART][SURFBOARD] El asset %d cargó, pero no contiene un Model utilizable."):format(SURFBOARD_ASSET_ID))
+		end
+		loadedSurfAsset:Destroy()
+	else
+		warn(("[BLOXY-KART][SURFBOARD] No se pudo cargar el asset %d: %s"):format(SURFBOARD_ASSET_ID, tostring(surfAssetOrError)))
 	end
-	spawnSurfboard(Vector3.new(175, yGround, 165), C_TEAL, 30)
-	spawnSurfboard(Vector3.new(180, yGround, 165), C_ORANGE, -20)
-	spawnSurfboard(Vector3.new(185, yGround, 165), C_YELLOW, 45)
+
+	local function spawnSurfboard(pos, rotY, leanDeg, scale)
+		if not surfboardTemplate then return false end
+		local board = surfboardTemplate:Clone()
+		board.Name = "Surfboard"
+		board.Parent = course
+
+		local _, originalBounds = board:GetBoundingBox()
+		local longestAxis = math.max(originalBounds.X, originalBounds.Y, originalBounds.Z)
+		if longestAxis <= 0.01 then
+			warn("[BLOXY-KART][SURFBOARD] El modelo tiene dimensiones inválidas; se omite esta instancia.")
+			board:Destroy()
+			return false
+		end
+
+		local targetLength = 8.0 * (scale or 1)
+		local scaled, scaleError = pcall(function()
+			board:ScaleTo(targetLength / longestAxis)
+		end)
+		if not scaled then
+			warn("[BLOXY-KART][SURFBOARD] No se pudo ajustar la escala: " .. tostring(scaleError))
+			board:Destroy()
+			return false
+		end
+
+		local boxCFrame, boxSize = board:GetBoundingBox()
+		local pivotToBox = board:GetPivot():ToObjectSpace(boxCFrame)
+		local targetBox = CFrame.new(pos)
+			* CFrame.Angles(0, math.rad(rotY or 0), 0)
+			* CFrame.Angles(0, 0, math.rad(leanDeg or 12))
+			* CFrame.new(0, boxSize.Y / 2, 0)
+		board:PivotTo(targetBox * pivotToBox:Inverse())
+
+		for _, descendant in ipairs(board:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				descendant.Anchored = true
+				descendant.CanCollide = false
+				descendant.CanTouch = false
+				descendant.CanQuery = false
+				descendant.Massless = true
+			end
+		end
+		return true
+	end
+
+	-- Grupo principal junto a la zona de playa existente y dos tablas adicionales
+	-- para dar más vida al sector sin acercarlas al asfalto ni a las barreras.
+	local surfboardPlacements = {
+		{ pos = Vector3.new(175, yGround, 165), rot = 30, lean = 12, scale = 1.00 },
+		{ pos = Vector3.new(180, yGround, 165), rot = -20, lean = 18, scale = 0.96 },
+		{ pos = Vector3.new(185, yGround, 165), rot = 45, lean = 8, scale = 1.04 },
+		{ pos = Vector3.new(190, yGround, 165), rot = -35, lean = 15, scale = 0.92 },
+		{ pos = Vector3.new(195, yGround, 165), rot = 18, lean = 10, scale = 1.02 },
+	}
+	for _, placement in ipairs(surfboardPlacements) do
+		spawnSurfboard(placement.pos, placement.rot, placement.lean, placement.scale)
+	end
 
 	-- Checkpoints
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
