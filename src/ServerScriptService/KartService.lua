@@ -770,20 +770,20 @@ local function buildTestCourse()
 		end
 
 		-- Roblox puede renombrar las piezas al importar el FBX. Primero se
-		-- buscan los nombres originales; si no existen, se clasifican por altura.
+		-- buscan los nombres originales; si no existen, se clasifican por altura
+		-- en el eje local de la palmera, para que la inclinación no altere el resultado.
 		local trunkParts = 0
 		local leafParts = 0
-		local middleY = finalBoxCFrame.Position.Y
 		for _, part in ipairs(palmParts) do
 			local partName = string.lower(part.Name)
-			local partY = part.Position.Y
+			local localPartY = finalBoxCFrame:PointToObjectSpace(part.Position).Y
 			local isTrunk = partName:find("trunk", 1, true) or partName:find("stem", 1, true)
 			local isLeaf = partName:find("leaf", 1, true) or partName:find("leaves", 1, true) or partName:find("foliage", 1, true)
-			if isTrunk or (not isLeaf and partY < middleY) then
+			if isTrunk or (not isLeaf and localPartY < 0) then
 				part.Color = Color3.fromRGB(126, 82, 48)
 				part.Material = Enum.Material.Wood
 				trunkParts += 1
-			elseif isLeaf or partY >= middleY then
+			elseif isLeaf or localPartY >= 0 then
 				part.Color = Color3.fromRGB(48, 150, 58)
 				part.Material = Enum.Material.Grass
 				leafParts += 1
