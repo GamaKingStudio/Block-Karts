@@ -43,6 +43,8 @@ local lapCompletedRemote = getOrCreateRemote("LapCompleted")
 local wrongWayRemote = getOrCreateRemote("WrongWayStateChanged")
 local requestRespawnRemote = getOrCreateRemote("RequestRespawn")
 local raceCountdownRemote = getOrCreateRemote("RaceCountdown")
+local cameraSelectionRemote = getOrCreateRemote("SelectRaceCamera")
+local selectionStateRemote = getOrCreateRemote("RaceSelectionState")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -61,6 +63,31 @@ local activeKarts = {}
 local driverInputs = {}
 local mapBuilt = false
 local raceData = {}
+local selectedCameras = {}
+local raceInProgress = false
+local countdownToken = 0
+local function publishSelectionState()
+ local list=Players:GetPlayers(); local ready=0
+ for _,p in ipairs(list) do local k=activeKarts[p]; if selectedCameras[p] and k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent==p.Character then ready+=1 end end
+ for _,p in ipairs(list) do selectionStateRemote:FireClient(p,ready,#list,selectedCameras[p]~=nil) end
+end
+local function tryStartRace()
+ if raceInProgress then return end
+ local list=Players:GetPlayers(); if #list==0 then return end
+ for _,p in ipairs(list) do local k=activeKarts[p]; if not k or not k.seat.Parent or not k.seat.Occupant or k.seat.Occupant.Parent~=p.Character or not selectedCameras[p] then publishSelectionState(); return end end
+ raceInProgress=true; countdownToken+=1; local token=countdownToken
+ for _,p in ipairs(list) do p:SetAttribute("RaceCountdownActive",true); p:SetAttribute("RaceStarted",false); driverInputs[p]={throttle=0,steering=0,braking=false} end
+ task.spawn(function()
+  for n=5,1,-1 do if token~=countdownToken then return end; raceCountdownRemote:FireAllClients(n); task.wait(1) end
+  if token~=countdownToken then return end
+  for _,p in ipairs(Players:GetPlayers()) do local k=activeKarts[p]; if k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent==p.Character then local d=raceData[p]; if d then d.LapStartTime=os.clock(); d.CanFinishLap=false end; p:SetAttribute("RaceStarted",true); raceCountdownRemote:FireClient(p,0) end end
+ end)
+end
+cameraSelectionRemote.OnServerEvent:Connect(function(p,mode)
+ if raceInProgress or (mode~="Classic" and mode~="Isometric") then return end
+ local k=activeKarts[p]; if not k or not k.seat.Parent or not k.seat.Occupant or k.seat.Occupant.Parent~=p.Character then return end
+ selectedCameras[p]=mode; p:SetAttribute("RaceCamera",mode); publishSelectionState(); tryStartRace()
+end)
 
 local function makePart(parent, name, size, cframe, color, material, shapeOrClass)
 	local className = "Part"
@@ -1557,6 +1584,10 @@ end)
 local function spawnPlayerKart(player)
 	player:SetAttribute("RaceStarted", false)
 	player:SetAttribute("RaceCountdownActive", false)
+	player:SetAttribute("RaceCamera", nil)
+	selectedCameras[player] = nil
+	raceInProgress = false
+	countdownToken += 1
 	local current = activeKarts[player]
 	if current then
 		current.model:Destroy()
@@ -1580,25 +1611,12 @@ local function spawnPlayerKart(player)
 		if kart.seat.Parent and not kart.seat.Occupant then
 			kart.seat:Sit(humanoid)
 		end
-		if kart.seat.Occupant == humanoid and not player:GetAttribute("RaceCountdownActive") and not player:GetAttribute("RaceStarted") then
-			player:SetAttribute("RaceCountdownActive", true)
-			task.spawn(function()
-				for count = 5, 1, -1 do
-					if not player.Parent or not kart.seat.Parent or kart.seat.Occupant ~= humanoid then return end
-					raceCountdownRemote:FireClient(player, count)
-					task.wait(1)
-				end
-				if player.Parent and kart.seat.Parent and kart.seat.Occupant == humanoid then
-					-- Sincronizar el cronómetro del servidor con la salida.
-					local playerRaceData = raceData[player]
-					if playerRaceData then
-						playerRaceData.LapStartTime = os.clock()
-						playerRaceData.CanFinishLap = false
-					end
-					player:SetAttribute("RaceStarted", true)
-					raceCountdownRemote:FireClient(player, 0)
-				end
-			end)
+		if kart.seat.Occupant == humanoid and not player:GetAttribute("RaceStarted") then
+			player:SetAttribute("RaceCountdownActive", false)
+			player:SetAttribute("RaceCamera", nil)
+			selectedCameras[player] = nil
+			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+			publishSelectionState()
 		end
 	end
 
@@ -1665,8 +1683,11 @@ Players.PlayerRemoving:Connect(function(player)
 	local kart = activeKarts[player]
 	if kart then kart.model:Destroy() end
 	activeKarts[player] = nil
+	selectedCameras[player] = nil
 	driverInputs[player] = nil
 	raceData[player] = nil
+	if raceInProgress then raceInProgress=false; countdownToken+=1; for _,p in ipairs(Players:GetPlayers()) do p:SetAttribute("RaceStarted",false); p:SetAttribute("RaceCountdownActive",false) end end
+	task.defer(function() publishSelectionState(); tryStartRace() end)
 end)
 
 return true
