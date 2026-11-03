@@ -890,6 +890,51 @@ local function buildTestCourse()
 		warn(("[BLOXY-KART][LOUNGER] No se pudo cargar el asset %d: %s"):format(LOUNGER_ASSET_ID, tostring(loungerAssetOrError)))
 	end
 
+	local loungerRandom = Random.new()
+	local loungerColors = {
+		Color3.fromRGB(235, 75, 75),   -- coral
+		Color3.fromRGB(255, 175, 55),  -- naranja
+		Color3.fromRGB(255, 220, 75),  -- amarillo
+		Color3.fromRGB(55, 185, 205),  -- turquesa
+		Color3.fromRGB(75, 125, 225),  -- azul
+		Color3.fromRGB(100, 185, 105), -- verde
+		Color3.fromRGB(205, 105, 185), -- rosa
+		Color3.fromRGB(240, 235, 215), -- crema
+	}
+	local LOUNGER_FRAME_COLOR = Color3.fromRGB(115, 120, 128)
+	local UMBRELLA_STAND_COLOR = Color3.fromRGB(205, 208, 212)
+
+	local function getLoungerPartRole(part)
+		local name = string.lower(part.Name)
+		local parentName = part.Parent and string.lower(part.Parent.Name) or ""
+		local labels = name .. " " .. parentName
+
+		if string.find(labels, "umbrella") or string.find(labels, "parasol")
+			or string.find(labels, "canopy") or string.find(labels, "sombrilla")
+			or string.find(labels, "shade") then
+			return "umbrella"
+		end
+		if string.find(labels, "pole") or string.find(labels, "stand")
+			or string.find(labels, "shaft") or string.find(labels, "mast")
+			or string.find(labels, "atril") then
+			return "stand"
+		end
+		if string.find(labels, "cushion") or string.find(labels, "pillow")
+			or string.find(labels, "fabric") or string.find(labels, "mattress")
+			or string.find(labels, "seat") or string.find(labels, "cojin")
+			or string.find(labels, "cojín") then
+			return "cushion"
+		end
+		if string.find(labels, "frame") or string.find(labels, "metal")
+			or string.find(labels, "iron") or string.find(labels, "steel")
+			or string.find(labels, "leg") or string.find(labels, "support")
+			or string.find(labels, "structure") or string.find(labels, "fierr")
+			or string.find(labels, "base") then
+			return "frame"
+		end
+		return nil
+	end
+
 	local function spawnLounger(pos, rotY)
 		-- No se genera ningún respaldo procedural: si el asset no carga,
 		-- se omite la reposera para evitar superponer el modelo antiguo. 
@@ -916,6 +961,8 @@ local function buildTestCourse()
 			return false
 		end
 
+		local umbrellaColor = loungerColors[loungerRandom:NextInteger(1, #loungerColors)]
+		local cushionColor = loungerColors[loungerRandom:NextInteger(1, #loungerColors)]
 		for _, descendant in ipairs(lounger:GetDescendants()) do
 			if descendant:IsA("BasePart") then
 				descendant.Anchored = true
@@ -923,6 +970,17 @@ local function buildTestCourse()
 				descendant.CanTouch = false
 				descendant.CanQuery = false
 				descendant.Massless = true
+
+				local role = getLoungerPartRole(descendant)
+				if role == "frame" then
+					descendant.Color = LOUNGER_FRAME_COLOR
+				elseif role == "stand" then
+					descendant.Color = UMBRELLA_STAND_COLOR
+				elseif role == "cushion" then
+					descendant.Color = cushionColor
+				elseif role == "umbrella" then
+					descendant.Color = umbrellaColor
+				end
 			end
 		end
 
