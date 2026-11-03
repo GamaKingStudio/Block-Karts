@@ -572,7 +572,61 @@ local function buildTestCourse()
 		spawnTireStack(tPos)
 	end
 
+	-- Antorcha personalizada creada para BLOXY KARTS.
+	local InsertService = game:GetService("InsertService")
+	local TORCH_ASSET_ID = 139155803475453
+	local torchTemplate = nil
+	local torchLoadOk, torchAssetOrError = pcall(function()
+		return InsertService:LoadAsset(TORCH_ASSET_ID)
+	end)
+	if torchLoadOk and torchAssetOrError then
+		local loadedTorchAsset = torchAssetOrError
+		local candidate = loadedTorchAsset:IsA("Model") and loadedTorchAsset or loadedTorchAsset:FindFirstChildWhichIsA("Model", true)
+		if candidate then
+			torchTemplate = candidate:Clone()
+			torchTemplate.Name = "CustomTorchTemplate"
+			for _, descendant in ipairs(torchTemplate:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = true
+					descendant.CanCollide = false
+					descendant.CanTouch = false
+					descendant.CanQuery = false
+					 descendant.Massless = true
+				end
+			end
+		else
+			warn(("[BLOXY-KART][TORCH] El asset %d no contiene un Model utilizable."):format(TORCH_ASSET_ID))
+		end
+		loadedTorchAsset:Destroy()
+	else
+		warn(("[BLOXY-KART][TORCH] No se pudo cargar el asset %d: %s"):format(TORCH_ASSET_ID, tostring(torchAssetOrError)))
+	end
+
 	local function spawnTikiTorch(pos)
+		if torchTemplate then
+			local torch = torchTemplate:Clone()
+			torch.Name = "TrackTorch"
+			torch.Parent = course
+			local _, bounds = torch:GetBoundingBox()
+			if bounds.Y > 0.01 then
+				local targetHeight = 8
+				local ok, scaleError = pcall(function()
+					torch:ScaleTo(targetHeight / bounds.Y)
+				end)
+				if not ok then
+					warn("[BLOXY-KART][TORCH] No se pudo ajustar la escala: " .. tostring(scaleError))
+				end
+			end
+			-- Apoya la base del modelo exactamente sobre el nivel del suelo.
+			torch:PivotTo(CFrame.new(pos))
+			local boxCFrame, boxSize = torch:GetBoundingBox()
+			local bottom = boxCFrame.Position.Y - boxSize.Y / 2
+			local correction = Vector3.new(pos.X - boxCFrame.Position.X, pos.Y - bottom, pos.Z - boxCFrame.Position.Z)
+			torch:PivotTo(CFrame.new(correction) * torch:GetPivot())
+			return
+		end
+
+		-- Respaldo visible si Roblox no permite cargar el asset en esta experiencia.
 		makePart(course, "TikiPole", Vector3.new(0.6, 6, 0.6), CFrame.new(pos) * CFrame.new(0, 3, 0), C_DARKWOOD, Enum.Material.Wood)
 		makePart(course, "TikiBowl", Vector3.new(1.2, 0.8, 1.2), CFrame.new(pos) * CFrame.new(0, 6.2, 0), C_DARKWOOD, Enum.Material.Wood)
 		local flame = makePart(course, "TikiFlame", Vector3.new(0.6, 0.8, 0.6), CFrame.new(pos) * CFrame.new(0, 6.9, 0), Color3.fromRGB(255, 140, 20), Enum.Material.Neon)
