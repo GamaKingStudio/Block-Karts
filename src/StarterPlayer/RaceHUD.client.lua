@@ -84,13 +84,15 @@ end)
 
 local racePanel = panel("RacePanel", UDim2.fromOffset(300, 100), UDim2.new(0.5, -150, 0, 22))
 local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19, nil, "Bold")
-local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 18, Color3.fromRGB(255, 220, 145), "Light")
-local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 11, Color3.fromRGB(190, 202, 216), "Light")
-local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 12, Color3.fromRGB(190, 202, 216), "Light")
+local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 22, Color3.fromRGB(255, 220, 145), "Light")
+local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 15, Color3.fromRGB(220, 226, 235), "Light")
+local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 15, Color3.fromRGB(220, 226, 235), "Light")
 
-local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -174, 1, -116))
-local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42, nil, "Bold")
-local speedUnit = label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216))
+local speedPanel = panel("SpeedPanel", UDim2.fromOffset(190, 70), UDim2.new(1, -210, 1, -96))
+local speedValue = label(speedPanel, "SpeedValue", UDim2.fromOffset(112, 64), UDim2.fromOffset(0, 2), "0", 48, nil, "Bold")
+speedValue.TextXAlignment = Enum.TextXAlignment.Right
+local speedUnit = label(speedPanel, "SpeedUnit", UDim2.fromOffset(72, 64), UDim2.fromOffset(116, 2), "/KMH", 21, Color3.fromRGB(220, 226, 235), "Light")
+speedUnit.TextXAlignment = Enum.TextXAlignment.Left
 
 
 local wrongWayLabel = label(
@@ -115,22 +117,22 @@ local renderConnection
 -- ==========================================================
 -- LEADERBOARD + MINIMAPA
 -- ==========================================================
-local leaderboard = panel("Leaderboard", UDim2.fromOffset(218, 250), UDim2.new(0, 18, 0, 22))
-local leaderboardTitle = label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 15, Color3.fromRGB(255, 220, 145), "Bold")
+local leaderboard = panel("Leaderboard", UDim2.fromOffset(218, 250), UDim2.new(0, 18, 0, 58))
+local leaderboardTitle = label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 18, Color3.fromRGB(255, 220, 145), "Bold")
 local leaderboardRows = {}
 local leaderboardRanks = {}
 for i = 1, 8 do
  local y = 35 + (i - 1) * 25
- local rank = label(leaderboard, "DriverRank" .. i, UDim2.fromOffset(22, 23), UDim2.fromOffset(9, y), "", 12, Color3.fromRGB(255, 220, 145), "Bold")
+ local rank = label(leaderboard, "DriverRank" .. i, UDim2.fromOffset(22, 23), UDim2.fromOffset(9, y), "", 15, Color3.fromRGB(255, 220, 145), "Bold")
  rank.TextXAlignment = Enum.TextXAlignment.Left
  leaderboardRanks[i] = rank
- local row = label(leaderboard, "Driver" .. i, UDim2.new(1, -48, 0, 23), UDim2.fromOffset(31, y), "", 12, nil, "Light")
+ local row = label(leaderboard, "Driver" .. i, UDim2.new(1, -48, 0, 23), UDim2.fromOffset(31, y), "", 15, nil, "Light")
  row.TextXAlignment = Enum.TextXAlignment.Left
  leaderboardRows[i] = row
 end
 
 local mapPanel = panel("MiniMap", UDim2.fromOffset(218, 190), UDim2.new(0, 18, 0, 284))
-local mapTitle = label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 25), UDim2.fromOffset(8, 4), "MAPA DE PISTA", 13, Color3.fromRGB(255, 220, 145), "Bold")
+local mapTitle = label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 22), UDim2.fromOffset(8, 0), "MAPA DE PISTA", 17, Color3.fromRGB(255, 220, 145), "Bold")
 
 -- HUD minimalista: solo texto, sin tarjetas ni fondos opacos.
 local function makeTextOnly(frame)
@@ -164,8 +166,8 @@ for _, rank in ipairs(leaderboardRanks) do
 end
 local mapArea = Instance.new("Frame")
 mapArea.Name = "MapArea"
-mapArea.Size = UDim2.new(1, -20, 1, -38)
-mapArea.Position = UDim2.fromOffset(10, 31)
+mapArea.Size = UDim2.new(1, -20, 1, -30)
+mapArea.Position = UDim2.fromOffset(10, 24)
 mapArea.BackgroundColor3 = Color3.fromRGB(10, 15, 21)
 mapArea.BackgroundTransparency = 1
 mapArea.BorderSizePixel = 0
@@ -216,6 +218,9 @@ local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
  line.BackgroundTransparency = 0
  line.BorderSizePixel = 0
  line.ZIndex = zIndex
+ local lineCorner = Instance.new("UICorner")
+ lineCorner.CornerRadius = UDim.new(1, 0)
+ lineCorner.Parent = line
  line.Parent = mapArea
  return line
 end
@@ -240,7 +245,7 @@ local function drawTrack()
   table.insert(trackSegments, makeTrackStroke("TrackAsphalt", p1, p2, 14, asphaltColor, 2))
  end
 
- -- Rellenos cuadrados en cada vértice: conectan los tramos sin formar círculos.
+ -- Uniones circulares: suavizan las curvas y evitan esquinas dentadas.
  for i = 1, #mappedPoints - 1 do
   local point = mappedPoints[i]
   local borderJoin = Instance.new("Frame")
@@ -248,6 +253,9 @@ local function drawTrack()
   borderJoin.AnchorPoint = Vector2.new(0.5, 0.5)
   borderJoin.Position = UDim2.fromOffset(point.X, point.Y)
   borderJoin.Size = UDim2.fromOffset(20, 20)
+  local borderJoinCorner = Instance.new("UICorner")
+  borderJoinCorner.CornerRadius = UDim.new(1, 0)
+  borderJoinCorner.Parent = borderJoin
   borderJoin.BackgroundColor3 = borderColor
   borderJoin.BackgroundTransparency = 0
   borderJoin.BorderSizePixel = 0
@@ -260,6 +268,9 @@ local function drawTrack()
   asphaltJoin.AnchorPoint = Vector2.new(0.5, 0.5)
   asphaltJoin.Position = UDim2.fromOffset(point.X, point.Y)
   asphaltJoin.Size = UDim2.fromOffset(14, 14)
+  local asphaltJoinCorner = Instance.new("UICorner")
+  asphaltJoinCorner.CornerRadius = UDim.new(1, 0)
+  asphaltJoinCorner.Parent = asphaltJoin
   asphaltJoin.BackgroundColor3 = asphaltColor
   asphaltJoin.BackgroundTransparency = 0
   asphaltJoin.BorderSizePixel = 0
