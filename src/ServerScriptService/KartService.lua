@@ -655,16 +655,30 @@ local function buildTestCourse()
 		local boxBottomY = finalBoxCFrame.Position.Y - finalBoxSize.Y / 2
 		local boxTopY = finalBoxCFrame.Position.Y + finalBoxSize.Y / 2
 
-		-- Conserva los colores, materiales y texturas definidos en el modelo importado.
-		-- Aquí solo se configuran propiedades físicas para integrarlo al circuito.
+		-- Apariencia del asset: el modelo contiene tronco y hojas como piezas independientes.
+		-- Se colorea el clon del juego, sin modificar el asset publicado en Roblox.
+		local trunkParts = 0
+		local leafParts = 0
 		for _, descendant in ipairs(palmModel:GetDescendants()) do
 			if descendant:IsA("BasePart") then
+				if descendant.Name == "Palm_Trunk" then
+					descendant.Color = Color3.fromRGB(126, 82, 48)
+					descendant.Material = Enum.Material.Wood
+					trunkParts += 1
+				elseif descendant.Name == "Palm_Leaves" then
+					descendant.Color = Color3.fromRGB(48, 150, 58)
+					descendant.Material = Enum.Material.Grass
+					leafParts += 1
+				end
 				descendant.Anchored = true
 				descendant.CanCollide = false
 				descendant.CanTouch = false
 				descendant.CanQuery = false
 				descendant.Massless = true
 			end
+		end
+		if trunkParts == 0 or leafParts == 0 then
+			warn(("[BLOXY-KART][PALM] Se esperaban Palm_Trunk y Palm_Leaves; encontradas %d partes de tronco y %d de hojas."):format(trunkParts, leafParts))
 		end
 		return true
 	end
