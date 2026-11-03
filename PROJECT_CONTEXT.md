@@ -450,3 +450,14 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - **Conclusión técnica:** el historial confirma que el indicador lateral actual es una restauración intencional y distinta del velocímetro central que el usuario reporta. No hay evidencia en el código versionado actual que permita identificar o eliminar con seguridad ese elemento central. No se elimina el indicador lateral ni se realizan cambios especulativos en scripts ajenos al problema.
 - **Siguiente diagnóstico necesario en Studio:** localizar el objeto central en Explorer mientras está visible (por ejemplo, bajo `PlayerGui`) y revisar su nombre/jerarquía/propiedades para identificar qué instancia lo crea. Hasta localizarlo, el origen del elemento central sigue sin confirmarse.
 - **Archivos de código revisados:** `RaceHUD.client.lua` y `KartControls.client.lua`. No se modificó código de juego en esta investigación.
+
+
+### Supresión preventiva del velocímetro central (3 de noviembre de 2026)
+
+- Se implementó en `src/StarterPlayer/RaceHUD.client.lua` una limpieza preventiva de interfaces de velocidad heredadas dentro de `PlayerGui`.
+- La limpieza identifica interfaces ajenas a `BLOXYRaceHUD` por nombres explícitos de velocímetro (`Speedometer`, `SpeedHUD`, `VehicleSpeed`) o por etiquetas que muestran unidades de velocidad (`KMH`, `KPH`, `MPH`). También vigila interfaces y cambios de texto que aparezcan después de iniciar el HUD.
+- La limpieza excluye expresamente `BLOXYRaceHUD`, por lo que conserva el velocímetro oficial inferior derecho (sin fondo ni tarjeta, número grande y `/KMH` pequeño), además del cronómetro, clasificación y minimapa.
+- No se modificaron los controles, la cámara, la física, el circuito ni el resto del HUD.
+- Estado: corrección publicada en `recovery/stable-handling`. Validación estática realizada: el filtro excluye el HUD oficial y elimina únicamente interfaces de velocidad ajenas identificables por nombre o unidad. Falta la prueba en Roblox Studio para confirmar que el elemento central reportado corresponde a una interfaz dentro de `PlayerGui` que cumpla esos criterios.
+- Límite conocido: una interfaz central que no tenga nombre identificable ni etiqueta con unidad de velocidad, o que sea creada fuera de `PlayerGui`, no puede identificarse de forma segura desde este script. No se declara todavía probado en Studio.
+- Commit de código: `9b2803d`. Archivo modificado: `src/StarterPlayer/RaceHUD.client.lua`. Este documento se actualiza en el commit siguiente.
