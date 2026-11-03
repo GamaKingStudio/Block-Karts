@@ -1212,6 +1212,12 @@ local function spawnPlayerKart(player)
 					task.wait(1)
 				end
 				if player.Parent and kart.seat.Parent and kart.seat.Occupant == humanoid then
+					-- Sincronizar el cronómetro del servidor con la salida.
+					local playerRaceData = raceData[player]
+					if playerRaceData then
+						playerRaceData.LapStartTime = os.clock()
+						playerRaceData.CanFinishLap = false
+					end
 					player:SetAttribute("RaceStarted", true)
 					raceCountdownRemote:FireClient(player, 0)
 				end
