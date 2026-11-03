@@ -207,20 +207,27 @@ local function startDrivingCamera(kart)
 end
 local selectionGui
 local function showCameraSelection()
-	if selectionGui then selectionGui:Destroy() end
+	local playerGui = player:WaitForChild("PlayerGui")
+	-- Remove interfaces left behind by an earlier LocalScript run (for example after Rojo hot reload).
+	for _, oldGui in ipairs(playerGui:GetChildren()) do
+		if oldGui:IsA("ScreenGui") and oldGui.Name == "BLOXYCameraSelection" then
+			oldGui:Destroy()
+		end
+	end
+	if selectionGui then selectionGui:Destroy(); selectionGui = nil end
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "BLOXYCameraSelection"
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 100
-	gui.Parent = player:WaitForChild("PlayerGui")
+	gui.Parent = playerGui
 	selectionGui = gui
 
 	local shade = Instance.new("Frame")
 	shade.Name = "Shade"
 	shade.Size = UDim2.fromScale(1, 1)
 	shade.BackgroundColor3 = Color3.fromRGB(10, 15, 24)
-	shade.BackgroundTransparency = 0.12
+	shade.BackgroundTransparency = 0.48
 	shade.Parent = gui
 
 	local panel = Instance.new("Frame")
@@ -228,7 +235,7 @@ local function showCameraSelection()
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	panel.Size = UDim2.new(0.9, 0, 0, 300)
-	panel.BackgroundColor3 = Color3.fromRGB(22, 29, 40)
+	panel.BackgroundColor3 = Color3.fromRGB(42, 55, 72)
 	panel.Parent = shade
 	local limit = Instance.new("UISizeConstraint")
 	limit.MaxSize = Vector2.new(570, 300)
@@ -276,7 +283,7 @@ local function showCameraSelection()
 		local button = Instance.new("TextButton")
 		button.Name = mode .. "Choice"
 		button.Size = UDim2.new(0.5, -8, 1, 0)
-		button.BackgroundColor3 = Color3.fromRGB(39, 51, 67)
+		button.BackgroundColor3 = Color3.fromRGB(57, 75, 96)
 		button.Text = ""
 		button.AutoButtonColor = true
 		button.Parent = cards
