@@ -92,33 +92,6 @@ local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -
 local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42, nil, "Bold")
 local speedUnit = label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216))
 
--- HUD minimalista: solo texto, sin tarjetas ni fondos opacos.
-local function makeTextOnly(frame)
- frame.BackgroundTransparency = 1
- local corner = frame:FindFirstChildOfClass("UICorner")
- if corner then corner:Destroy() end
- local stroke = frame:FindFirstChildOfClass("UIStroke")
- if stroke then stroke:Destroy() end
-end
-
-local function addTextOutline(textObject, color)
- textObject.TextStrokeColor3 = color or Color3.fromRGB(12, 16, 24)
- textObject.TextStrokeTransparency = 0.18
-end
-
-makeTextOnly(racePanel)
-makeTextOnly(speedPanel)
-makeTextOnly(leaderboard)
-makeTextOnly(mapPanel)
-for _, textObject in ipairs({
- lapLabel, timerLabel, bestLabel, checkpointLabel, speedValue, speedUnit,
- leaderboardTitle, mapTitle,
-}) do
- addTextOutline(textObject)
-end
-for _, row in ipairs(leaderboardRows) do
- addTextOutline(row)
-end
 
 local wrongWayLabel = label(
  hud,
@@ -153,6 +126,34 @@ end
 
 local mapPanel = panel("MiniMap", UDim2.fromOffset(218, 190), UDim2.new(0, 18, 0, 284))
 local mapTitle = label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 25), UDim2.fromOffset(8, 4), "MAPA DE PISTA", 13, Color3.fromRGB(255, 220, 145), "Bold")
+
+-- HUD minimalista: solo texto, sin tarjetas ni fondos opacos.
+local function makeTextOnly(frame)
+ frame.BackgroundTransparency = 1
+ local corner = frame:FindFirstChildOfClass("UICorner")
+ if corner then corner:Destroy() end
+ local stroke = frame:FindFirstChildOfClass("UIStroke")
+ if stroke then stroke:Destroy() end
+end
+
+local function addTextOutline(textObject, color)
+ textObject.TextStrokeColor3 = color or Color3.fromRGB(12, 16, 24)
+ textObject.TextStrokeTransparency = 0.18
+end
+
+makeTextOnly(racePanel)
+makeTextOnly(speedPanel)
+makeTextOnly(leaderboard)
+makeTextOnly(mapPanel)
+for _, textObject in ipairs({
+ lapLabel, timerLabel, bestLabel, checkpointLabel, speedValue, speedUnit,
+ leaderboardTitle, mapTitle,
+}) do
+ addTextOutline(textObject)
+end
+for _, row in ipairs(leaderboardRows) do
+ addTextOutline(row)
+end
 local mapArea = Instance.new("Frame")
 mapArea.Name = "MapArea"
 mapArea.Size = UDim2.new(1, -20, 1, -38)
