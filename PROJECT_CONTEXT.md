@@ -28,7 +28,7 @@ Debe utilizarse como contexto del proyecto y no como una orden para modificar c�
 
 **ChatGPT:** Apoyo estratégico y técnico, incluida la implementación directa cuando se solicite. Antes de proponer o ejecutar cualquier cambio debe leer PROJECT_CONTEXT.md completo y revisar el código actual relacionado. Debe comprobar si la funcionalidad o corrección ya existe para evitar duplicar trabajo o revertir decisiones aprobadas. No debe afirmar pruebas en Studio que no haya realizado.
 
-**Usuario:** Director del proyecto y tester en Roblox Studio. Define las prioridades, aprueba las decisiones importantes y realiza las pruebas manuales necesarias. Requiere instrucciones claras y graduales para las tareas que impliquen acciones en su entorno local.
+**Usuario:** Director del proyecto y tester en Roblox Studio. Define prioridades y realiza las pruebas manuales. El acuerdo de trabajo vigente es que ChatGPT implemente directamente las tareas ya acordadas, publique los cambios en la rama autorizada y entregue el comando `git pull`; no debe pedir aprobación para cada paso técnico. Solo debe detenerse y consultar si aparece un riesgo grave, una decisión de producto no acordada o un bloqueo que requiera una acción del usuario en Studio.
 
 ### Fuente oficial de información
 
