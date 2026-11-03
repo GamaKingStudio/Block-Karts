@@ -581,3 +581,13 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Se mantiene la retirada de ambos postes, la viga roja y el panel/banner antiguos. No se modifica la lógica de carrera, checkpoints ni otras piezas del circuito.
 - No se requieren más ajustes al arco de meta por ahora. Mantener esta implementación como aprobada y no modificarla salvo solicitud expresa.
 - Código asociado: `src/ServerScriptService/KartService.lua`. Commit de implementación: `755872bb77515310c9ce62dbb2a681567a38a81d`.
+
+
+### Prueba experimental de cámara isométrica (3 de noviembre de 2026)
+
+- Se sustituyó temporalmente la cámara de seguimiento baja desde atrás por una perspectiva elevada de tres cuartos para evaluar una lectura más isométrica del circuito.
+- La cámara sigue al kart desde una posición elevada y ligeramente desplazada hacia un costado, mirando hacia el kart y el tramo de pista que tiene por delante. Se conserva la interpolación suave, el ajuste leve del campo de visión según velocidad y la restauración de la cámara normal al salir del asiento.
+- Parámetros de prueba en `KartConfig.lua`: `CameraOffset = Vector3.new(16, 27, 21)` y `CameraLookAhead = 9`.
+- El cambio se limita a la cámara cliente y sus parámetros; no altera físicas, controles, derrape, HUD, geometría ni lógica de carrera.
+- Estado: implementación experimental publicada en `recovery/stable-handling`. No se ha ejecutado Roblox Studio desde este entorno; el usuario debe evaluar encuadre, visibilidad de la pista en curvas y sensación de conducción. Ajustar o revertir según su prueba.
+- Archivos modificados: `src/StarterPlayer/KartControls.client.lua`, `src/ReplicatedStorage/KartConfig.lua` y `PROJECT_CONTEXT.md`.
