@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
+local InsertService = game:GetService("InsertService")
 
 local DIAGNOSTICS_ENABLED = false
 local DIAGNOSTIC_INTERVAL = 2
@@ -548,21 +549,62 @@ local function buildTestCourse()
 	makePart(course, "GantryBeamTop", Vector3.new(2.2, 1.8, spanWidth + 3.6), CFrame.new(gantryX, beamY, 70), C_RED)
 	makePart(course, "GantrySign", Vector3.new(0.3, 2.6, spanWidth - 1.0), CFrame.new(gantryX - 1.2, beamY - 1.6, 70), C_WHITE)
 
-	local checkRows = 2
-	local checkCols = 8
-	local sqSize = trackWidth / checkCols
-	for r = 1, checkRows do
-		for c = 1, checkCols do
-			local isWhite = (r + c) % 2 == 0
-			local posX = (gantryX - 1.5) + (r - 1) * 3.0
-			local posZ = (70 - trackWidth / 2 + sqSize / 2) + (c - 1) * sqSize
-			local tileColor = isWhite and C_WHITE or C_BLACK
-			local tile = makePart(course, "CheckTile", Vector3.new(2.8, 0.025, sqSize - 0.2),
-				CFrame.new(posX, yGround + 0.065, posZ), tileColor, Enum.Material.Asphalt)
-			tile.CanCollide = false
-			tile.CanTouch = false
-			tile.CanQuery = false
+	-- Línea de meta importada desde el asset publicado por el usuario.
+	local FINISH_LINE_ASSET_ID = 132205617373322
+	local finishAssetOk, finishAssetOrError = pcall(function()
+		return InsertService:LoadAsset(FINISH_LINE_ASSET_ID)
+	end)
+	if finishAssetOk and finishAssetOrError then
+		local loadedFinishAsset = finishAssetOrError
+		local finishModel = loadedFinishAsset
+		if not finishModel:IsA("Model") then
+			finishModel = loadedFinishAsset:FindFirstChildWhichIsA("Model", true)
 		end
+		if not finishModel then
+			local wrapper = Instance.new("Model")
+			for _, child in ipairs(loadedFinishAsset:GetChildren()) do
+				child.Parent = wrapper
+			end
+			finishModel = wrapper
+		end
+		if #finishModel:GetDescendants() > 0 or #finishModel:GetChildren() > 0 then
+			local finishClone = finishModel:Clone()
+			finishClone.Name = "ImportedFinishLine"
+			finishClone.Parent = course
+			local _, initialBounds = finishClone:GetBoundingBox()
+			local horizontalSpan = math.max(initialBounds.X, initialBounds.Z)
+			if horizontalSpan > 0.01 then
+				local scaled, scaleError = pcall(function()
+					finishClone:ScaleTo(trackWidth / horizontalSpan)
+				end)
+				if scaled then
+					for _, descendant in ipairs(finishClone:GetDescendants()) do
+						if descendant:IsA("BasePart") then
+							descendant.Anchored = true
+							descendant.CanCollide = false
+							descendant.CanTouch = false
+							descendant.CanQuery = false
+							descendant.Massless = true
+						end
+					end
+					local boundsCFrame, boundsSize = finishClone:GetBoundingBox()
+					local pivotToBounds = finishClone:GetPivot():ToObjectSpace(boundsCFrame)
+					local targetBounds = CFrame.new(gantryX, yGround + 0.065 + boundsSize.Y / 2, 70)
+					finishClone:PivotTo(targetBounds * pivotToBounds:Inverse())
+				else
+					warn(("[BLOXY-KART][FINISH] No se pudo escalar el asset %d: %s"):format(FINISH_LINE_ASSET_ID, tostring(scaleError)))
+					finishClone:Destroy()
+				end
+		else
+			warn(("[BLOXY-KART][FINISH] El asset %d tiene dimensiones inválidas."):format(FINISH_LINE_ASSET_ID))
+			finishClone:Destroy()
+		end
+		else
+			warn(("[BLOXY-KART][FINISH] El asset %d no contiene geometría utilizable."):format(FINISH_LINE_ASSET_ID))
+		end
+		loadedFinishAsset:Destroy()
+	else
+		warn(("[BLOXY-KART][FINISH] No se pudo cargar el asset %d: %s"):format(FINISH_LINE_ASSET_ID, tostring(finishAssetOrError)))
 	end
 
 	local function spawnTireStack(pos)
