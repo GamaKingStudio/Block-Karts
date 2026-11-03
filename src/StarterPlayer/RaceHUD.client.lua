@@ -75,7 +75,6 @@ countdownEvent.OnClientEvent:Connect(function(value)
  else
   -- El cronómetro de la vuelta comienza exactamente al dar la salida.
   lapStartedAt = os.clock()
-  timerLabel.Text = "00:00.00"
   countdownLabel.Text = "¡YA!"
   countdownLabel.TextColor3 = Color3.fromRGB(100, 255, 145)
   countdownLabel.Visible = true
