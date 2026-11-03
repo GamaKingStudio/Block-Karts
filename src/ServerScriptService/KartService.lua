@@ -216,7 +216,8 @@ local function buildTestCourse()
 	spawnCabana(-25, -145, 0)
 
 	for tier = 1, 3 do
-		local benchZ = 52 - (tier - 1) * 3.5
+		-- Gradas y asientos en la arena, detrás de la zona de boxes; no invaden la pista.
+		local benchZ = 135 - (tier - 1) * 3.5
 		local benchY = yGround + tier * 1.0
 		makePart(course, "GrandstandStep_" .. tier, Vector3.new(50, 0.8, 3.2), CFrame.new(35, benchY, benchZ), C_WOOD, Enum.Material.Wood)
 		local seatColors = { C_BLUE, C_RED, C_YELLOW, C_TEAL }
