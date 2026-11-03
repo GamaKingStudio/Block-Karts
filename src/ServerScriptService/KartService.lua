@@ -304,9 +304,16 @@ local function buildTestCourse()
 
 		for dist = 8, length - 8, 14 do
 			local linePos = roadCF * CFrame.new(0, 0.025, -length / 2 + dist)
-			local line = makePart(course, "DashLine", Vector3.new(0.7, 0.02, 6), linePos, C_WHITE)
-			line.CanCollide = false
-			line.CanTouch = false
+			local worldPos = linePos.Position
+			-- Deja libre el rectángulo de salida: la línea discontinua no debe
+			-- atravesar ni quedar coplanar con los cuadros de la bandera.
+			local insideStartGrid = math.abs(worldPos.X) < 4
+				and math.abs(worldPos.Z - 70) < trackWidth / 2 + 1
+			if not insideStartGrid then
+				local line = makePart(course, "DashLine", Vector3.new(0.7, 0.02, 6), linePos, C_WHITE)
+				line.CanCollide = false
+				line.CanTouch = false
+			end
 		end
 	end
 
@@ -546,9 +553,12 @@ local function buildTestCourse()
 			local isWhite = (r + c) % 2 == 0
 			local posX = (gantryX - 1.5) + (r - 1) * 3.0
 			local posZ = (70 - trackWidth / 2 + sqSize / 2) + (c - 1) * sqSize
-			local tile = makePart(course, "CheckTile", Vector3.new(2.8, 0.02, sqSize - 0.2), CFrame.new(posX, yGround + 0.045, posZ), isWhite and C_WHITE or C_BLACK)
+			local tileColor = isWhite and Color3.fromRGB(91, 95, 101) or Color3.fromRGB(48, 52, 58)
+			local tile = makePart(course, "CheckTile", Vector3.new(2.8, 0.025, sqSize - 0.2),
+				CFrame.new(posX, yGround + 0.065, posZ), tileColor, Enum.Material.Asphalt)
 			tile.CanCollide = false
 			tile.CanTouch = false
+			tile.CanQuery = false
 		end
 	end
 
@@ -572,97 +582,58 @@ local function buildTestCourse()
 		spawnTireStack(tPos)
 	end
 
-	-- Antorcha personalizada creada para BLOXY KARTS.
-	local InsertService = game:GetService("InsertService")
-	local TORCH_ASSET_ID = 139155803475453
-	local torchTemplate = nil
-	local torchLoadOk, torchAssetOrError = pcall(function()
-		return InsertService:LoadAsset(TORCH_ASSET_ID)
-	end)
-	if torchLoadOk and torchAssetOrError then
-		local loadedTorchAsset = torchAssetOrError
-		local candidate = loadedTorchAsset:IsA("Model") and loadedTorchAsset or loadedTorchAsset:FindFirstChildWhichIsA("Model", true)
-		if candidate then
-			torchTemplate = candidate:Clone()
-			torchTemplate.Name = "CustomTorchTemplate"
-			for _, descendant in ipairs(torchTemplate:GetDescendants()) do
-				if descendant:IsA("BasePart") then
-					descendant.Anchored = true
-					descendant.CanCollide = false
-					descendant.CanTouch = false
-					descendant.CanQuery = false
-					 descendant.Massless = true
-				end
-			end
-		else
-			warn(("[BLOXY-KART][TORCH] El asset %d no contiene un Model utilizable."):format(TORCH_ASSET_ID))
-		end
-		loadedTorchAsset:Destroy()
-	else
-		warn(("[BLOXY-KART][TORCH] No se pudo cargar el asset %d: %s"):format(TORCH_ASSET_ID, tostring(torchAssetOrError)))
-	end
-
+	-- Antorchas procedurales: madera, quemador metálico y fuego nativo de Roblox.
+	-- No dependen de texturas externas ni de permisos de imágenes del modelo importado.
 	local function spawnTikiTorch(pos)
-		if torchTemplate then
-			local torch = torchTemplate:Clone()
-			torch.Name = "TrackTorch"
-			torch.Parent = course
-			local _, bounds = torch:GetBoundingBox()
-			if bounds.Y > 0.01 then
-				local targetHeight = 8
-				local ok, scaleError = pcall(function()
-					torch:ScaleTo(targetHeight / bounds.Y)
-				end)
-				if not ok then
-					warn("[BLOXY-KART][TORCH] No se pudo ajustar la escala: " .. tostring(scaleError))
-				end
-			end
-			-- Apoya la base del modelo exactamente sobre el nivel del suelo.
-			torch:PivotTo(CFrame.new(pos))
-			local boxCFrame, boxSize = torch:GetBoundingBox()
-			local bottom = boxCFrame.Position.Y - boxSize.Y / 2
-			local correction = Vector3.new(pos.X - boxCFrame.Position.X, pos.Y - bottom, pos.Z - boxCFrame.Position.Z)
-			torch:PivotTo(CFrame.new(correction) * torch:GetPivot())
+		local woodColor = Color3.fromRGB(112, 70, 38)
+		local woodDark = Color3.fromRGB(78, 48, 28)
+		local metalColor = Color3.fromRGB(105, 112, 120)
 
-			-- Luz cálida desde la zona superior de la antorcha, como una lámpara real.
-			local finalBoxCFrame, finalBoxSize = torch:GetBoundingBox()
-			local lightAnchor = Instance.new("Part")
-			lightAnchor.Name = "TorchLightSource"
-			lightAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
-			lightAnchor.CFrame = CFrame.new(
-				finalBoxCFrame.Position.X,
-				finalBoxCFrame.Position.Y + finalBoxSize.Y * 0.39,
-				finalBoxCFrame.Position.Z
-			)
-			lightAnchor.Transparency = 1
-			lightAnchor.Anchored = true
-			lightAnchor.CanCollide = false
-			lightAnchor.CanTouch = false
-			lightAnchor.CanQuery = false
-			lightAnchor.Parent = torch
+		local foot = makePart(course, "TorchWoodBase", Vector3.new(1.05, 0.45, 1.05),
+			CFrame.new(pos + Vector3.new(0, 0.225, 0)), woodDark, Enum.Material.WoodPlanks)
+		foot.CanCollide = false
+		local pole = makePart(course, "TorchWoodPost", Vector3.new(0.62, 5.9, 0.62),
+			CFrame.new(pos + Vector3.new(0, 3.35, 0)), woodColor, Enum.Material.Wood)
+		pole.CanCollide = false
 
-			local torchLight = Instance.new("PointLight")
-			torchLight.Name = "TorchGlow"
-			torchLight.Color = Color3.fromRGB(255, 174, 92)
-			torchLight.Range = 24
-			torchLight.Brightness = 2.4
-			torchLight.Shadows = true
-			torchLight.Parent = lightAnchor
-			return
-		end
+		-- Cuenco/quemador de metal, con borde superior.
+		local burner = makePart(course, "TorchMetalBurner", Vector3.new(1.55, 0.62, 1.55),
+			CFrame.new(pos + Vector3.new(0, 6.35, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+			metalColor, Enum.Material.Metal, "Cylinder")
+		burner.CanCollide = false
+		local rim = makePart(course, "TorchMetalRim", Vector3.new(1.72, 0.16, 1.72),
+			CFrame.new(pos + Vector3.new(0, 6.72, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+			Color3.fromRGB(145, 151, 158), Enum.Material.Metal, "Cylinder")
+		rim.CanCollide = false
 
-		-- Respaldo visible si Roblox no permite cargar el asset en esta experiencia.
-		makePart(course, "TikiPole", Vector3.new(0.6, 6, 0.6), CFrame.new(pos) * CFrame.new(0, 3, 0), C_DARKWOOD, Enum.Material.Wood)
-		makePart(course, "TikiBowl", Vector3.new(1.2, 0.8, 1.2), CFrame.new(pos) * CFrame.new(0, 6.2, 0), C_DARKWOOD, Enum.Material.Wood)
-		local flame = makePart(course, "TikiFlame", Vector3.new(0.6, 0.8, 0.6), CFrame.new(pos) * CFrame.new(0, 6.9, 0), Color3.fromRGB(255, 140, 20), Enum.Material.Neon)
-		flame.CanCollide = false
+		-- La instancia Fire genera el degradado real amarillo/naranja de la llama.
+		local flameAnchor = Instance.new("Part")
+		flameAnchor.Name = "TorchFlame"
+		flameAnchor.Size = Vector3.new(0.25, 0.25, 0.25)
+		flameAnchor.CFrame = CFrame.new(pos + Vector3.new(0, 7.05, 0))
+		flameAnchor.Transparency = 1
+		flameAnchor.Anchored = true
+		flameAnchor.CanCollide = false
+		flameAnchor.CanTouch = false
+		flameAnchor.CanQuery = false
+		flameAnchor.Parent = course
+
+		local fire = Instance.new("Fire")
+		fire.Name = "TorchFire"
+		fire.Color = Color3.fromRGB(255, 224, 95)
+		fire.SecondaryColor = Color3.fromRGB(255, 105, 24)
+		fire.Size = 4.2
+		fire.Heat = 7
+		fire.Parent = flameAnchor
+
 		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 160, 50)
-		light.Range = 18
-		light.Brightness = 1.8
-		light.Parent = flame
+		light.Name = "TorchGlow"
+		light.Color = Color3.fromRGB(255, 164, 72)
+		light.Range = 24
+		light.Brightness = 2.4
+		light.Shadows = true
+		light.Parent = flameAnchor
 	end
-
 	local torchPositions = {
 		Vector3.new(-146, yGround, 20),
 		Vector3.new(-146, yGround, -40),
