@@ -200,7 +200,7 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Pit Lane (Calle de Boxes):** Carril paralelo al sur de la recta principal. Incluye muro divisor físico, cajones de detención, un WedgePart para sellar la geometría en la entrada y un carril de incorporación fluida a la vía principal.
 
-**Arco de Meta (Gantry):** Se reemplazó la estructura procedural completa (ambos postes, viga y panel/banner) por el modelo importado del usuario, asset Roblox `132205617373322`. El modelo se escala proporcionalmente para cubrir el ancho de la pista, se centra en la recta de meta y se apoya por su bounding box sobre el nivel del circuito. Sus piezas quedan ancladas y sin colisión, contacto ni consulta para no interferir con los karts. No se genera una línea de meta decorativa en el suelo con este asset; la lógica de carrera/checkpoints permanece separada.
+**Arco de Meta (Gantry):** Se reemplazó la estructura procedural completa (ambos postes, viga y panel/banner) por el modelo importado del usuario, asset Roblox `132205617373322`. El modelo se rota 90° sobre el eje Y para orientar su vano transversalmente sobre la pista, se escala proporcionalmente para cubrir el ancho, se centra en la recta de meta y se apoya por su bounding box sobre el nivel del circuito. Sus piezas quedan ancladas y sin colisión, contacto ni consulta para no interferir con los karts. No se genera una línea de meta decorativa en el suelo con este asset; la lógica de carrera/checkpoints permanece separada.
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki. Los puestos de playa contienen únicamente reposeras instanciadas desde el asset Roblox `110854388215298`; las antiguas sombrillas, toallas y pelotas procedurales fueron retiradas.
 
@@ -563,3 +563,12 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Estado: implementación publicada en `recovery/stable-handling`; revisión estática del bloque realizada. La carga del asset, su orientación, escala y apoyo visual deben confirmarse en Roblox Studio. No se ha ejecutado Play desde este entorno.
 - Commit de código: `ee3bba8022557340311cfe1c143728296436e6fe`.
 - Archivo de código modificado: `src/ServerScriptService/KartService.lua`.
+
+
+### Orientación del modelo de meta (3 de noviembre de 2026)
+
+- Tras la primera prueba visual, el usuario detectó que el modelo importado había quedado tendido sobre el asfalto. Se corrigió su orientación aplicando un giro de 90° sobre el eje Y antes del cálculo de escala.
+- Se ajustó el posicionamiento para trasladar el bounding box sin perder la rotación: el modelo queda centrado en la recta (X=0, Z=70) y apoyado por su base en el nivel del circuito.
+- No se reintroducen postes ni banner procedurales y no se modifica la lógica de carrera ni otras piezas del mapa.
+- Estado: corrección publicada en `recovery/stable-handling`; pendiente de comprobar en Roblox Studio que el vano quede efectivamente sobre la pista. No se ha ejecutado Play desde este entorno.
+- Commit de código: `755872bb77515310c9ce62dbb2a681567a38a81d`.
