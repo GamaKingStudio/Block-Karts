@@ -657,19 +657,10 @@ local function buildTestCourse()
 
 		-- Apariencia del asset: el modelo contiene tronco y hojas como piezas independientes.
 		-- Se colorea el clon del juego, sin modificar el asset publicado en Roblox.
-		local trunkParts = 0
-		local leafParts = 0
+		local palmParts = {}
 		for _, descendant in ipairs(palmModel:GetDescendants()) do
 			if descendant:IsA("BasePart") then
-				if descendant.Name == "Palm_Trunk" then
-					descendant.Color = Color3.fromRGB(126, 82, 48)
-					descendant.Material = Enum.Material.Wood
-					trunkParts += 1
-				elseif descendant.Name == "Palm_Leaves" then
-					descendant.Color = Color3.fromRGB(48, 150, 58)
-					descendant.Material = Enum.Material.Grass
-					leafParts += 1
-				end
+				table.insert(palmParts, descendant)
 				descendant.Anchored = true
 				descendant.CanCollide = false
 				descendant.CanTouch = false
@@ -677,8 +668,33 @@ local function buildTestCourse()
 				descendant.Massless = true
 			end
 		end
-		if trunkParts == 0 or leafParts == 0 then
-			warn(("[BLOXY-KART][PALM] Se esperaban Palm_Trunk y Palm_Leaves; encontradas %d partes de tronco y %d de hojas."):format(trunkParts, leafParts))
+
+		-- Roblox puede renombrar las piezas al importar el FBX. Primero se
+		-- buscan los nombres originales; si no existen, se clasifican por altura.
+		local trunkParts = 0
+		local leafParts = 0
+		local middleY = finalBoxCFrame.Position.Y
+		for _, part in ipairs(palmParts) do
+			local partName = string.lower(part.Name)
+			local partY = part.Position.Y
+			local isTrunk = partName:find("trunk", 1, true) or partName:find("stem", 1, true)
+			local isLeaf = partName:find("leaf", 1, true) or partName:find("leaves", 1, true) or partName:find("foliage", 1, true)
+			if isTrunk or (not isLeaf and partY < middleY) then
+				part.Color = Color3.fromRGB(126, 82, 48)
+				part.Material = Enum.Material.Wood
+				trunkParts += 1
+			elseif isLeaf or partY >= middleY then
+				part.Color = Color3.fromRGB(48, 150, 58)
+				part.Material = Enum.Material.Grass
+				leafParts += 1
+			end
+		end
+		if #palmParts == 0 then
+			warn("[BLOXY-KART][PALM] El modelo importado no contiene piezas BasePart; revisa la estructura del asset.")
+		elseif trunkParts == 0 or leafParts == 0 then
+			warn(("[BLOXY-KART][PALM] Clasificación incompleta: piezas=%d tronco=%d hojas=%d."):format(#palmParts, trunkParts, leafParts))
+		else
+			print(("[BLOXY-KART][PALM] Apariencia aplicada: piezas=%d tronco=%d hojas=%d."):format(#palmParts, trunkParts, leafParts))
 		end
 		return true
 	end
