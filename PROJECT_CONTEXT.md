@@ -38,6 +38,31 @@ Cuando exista una diferencia entre lo documentado y el código, Gemini Desarroll
 
 Este documento no debe convertirse en un registro de conversaciones. Debe representar una fotografía clara y actualizada del proyecto.
 
+## Fuente única de verdad y flujo seguro GitHub → Rojo → Studio (acuerdo vigente: 3 de noviembre de 2026)
+
+**GitHub es la fuente oficial y el punto de recuperación del proyecto.** La rama de trabajo autorizada para esta etapa es `recovery/stable-handling`; `main` permanece protegida y no se modifica sin autorización expresa.
+
+### Reglas obligatorias
+
+1. Antes de cada tarea, revisar este documento completo, confirmar la rama remota y revisar los archivos afectados.
+2. Todo cambio de código o configuración se realiza primero en los archivos versionados del repositorio y se publica mediante un commit identificable en `recovery/stable-handling`.
+3. No considerar un cambio parte de la versión oficial hasta que el commit esté publicado en GitHub.
+4. Roblox Studio se utiliza para abrir, ejecutar y validar visualmente el proyecto. No se debe asumir que una modificación manual hecha en Studio se guarda automáticamente en GitHub.
+5. Si se realiza una modificación manual en Studio, debe trasladarse a los archivos fuente correspondientes o guardarse como un respaldo de proyecto versionado antes de considerarla parte oficial. No dejar cambios únicos importantes únicamente en una sesión local de Studio.
+6. Rojo 7.7.1 sincroniza los directorios declarados en `default.project.json` desde el árbol local hacia Studio. No es un mecanismo de publicación Studio → GitHub ni un sistema de respaldo. No iniciar una sincronización sin comprobar primero rama, estado de Git y archivos que se van a sincronizar.
+7. Antes de conectar Rojo o aplicar una sincronización: confirmar que la copia local está en `recovery/stable-handling`, traer los commits remotos previstos, revisar cualquier cambio local y guardar un respaldo `.rbxl` cuando el hito visual lo amerite. Nunca sobrescribir cambios locales sin revisarlos.
+8. Después de validar una modificación en Studio, registrar el resultado en `PROJECT_CONTEXT.md` y publicar esa actualización en el mismo flujo de commits.
+9. Cada tarea debe terminar indicando rama, commit publicado, archivos modificados, estado de validación (estática / Studio) y el comando exacto para actualizar la copia local.
+10. No declarar que el mapa completo está respaldado en GitHub solo porque el código fuente esté publicado. Confirmar que los archivos y assets necesarios están versionados o que existe un respaldo `.rbxl` publicado por separado.
+
+### Alcance de Rojo en este proyecto
+
+El archivo `default.project.json` mapea `src/ReplicatedFirst`, `src/ReplicatedStorage`, `src/ServerScriptService` y `src/StarterPlayer` a sus servicios correspondientes de Roblox. Los objetos que se creen manualmente en Studio fuera de esos archivos/mapeos no quedan versionados automáticamente por ese mecanismo.
+
+**Principio operativo:** GitHub → copia local Git → Rojo → Roblox Studio. Para incorporar cambios originados en Studio, primero se deben convertir en archivos fuente o en un respaldo versionado; nunca asumir una sincronización inversa automática.
+
+---
+
 ## 2. Visión del juego
 
 BLOXY KARTS es un juego de carreras arcade para Roblox, con estética low-poly inspirada en el lenguaje visual de Roblox y Minecraft, con identidad y recursos originales. El proyecto busca establecerse como un producto comercial del estudio GamaKingStudio.
