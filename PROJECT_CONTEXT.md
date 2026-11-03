@@ -204,7 +204,7 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
 
-**Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `139237715567825`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El código conserva los colores, materiales y texturas del modelo importado; no aplica recoloración automática. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
+**Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `135644677713727`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El código conserva los colores, materiales y texturas del modelo importado; no aplica recoloración automática. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
 
 ### Registro de integración de palmera (2 de noviembre de 2026)
 
@@ -230,7 +230,7 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-- **Palmeras del Beach Resort:** el asset completo `139237715567825` se carga dinámicamente y se normaliza por altura real (objetivo aproximado 14–17 studs), con ajuste por bounding box y respaldo procedural. El código conserva los colores, materiales y texturas del modelo importado; se eliminó la recoloración automática que dejaba toda la palmera verde. Pendiente probar en Roblox Studio para confirmar colores, materiales, tamaño, orientación y apoyo en el suelo.
+- **Palmeras del Beach Resort:** el asset completo `135644677713727` se carga dinámicamente y se normaliza por altura real (objetivo aproximado 14–17 studs), con ajuste por bounding box y respaldo procedural. El código conserva los colores, materiales y texturas del modelo importado; se eliminó la recoloración automática que dejaba toda la palmera verde. Pendiente probar en Roblox Studio para confirmar colores, materiales, tamaño, orientación y apoyo en el suelo.
 
 - Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
@@ -355,7 +355,7 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 
 ### Actualización de ID de palmera y sincronización (2 de noviembre de 2026)
 
-- El usuario confirmó que la palmera que debe utilizar el juego es el asset `139237715567825`, que actualmente se ve completamente verde dentro de la experiencia.
+- El usuario confirmó que la palmera que debe utilizar el juego es el asset `135644677713727`, que actualmente se ve completamente verde dentro de la experiencia.
 - Se actualizó `src/ServerScriptService/KartService.lua` para cargar ese ID, manteniendo la corrección anterior que preserva los colores, materiales y texturas originales del modelo importado.
 - Se conserva la configuración física de las piezas, la normalización de escala, el posicionamiento por bounding box y el respaldo procedural.
 - El cambio de ID y la preservación visual están implementados en el código del repositorio. Todavía no se ha probado la carga ni la apariencia en Roblox Studio; esa validación queda pendiente.
@@ -419,3 +419,11 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - **Alcance protegido:** estas correcciones no autorizan cambios en conducción, cámara, trazado, pianos, guardarraíles, checkpoints, minimapa, leaderboard ni ubicación de props.
 - **Commits recientes en `recovery/stable-handling`:** HUD y velocímetro `408c94a`; rol tipográfico `96b830e`; documentación de corrección previa `2be93b5`. La corrección de antorchas y el primer retorno del velocímetro lateral se encuentran registrados en los commits anteriores de esta misma rama.
 - **Validación:** se verificó que los archivos publicados contienen el panel transparente, el formato horizontal de velocidad y el rol `Title`. No se ejecutó Roblox Studio después de estos commits; la apariencia final queda pendiente de la prueba manual del usuario.
+
+### Actualización de nueva palmera (3 de noviembre de 2026)
+
+- El usuario proporcionó el nuevo asset de palmera de Roblox: `135644677713727`.
+- Se actualizó `PALM_ASSET_ID` en `src/ServerScriptService/KartService.lua` para que el circuito cargue este nuevo modelo.
+- Se conserva la lógica existente de carga mediante `InsertService:LoadAsset`, normalización de altura, posicionamiento por bounding box, inclinación, tratamiento visual por piezas y respaldo procedural. No se modificaron ubicaciones ni cantidades de palmeras.
+- Estado: ID actualizado en el código y documentado. La estructura, apariencia, escala y carga del nuevo asset deben comprobarse en Roblox Studio; no se ha ejecutado una prueba de runtime desde este entorno.
+- Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
