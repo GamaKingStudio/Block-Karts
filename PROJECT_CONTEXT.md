@@ -507,8 +507,18 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 ### Actualización de reposeras de playa (3 de noviembre de 2026)
 
 - El usuario proporcionó el asset Roblox `110854388215298` para reemplazar las reposeras procedurales del Beach Resort.
-- `KartService.lua` ahora carga una plantilla mediante `InsertService:LoadAsset`, la clona para las 14 reposeras distribuidas en los siete puestos de playa y ajusta cada modelo a una longitud máxima aproximada de 5.8 studs.
+- `KartService.lua` carga una plantilla mediante `InsertService:LoadAsset` y la clona para las 14 reposeras distribuidas en los siete puestos de playa. Tras la revisión visual del usuario, la escala objetivo se aumentó de 5.8 a 6.5 studs.
 - Se conservan los colores, materiales y texturas publicados en el asset. Las piezas quedan ancladas y sin colisión, contacto ni consulta, para que los karts no se enganchen.
 - Sombrillas, postes, toallas, pelotas y ubicaciones de los puestos permanecen sin cambios. Si Roblox no permite cargar el asset, se mantiene un respaldo procedural para evitar que desaparezcan las reposeras.
 - Estado: integración implementada y publicada en `recovery/stable-handling`. Se verificó estáticamente el ID, el clonado, la escala y las propiedades físicas. No se ejecutó Roblox Studio; la apariencia, orientación y escala finales requieren validación visual en Play.
 - Archivos modificados: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
+
+
+### Ajuste de tamaño y eliminación del respaldo antiguo de reposeras (3 de noviembre de 2026)
+
+- Tras revisar la captura del usuario, se identificó que el código conservaba un respaldo procedural (Lounger_Fallback) que generaba una pieza blanca antigua en la misma ubicación cuando el asset importado no estaba disponible. Esto podía producir la superposición observada.
+- Se eliminó por completo ese respaldo. Si el asset 110854388215298 no puede cargarse, no se crea una reposera alternativa ni se superpone geometría antigua.
+- Se aumentó la escala objetivo del modelo importado de 5.8 a 6.5 studs, aproximadamente un 12 % más grande, manteniendo la proporción original del asset.
+- Se mantienen las 14 instancias, las ubicaciones de los puestos y las propiedades sin colisión/contacto/consulta. No se modifican sombrillas ni accesorios.
+- Estado: cambio implementado y publicado en recovery/stable-handling; verificación estática pendiente de nueva prueba visual del usuario en Roblox Studio. No se ejecutó Play desde este entorno.
+- Archivos modificados: src/ServerScriptService/KartService.lua y PROJECT_CONTEXT.md.
