@@ -68,7 +68,10 @@ local countdownLabel = label(hud, "RaceCountdown", UDim2.fromOffset(360, 150), U
 countdownLabel.TextStrokeTransparency = 0.35
 countdownLabel.Visible = false
 countdownEvent.OnClientEvent:Connect(function(value)
- if value > 0 then
+ if value > 3 then
+  -- La cuenta corre desde 5 en el servidor, pero el HUD aparece recién en 3.
+  countdownLabel.Visible = false
+ elseif value > 0 then
   countdownLabel.Text = tostring(value)
   countdownLabel.TextColor3 = Color3.fromRGB(255, 205, 75)
   countdownLabel.Visible = true
