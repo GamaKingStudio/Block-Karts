@@ -620,9 +620,10 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 
 ## Selección de cámara previa a la carrera (3 de noviembre de 2026)
 
-- Al sentarse en su kart, cada jugador elige cámara clásica (trasera) o isométrica (elevada en diagonal) mediante dos tarjetas con previsualización 3D del kart en ViewportFrame.
+- Al sentarse en su kart, cada jugador elige cámara clásica (trasera) o isométrica (elevada en diagonal) mediante dos botones de texto grandes; se eliminó la previsualización 3D ViewportFrame porque podía mostrarse negra y bloquear la selección.
 - El servidor valida la selección y espera a que todos los jugadores conectados estén sentados y hayan elegido. Después envía una cuenta regresiva global de cinco segundos y habilita RaceStarted de forma sincronizada.
 - Cada cámara se aplica localmente; físicas y controles son iguales. La selección no altera el circuito ni los elementos aprobados.
 - Si un jugador sale durante la cuenta regresiva, se invalida esa cuenta y se vuelve a evaluar a los participantes restantes.
-- Estado: código publicado, pendiente de prueba multijugador en Roblox Studio. Las vistas previas muestran el kart desde cada ángulo, no una captura completa del circuito.
+- Corrección del 3 de noviembre: se eliminó ViewportFrame y se sustituyó por botones TextButton visibles, con iconos, descripciones y confirmación de selección. La interfaz se adapta al ancho disponible y conserva el flujo de selección sincronizada.
+- Estado: corrección publicada; validación estática realizada. Pendiente de prueba manual en Roblox Studio.
 - Archivos: src/ServerScriptService/KartService.lua, src/StarterPlayer/KartControls.client.lua y PROJECT_CONTEXT.md.
