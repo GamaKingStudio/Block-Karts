@@ -91,11 +91,7 @@ local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim
 local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 15, Color3.fromRGB(220, 226, 235), "Light")
 local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 15, Color3.fromRGB(220, 226, 235), "Light")
 
-local speedPanel = panel("SpeedPanel", UDim2.fromOffset(190, 70), UDim2.new(1, -210, 1, -96))
-local speedValue = label(speedPanel, "SpeedValue", UDim2.fromOffset(112, 64), UDim2.fromOffset(0, 2), "0", 48, nil, "Bold")
-speedValue.TextXAlignment = Enum.TextXAlignment.Right
-local speedUnit = label(speedPanel, "SpeedUnit", UDim2.fromOffset(72, 64), UDim2.fromOffset(116, 2), "/KMH", 21, Color3.fromRGB(220, 226, 235), "Light")
-speedUnit.TextXAlignment = Enum.TextXAlignment.Left
+-- El velocímetro permanece fuera del HUD de carrera.
 
 
 local wrongWayLabel = label(
@@ -152,11 +148,10 @@ local function addTextOutline(textObject, color)
 end
 
 makeTextOnly(racePanel)
-makeTextOnly(speedPanel)
 makeTextOnly(leaderboard)
 makeTextOnly(mapPanel)
 for _, textObject in ipairs({
- lapLabel, timerLabel, bestLabel, checkpointLabel, speedValue, speedUnit,
+ lapLabel, timerLabel, bestLabel, checkpointLabel,
  leaderboardTitle, mapTitle,
 }) do
  addTextOutline(textObject)
@@ -422,13 +417,8 @@ wrongWayEvent.OnClientEvent:Connect(function(isWrongWay)
  wrongWayLabel.Visible = isWrongWay
 end)
 
-local function updateSpeed()
- if not currentChassis or not currentChassis.Parent then
-  speedValue.Text = "0"
-  return
- end
- local speed = math.abs(currentChassis.AssemblyLinearVelocity:Dot(currentChassis.CFrame.LookVector))
- speedValue.Text = tostring(math.floor(speed * 1.008 + 0.5))
+local function updateRaceDisplay()
+ if not currentChassis or not currentChassis.Parent then return end
  updateMiniMap()
  if lapStartedAt then
   timerLabel.Text = formatTime(os.clock() - lapStartedAt)
@@ -450,9 +440,9 @@ local function setDriving(seat)
   bestLabel.Text = "MEJOR --:--.--"
   bestLabel.TextColor3 = Color3.fromRGB(190, 202, 216)
   wrongWayLabel.Visible = false
-  updateSpeed()
+  updateRaceDisplay()
   if renderConnection then renderConnection:Disconnect() end
-  renderConnection = RunService.RenderStepped:Connect(updateSpeed)
+  renderConnection = RunService.RenderStepped:Connect(updateRaceDisplay)
  else
   currentSeat = nil
   currentChassis = nil
