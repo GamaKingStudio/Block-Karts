@@ -572,3 +572,12 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - No se reintroducen postes ni banner procedurales y no se modifica la lógica de carrera ni otras piezas del mapa.
 - Estado: corrección publicada en `recovery/stable-handling`; pendiente de comprobar en Roblox Studio que el vano quede efectivamente sobre la pista. No se ha ejecutado Play desde este entorno.
 - Commit de código: `755872bb77515310c9ce62dbb2a681567a38a81d`.
+
+
+### Validación del arco de meta importado (3 de noviembre de 2026)
+
+- El usuario confirmó que la corrección de orientación del modelo de meta quedó perfecta en Roblox Studio.
+- Se considera visualmente validado por el usuario el reemplazo completo de la estructura procedural por el asset Roblox `132205617373322`, con giro de 90° sobre el eje Y, escala proporcional al ancho de pista y posicionamiento elevado sobre el trazado.
+- Se mantiene la retirada de ambos postes, la viga roja y el panel/banner antiguos. No se modifica la lógica de carrera, checkpoints ni otras piezas del circuito.
+- No se requieren más ajustes al arco de meta por ahora. Mantener esta implementación como aprobada y no modificarla salvo solicitud expresa.
+- Código asociado: `src/ServerScriptService/KartService.lua`. Commit de implementación: `755872bb77515310c9ce62dbb2a681567a38a81d`.
