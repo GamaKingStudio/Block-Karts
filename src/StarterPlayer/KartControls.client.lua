@@ -371,26 +371,27 @@ local function setupDriftSmoke(kart)
 			emitter.Name = "LocalDriftSmoke"
 			emitter.Texture = "rbxasset://textures/particles/smoke_main.dds"
 			emitter.Enabled = false
-			emitter.Rate = 90
-			emitter.Lifetime = NumberRange.new(0.75, 1.2)
-			emitter.Speed = NumberRange.new(0.6, 1.8)
-			emitter.SpreadAngle = Vector2.new(38, 38)
+			emitter.Rate = 220
+			emitter.Lifetime = NumberRange.new(1.25, 1.9)
+			emitter.Speed = NumberRange.new(0.25, 0.9)
+			emitter.SpreadAngle = Vector2.new(24, 24)
 			emitter.EmissionDirection = Enum.NormalId.Top
-			emitter.Acceleration = Vector3.new(0, 2.2, 0)
-			emitter.Drag = 3
-			emitter.RotSpeed = NumberRange.new(-30, 30)
+			emitter.Acceleration = Vector3.new(0, 1.1, 0)
+			emitter.Drag = 4
+			emitter.RotSpeed = NumberRange.new(-18, 18)
 			emitter.Size = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0.75),
-				NumberSequenceKeypoint.new(0.45, 1.35),
-				NumberSequenceKeypoint.new(1, 1.9),
+				NumberSequenceKeypoint.new(0, 1.1),
+				NumberSequenceKeypoint.new(0.35, 1.8),
+				NumberSequenceKeypoint.new(1, 2.6),
 			})
 			emitter.Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0.12),
+				NumberSequenceKeypoint.new(0, 0.04),
+				NumberSequenceKeypoint.new(0.7, 0.18),
 				NumberSequenceKeypoint.new(1, 1),
 			})
-			emitter.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(225, 228, 232))
+			emitter.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(245, 247, 250))
 			emitter.LightInfluence = 0
-			emitter.LightEmission = 0.12
+			emitter.LightEmission = 0.18
 			emitter.Parent = attachment
 			table.insert(driftSmokeEmitters, emitter)
 		end
