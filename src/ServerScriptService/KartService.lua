@@ -547,45 +547,38 @@ local function buildTestCourse()
 
 	local beamY = yGround + postHeight + 0.9
 	makePart(course, "GantryBeamTop", Vector3.new(2.2, 1.8, spanWidth + 3.6), CFrame.new(gantryX, beamY, 70), C_RED)
+	makePart(course, "GantrySign", Vector3.new(0.3, 2.6, spanWidth - 1.0), CFrame.new(gantryX - 1.2, beamY - 1.6, 70), C_WHITE)
 
-	-- Banner del arco: el asset del usuario sustituye el panel anterior,
-	-- conservando el marco estructural y sus soportes.
-	local FINISH_BANNER_ASSET_ID = 132205617373322
-	local bannerAssetOk, bannerAssetOrError = pcall(function()
-		return InsertService:LoadAsset(FINISH_BANNER_ASSET_ID)
+	-- Línea de meta importada desde el asset publicado por el usuario.
+	local FINISH_LINE_ASSET_ID = 132205617373322
+	local finishAssetOk, finishAssetOrError = pcall(function()
+		return InsertService:LoadAsset(FINISH_LINE_ASSET_ID)
 	end)
-	if bannerAssetOk and bannerAssetOrError then
-		local loadedBannerAsset = bannerAssetOrError
-		local bannerSource = loadedBannerAsset:IsA("Model")
-			and loadedBannerAsset
-			or loadedBannerAsset:FindFirstChildWhichIsA("Model", true)
-		if not bannerSource then
+	if finishAssetOk and finishAssetOrError then
+		local loadedFinishAsset = finishAssetOrError
+		local finishModel = loadedFinishAsset
+		if not finishModel:IsA("Model") then
+			finishModel = loadedFinishAsset:FindFirstChildWhichIsA("Model", true)
+		end
+		if not finishModel then
 			local wrapper = Instance.new("Model")
-			for _, child in ipairs(loadedBannerAsset:GetChildren()) do
+			for _, child in ipairs(loadedFinishAsset:GetChildren()) do
 				child.Parent = wrapper
 			end
-			bannerSource = wrapper
+			finishModel = wrapper
 		end
-
-		if #bannerSource:GetDescendants() > 0 or #bannerSource:GetChildren() > 0 then
-			local banner = bannerSource:Clone()
-			banner.Name = "ImportedFinishBanner"
-			banner.Parent = course
-			local _, initialSize = banner:GetBoundingBox()
-			local initialSpan = math.max(initialSize.X, initialSize.Z)
-			if initialSpan > 0.01 and initialSize.Y > 0.01 then
-				local targetWidth = spanWidth - 1.0
-				local targetHeight = 2.6
-				local uniformScale = math.min(targetWidth / initialSpan, targetHeight / initialSize.Y)
+		if #finishModel:GetDescendants() > 0 or #finishModel:GetChildren() > 0 then
+			local finishClone = finishModel:Clone()
+			finishClone.Name = "ImportedFinishLine"
+			finishClone.Parent = course
+			local _, initialBounds = finishClone:GetBoundingBox()
+			local horizontalSpan = math.max(initialBounds.X, initialBounds.Z)
+			if horizontalSpan > 0.01 then
 				local scaled, scaleError = pcall(function()
-					banner:ScaleTo(uniformScale)
+					finishClone:ScaleTo(trackWidth / horizontalSpan)
 				end)
 				if scaled then
-					local _, scaledSize = banner:GetBoundingBox()
-					if scaledSize.X > scaledSize.Z then
-						banner:PivotTo(banner:GetPivot() * CFrame.Angles(0, math.rad(90), 0))
-					end
-					for _, descendant in ipairs(banner:GetDescendants()) do
+					for _, descendant in ipairs(finishClone:GetDescendants()) do
 						if descendant:IsA("BasePart") then
 							descendant.Anchored = true
 							descendant.CanCollide = false
@@ -594,47 +587,24 @@ local function buildTestCourse()
 							descendant.Massless = true
 						end
 					end
-					local boundsCFrame = banner:GetBoundingBox()
-					local pivotToBounds = banner:GetPivot():ToObjectSpace(boundsCFrame)
-					local targetBounds = CFrame.new(gantryX - 1.25, beamY - 1.6, 70)
-					banner:PivotTo(targetBounds * pivotToBounds:Inverse())
+					local boundsCFrame, boundsSize = finishClone:GetBoundingBox()
+					local pivotToBounds = finishClone:GetPivot():ToObjectSpace(boundsCFrame)
+					local targetBounds = CFrame.new(gantryX, yGround + 0.065 + boundsSize.Y / 2, 70)
+					finishClone:PivotTo(targetBounds * pivotToBounds:Inverse())
 				else
-					warn(("[BLOXY-KART][BANNER] No se pudo escalar el asset %d: %s"):format(FINISH_BANNER_ASSET_ID, tostring(scaleError)))
-					banner:Destroy()
+					warn(("[BLOXY-KART][FINISH] No se pudo escalar el asset %d: %s"):format(FINISH_LINE_ASSET_ID, tostring(scaleError)))
+					finishClone:Destroy()
 				end
 		else
-				warn(("[BLOXY-KART][BANNER] El asset %d tiene dimensiones inválidas."):format(FINISH_BANNER_ASSET_ID))
-				banner:Destroy()
+			warn(("[BLOXY-KART][FINISH] El asset %d tiene dimensiones inválidas."):format(FINISH_LINE_ASSET_ID))
+			finishClone:Destroy()
 		end
-		loadedBannerAsset:Destroy()
+		else
+			warn(("[BLOXY-KART][FINISH] El asset %d no contiene geometría utilizable."):format(FINISH_LINE_ASSET_ID))
+		end
+		loadedFinishAsset:Destroy()
 	else
-		warn(("[BLOXY-KART][BANNER] No se pudo cargar el asset %d: %s"):format(FINISH_BANNER_ASSET_ID, tostring(bannerAssetOrError)))
-	end
-
-	-- Línea de salida/meta: overlay de cuadros blancos y negros sobre el asfalto.
-	-- La recta cruza el eje Z; cada cuadro mide 2 x 2 studs y carece de colisión.
-	local checkerTileSize = 2
-	local checkerColumns = math.floor(trackWidth / checkerTileSize)
-	local checkerRows = 2
-	for row = 1, checkerRows do
-		for column = 1, checkerColumns do
-			local isWhite = (row + column) % 2 == 0
-			local tile = makePart(
-				course,
-				("FinishChecker_%02d_%02d"):format(row, column),
-				Vector3.new(checkerTileSize, 0.025, checkerTileSize),
-				CFrame.new(
-					gantryX + (row - (checkerRows + 1) / 2) * checkerTileSize,
-					yGround + 0.055,
-					70 + (column - (checkerColumns + 1) / 2) * checkerTileSize
-				),
-				isWhite and C_WHITE or C_BLACK,
-				Enum.Material.SmoothPlastic
-			)
-			tile.CanCollide = false
-			tile.CanTouch = false
-			tile.CanQuery = false
-		end
+		warn(("[BLOXY-KART][FINISH] No se pudo cargar el asset %d: %s"):format(FINISH_LINE_ASSET_ID, tostring(finishAssetOrError)))
 	end
 
 	local function spawnTireStack(pos)
