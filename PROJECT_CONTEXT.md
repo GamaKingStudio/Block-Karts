@@ -461,3 +461,14 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Estado: corrección publicada en `recovery/stable-handling`. Validación estática realizada: el filtro excluye el HUD oficial y elimina únicamente interfaces de velocidad ajenas identificables por nombre o unidad. Falta la prueba en Roblox Studio para confirmar que el elemento central reportado corresponde a una interfaz dentro de `PlayerGui` que cumpla esos criterios.
 - Límite conocido: una interfaz central que no tenga nombre identificable ni etiqueta con unidad de velocidad, o que sea creada fuera de `PlayerGui`, no puede identificarse de forma segura desde este script. No se declara todavía probado en Studio.
 - Commit de código: `9b2803d`. Archivo modificado: `src/StarterPlayer/RaceHUD.client.lua`. Este documento se actualiza en el commit siguiente.
+
+
+### Identificación visual y eliminación del velocímetro central "Velocidad" (3 de noviembre de 2026)
+
+- El usuario compartió una captura del elemento que persistía en el centro: un HUD con el título literal **"Velocidad"**, un valor numérico y una barra horizontal segmentada naranja; no muestra unidad KMH/KPH/MPH.
+- Causa del fallo de la limpieza preventiva anterior: el detector buscaba nombres de GUI o unidades de velocidad, por lo que no reconocía este diseño concreto.
+- Corrección aplicada en `src/StarterPlayer/RaceHUD.client.lua`: ahora también detecta etiquetas cuyo texto normalizado sea exactamente `VELOCIDAD` o `SPEED` en cualquier ScreenGui ajeno a `BLOXYRaceHUD` y elimina ese ScreenGui. Se mantiene la limpieza previa por nombres y unidades, así como la vigilancia de nuevas instancias y cambios de texto.
+- El HUD oficial `BLOXYRaceHUD` está expresamente excluido de la eliminación, por lo que se conserva el velocímetro lateral inferior derecho y el resto de sus elementos.
+- Alcance: solo se modificó el detector de interfaces heredadas en `RaceHUD.client.lua`; no se tocaron controles, física, cámara, circuito ni diseño del HUD oficial.
+- Estado: cambio publicado y verificado estáticamente en `recovery/stable-handling`. Falta la nueva prueba del usuario en Roblox Studio. Si el elemento se crea fuera de `PlayerGui` o no contiene el título mostrado en la captura, habría que localizar su origen por separado.
+- Commit de código: `760a6c3`.
