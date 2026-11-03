@@ -691,6 +691,7 @@ local function buildTestCourse()
 	end
 	-- Antorchas reubicadas en arena perimetral; no invaden pista ni barandas.
 	local torchPositions = {
+		-- Antorchas del perímetro.
 		Vector3.new(-165, yGround, -105),
 		Vector3.new(-165, yGround, -35),
 		Vector3.new(-165, yGround, 35),
@@ -699,6 +700,11 @@ local function buildTestCourse()
 		Vector3.new(175, yGround, -35),
 		Vector3.new(175, yGround, 35),
 		Vector3.new(125, yGround, 145),
+		-- Antorchas bajas en los claros de arena interiores.
+		Vector3.new(28, yGround, 25),
+		Vector3.new(67, yGround, 25),
+		Vector3.new(28, yGround, -45),
+		Vector3.new(67, yGround, -45),
 	}
 	for _, tp in ipairs(torchPositions) do
 		spawnTikiTorch(tp)
@@ -904,6 +910,11 @@ local function buildTestCourse()
 	spawnBeachCluster(Vector3.new(-25, yGround, 155), C_RED, C_BLUE, 40)
 	spawnBeachCluster(Vector3.new(35, yGround, 155), C_TEAL, C_ORANGE, -30)
 	spawnBeachCluster(Vector3.new(95, yGround, 155), C_ORANGE, C_TEAL, 10)
+
+	-- Dos rincones de playa en los claros interiores de arena.
+	-- Se mantienen separados del asfalto y de las barreras.
+	spawnBeachCluster(Vector3.new(45, yGround, 20), C_BLUE, C_WHITE, 18)
+	spawnBeachCluster(Vector3.new(48, yGround, -45), C_TEAL, C_YELLOW, -22)
 
 	local function spawnSurfboard(pos, color, rotY)
 		local sb = makePart(course, "Surfboard", Vector3.new(0.3, 8.0, 2.2), CFrame.new(pos) * CFrame.Angles(0, math.rad(rotY or 0), math.rad(18)) * CFrame.new(0, 3.5, 0), color)
