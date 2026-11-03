@@ -437,3 +437,16 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - **Estado del problema:** regresión reportada por el usuario, origen todavía no identificado. La inspección del código versionado no explica por sí sola el elemento central que aparece en Studio. No se debe mover, duplicar ni recrear el velocímetro lateral a ciegas. Antes de otro cambio, revisar la sincronización Rojo/instancias de Studio y localizar la instancia o script que realmente dibuja el indicador central.
 - **Pruebas:** el usuario confirmó visualmente la corrección de la palmera. El velocímetro central sigue pendiente de diagnóstico en Studio; no se declara resuelto ni se afirma que el código actual haya sido probado en Play tras esta inspección.
 - **Archivos de código revisados sin modificarlos:** `src/StarterPlayer/RaceHUD.client.lua`, `src/StarterPlayer/KartControls.client.lua`, `src/ReplicatedFirst/LoadingScreen.client.lua`, `src/ServerScriptService/KartBootstrap.server.lua` y `src/ServerScriptService/KartService.lua`.
+
+### Investigación histórica del velocímetro central (3 de noviembre de 2026)
+
+- Se revisó el historial Git específico de `src/StarterPlayer/RaceHUD.client.lua`, en la rama `recovery/stable-handling`.
+- **Commit `9c0482c` — “Remove speedometer from race HUD”:** eliminó el panel, los labels y el cálculo de velocidad del HUD.
+- **Commit `25399ea` — “Restore right-side kart speed HUD”:** volvió a incorporar un indicador de velocidad, explícitamente ubicado en la esquina inferior derecha. No restaura el diseño central.
+- **Commit `408c94a` — “Fix transparent speed HUD and compact KMH layout”:** conserva la posición inferior derecha y ajusta el formato a número grande + `/KMH` pequeño en una misma línea.
+- El código actual de `RaceHUD.client.lua` mantiene esa posición inferior derecha mediante `UDim2.new(1, -202, 1, -88)`; el único `SpeedPanel` del archivo se vuelve transparente con `makeTextOnly`.
+- Se volvió a inspeccionar `KartControls.client.lua`: contiene un `BillboardGui` asociado al aviso/interacción para entrar al kart, además de cálculos físicos de velocidad, pero no crea un velocímetro ni muestra KM/H.
+- El árbol versionado de `src` solo contiene los dos scripts cliente relevantes (`RaceHUD.client.lua` y `KartControls.client.lua`); no se encontró un segundo script de velocímetro en el repositorio.
+- **Conclusión técnica:** el historial confirma que el indicador lateral actual es una restauración intencional y distinta del velocímetro central que el usuario reporta. No hay evidencia en el código versionado actual que permita identificar o eliminar con seguridad ese elemento central. No se elimina el indicador lateral ni se realizan cambios especulativos en scripts ajenos al problema.
+- **Siguiente diagnóstico necesario en Studio:** localizar el objeto central en Explorer mientras está visible (por ejemplo, bajo `PlayerGui`) y revisar su nombre/jerarquía/propiedades para identificar qué instancia lo crea. Hasta localizarlo, el origen del elemento central sigue sin confirmarse.
+- **Archivos de código revisados:** `RaceHUD.client.lua` y `KartControls.client.lua`. No se modificó código de juego en esta investigación.
