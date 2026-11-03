@@ -49,13 +49,17 @@ local drivingBaseFieldOfView
 local shownEnterPrompt
 local enterPromptBillboard
 local held = { forward = false, reverse = false, left = false, right = false, brake = false }
+local driftHeld = false
+local isDrifting = false
+local driftStartTime = 0
+local miniTurboEndTime = 0
 local driveActionName = "BLOXYKartDriveControls"
 local driveKeys = {
 	Enum.KeyCode.W, Enum.KeyCode.Up,
 	Enum.KeyCode.S, Enum.KeyCode.Down,
 	Enum.KeyCode.A, Enum.KeyCode.Left,
 	Enum.KeyCode.D, Enum.KeyCode.Right,
-	Enum.KeyCode.Space, Enum.KeyCode.R,
+	Enum.KeyCode.Space, Enum.KeyCode.R, Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift,
 }
 local keyToControl = {
 	[Enum.KeyCode.W] = "forward", [Enum.KeyCode.Up] = "forward",
@@ -387,14 +391,30 @@ local function simulateOwnedKart()
 	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
 	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
 	local travelDirection = forwardSpeed >= 0 and 1 or -1
-	local yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection
+	local driftYawMultiplier = isDrifting and (KartConfig.DriftYawMultiplier or 1.6) or 1
+	local yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection * driftYawMultiplier
 	chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
+
+	local now = os.clock()
+	local driftMinSpeed = KartConfig.DriftMinSpeed or 8
+	if driftHeld and math.abs(forwardSpeed) > driftMinSpeed and not isDrifting then
+		isDrifting = true
+		driftStartTime = now
+	elseif not driftHeld and isDrifting then
+		local driftDuration = now - driftStartTime
+		isDrifting = false
+		if driftDuration >= (KartConfig.DriftMinDuration or 0.8) then
+			miniTurboEndTime = now + (KartConfig.MiniTurboDuration or 0.75)
+		end
+	end
+	local miniTurboActive = now < miniTurboEndTime
 
 	local acceleration = 0
 	if held.brake then
 		acceleration = -math.sign(forwardSpeed) * KartConfig.BrakeDeceleration
 	elseif throttle > 0 then
-		acceleration = KartConfig.ForwardAcceleration
+		local turboMultiplier = miniTurboActive and (KartConfig.MiniTurboAccelerationMultiplier or 1.45) or 1
+		acceleration = KartConfig.ForwardAcceleration * turboMultiplier
 	elseif throttle < 0 then
 		if forwardSpeed > 2 then
 			acceleration = -KartConfig.BrakeDeceleration * 0.65
@@ -404,11 +424,20 @@ local function simulateOwnedKart()
 	end
 
 	local drag = -forwardSpeed * KartConfig.CoastDrag
-	local lateralForce = -lateralSpeed * KartConfig.LateralGrip
+	local lateralForce
+	if isDrifting then
+		local gripMultiplier = KartConfig.DriftGripMultiplier or 0.25
+		local lateralSpeedRatio = KartConfig.DriftLateralSpeedRatio or 0.22
+		local targetLateralSpeed = steering * math.abs(forwardSpeed) * lateralSpeedRatio
+		lateralForce = (targetLateralSpeed - lateralSpeed) * KartConfig.LateralGrip * gripMultiplier
+	else
+		lateralForce = -lateralSpeed * KartConfig.LateralGrip
+	end
 	driveForce.Force = forward * ((acceleration + drag) * chassis.AssemblyMass)
 		+ right * (lateralForce * chassis.AssemblyMass)
 
-	local maxSpeed = (throttle < 0 and forwardSpeed <= 2) and KartConfig.MaxReverseSpeed or KartConfig.MaxForwardSpeed
+	local normalMaxSpeed = (throttle < 0 and forwardSpeed <= 2) and KartConfig.MaxReverseSpeed or KartConfig.MaxForwardSpeed
+	local maxSpeed = miniTurboActive and throttle > 0 and normalMaxSpeed * (KartConfig.MiniTurboMaxSpeedMultiplier or 1.25) or normalMaxSpeed
 	if math.abs(forwardSpeed) > maxSpeed then
 		local clamped = math.sign(forwardSpeed) * maxSpeed
 		chassis.AssemblyLinearVelocity = forward * clamped + right * lateralSpeed + Vector3.new(0, velocity.Y, 0)
@@ -472,6 +501,14 @@ local function onDriveAction(_, inputState, inputObject)
 		requestRespawnRemote:FireServer()
 		return Enum.ContextActionResult.Sink
 	end
+	if inputObject.KeyCode == Enum.KeyCode.LeftShift or inputObject.KeyCode == Enum.KeyCode.RightShift then
+		if inputState == Enum.UserInputState.Begin then
+			driftHeld = true
+		elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+			driftHeld = false
+		end
+		return Enum.ContextActionResult.Sink
+	end
 	local control = keyToControl[inputObject.KeyCode]
 	if control then
 		if inputState == Enum.UserInputState.Begin then
@@ -488,6 +525,10 @@ local function clearDriveInput()
 	for key in pairs(held) do
 		held[key] = false
 	end
+	driftHeld = false
+	isDrifting = false
+	driftStartTime = 0
+	miniTurboEndTime = 0
 	if currentSeat then
 		controlRemote:FireServer(0, 0, false)
 	end
