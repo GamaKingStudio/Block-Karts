@@ -582,56 +582,124 @@ local function buildTestCourse()
 		spawnTireStack(tPos)
 	end
 
-	-- Antorchas procedurales: madera, quemador metálico y fuego nativo de Roblox.
-	-- No dependen de texturas externas ni de permisos de imágenes del modelo importado.
+	-- Antorcha original del creador: conservar su geometría y aplicar materiales nativos.
+	local InsertService = game:GetService("InsertService")
+	local TORCH_ASSET_ID = 139155803475453
+	local torchTemplate = nil
+	local torchLoadOk, torchAssetOrError = pcall(function()
+		return InsertService:LoadAsset(TORCH_ASSET_ID)
+	end)
+	if torchLoadOk and torchAssetOrError then
+		local loadedTorchAsset = torchAssetOrError
+		local candidate = loadedTorchAsset:IsA("Model") and loadedTorchAsset
+			or loadedTorchAsset:FindFirstChildWhichIsA("Model", true)
+		if candidate then
+			torchTemplate = candidate:Clone()
+			torchTemplate.Name = "OriginalTorchTemplate"
+		else
+			warn(("[BLOXY-KART][TORCH] El asset %d no contiene un Model utilizable."):format(TORCH_ASSET_ID))
+		end
+		loadedTorchAsset:Destroy()
+	else
+		warn(("[BLOXY-KART][TORCH] No se pudo cargar el asset %d: %s"):format(TORCH_ASSET_ID, tostring(torchAssetOrError)))
+	end
+
 	local function spawnTikiTorch(pos)
-		local woodColor = Color3.fromRGB(112, 70, 38)
-		local woodDark = Color3.fromRGB(78, 48, 28)
-		local metalColor = Color3.fromRGB(105, 112, 120)
+		if torchTemplate then
+			local torch = torchTemplate:Clone()
+			torch.Name = "TrackTorch"
+			torch.Parent = course
+			local _, originalBounds = torch:GetBoundingBox()
+			if originalBounds.Y > 0.01 then
+				pcall(function() torch:ScaleTo(8 / originalBounds.Y) end)
+			end
+			torch:PivotTo(CFrame.new(pos))
+			local boxCFrame, boxSize = torch:GetBoundingBox()
+			local bottom = boxCFrame.Position.Y - boxSize.Y / 2
+			torch:PivotTo(CFrame.new(pos.X - boxCFrame.Position.X, pos.Y - bottom, pos.Z - boxCFrame.Position.Z) * torch:GetPivot())
 
-		local foot = makePart(course, "TorchWoodBase", Vector3.new(1.05, 0.45, 1.05),
-			CFrame.new(pos + Vector3.new(0, 0.225, 0)), woodDark, Enum.Material.WoodPlanks)
-		foot.CanCollide = false
-		local pole = makePart(course, "TorchWoodPost", Vector3.new(0.62, 5.9, 0.62),
-			CFrame.new(pos + Vector3.new(0, 3.35, 0)), woodColor, Enum.Material.Wood)
+			-- Se conserva el modelo y sus piezas; solo se sustituyen mapas externos por color/material.
+			local finalBox, finalSize = torch:GetBoundingBox()
+			local topY = finalBox.Position.Y + finalSize.Y / 2
+			for _, descendant in ipairs(torch:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					local heightRatio = (descendant.Position.Y - (finalBox.Position.Y - finalSize.Y / 2)) / math.max(finalSize.Y, 0.01)
+					descendant.Anchored = true
+					descendant.CanCollide = false
+					descendant.CanTouch = false
+					descendant.CanQuery = false
+					descendant.Massless = true
+					if heightRatio >= 0.72 then
+						descendant.Color = Color3.fromRGB(112, 119, 127)
+						descendant.Material = Enum.Material.Metal
+					else
+						descendant.Color = heightRatio < 0.12 and Color3.fromRGB(78, 48, 28) or Color3.fromRGB(112, 70, 38)
+						descendant.Material = Enum.Material.Wood
+					end
+					if descendant:IsA("MeshPart") then
+						pcall(function() descendant.TextureID = "" end)
+					end
+				elseif descendant:IsA("SurfaceAppearance") or descendant:IsA("Decal") or descendant:IsA("Texture") then
+					descendant:Destroy()
+				end
+			end
+
+			-- Fuego y luz sobre el quemador del modelo original.
+			local flameAnchor = Instance.new("Part")
+			flameAnchor.Name = "TorchFlame"
+			flameAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
+			flameAnchor.CFrame = CFrame.new(finalBox.Position.X, topY + 0.25, finalBox.Position.Z)
+			flameAnchor.Transparency = 1
+			flameAnchor.Anchored = true
+			flameAnchor.CanCollide = false
+			flameAnchor.CanTouch = false
+			flameAnchor.CanQuery = false
+			flameAnchor.Parent = torch
+
+			local fire = Instance.new("Fire")
+			fire.Name = "TorchFire"
+			fire.Color = Color3.fromRGB(255, 224, 95)
+			fire.SecondaryColor = Color3.fromRGB(255, 105, 24)
+			fire.Size = 4.2
+			fire.Heat = 7
+			fire.Parent = flameAnchor
+
+			local light = Instance.new("PointLight")
+			light.Name = "TorchGlow"
+			light.Color = Color3.fromRGB(255, 164, 72)
+			light.Range = 24
+			light.Brightness = 2.4
+			light.Shadows = true
+			light.Parent = flameAnchor
+			return
+		end
+
+		-- Respaldo procedural solo si Roblox no permite cargar el modelo original.
+		local pole = makePart(course, "TikiPole", Vector3.new(0.62, 5.9, 0.62),
+			CFrame.new(pos + Vector3.new(0, 3.35, 0)), Color3.fromRGB(112, 70, 38), Enum.Material.Wood)
 		pole.CanCollide = false
-
-		-- Cuenco/quemador de metal, con borde superior.
-		local burner = makePart(course, "TorchMetalBurner", Vector3.new(1.55, 0.62, 1.55),
+		local burner = makePart(course, "TikiBurner", Vector3.new(1.55, 0.62, 1.55),
 			CFrame.new(pos + Vector3.new(0, 6.35, 0)) * CFrame.Angles(0, 0, math.pi / 2),
-			metalColor, Enum.Material.Metal, "Cylinder")
+			Color3.fromRGB(112, 119, 127), Enum.Material.Metal, "Cylinder")
 		burner.CanCollide = false
-		local rim = makePart(course, "TorchMetalRim", Vector3.new(1.72, 0.16, 1.72),
-			CFrame.new(pos + Vector3.new(0, 6.72, 0)) * CFrame.Angles(0, 0, math.pi / 2),
-			Color3.fromRGB(145, 151, 158), Enum.Material.Metal, "Cylinder")
-		rim.CanCollide = false
-
-		-- La instancia Fire genera el degradado real amarillo/naranja de la llama.
 		local flameAnchor = Instance.new("Part")
 		flameAnchor.Name = "TorchFlame"
-		flameAnchor.Size = Vector3.new(0.25, 0.25, 0.25)
+		flameAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
 		flameAnchor.CFrame = CFrame.new(pos + Vector3.new(0, 7.05, 0))
 		flameAnchor.Transparency = 1
 		flameAnchor.Anchored = true
 		flameAnchor.CanCollide = false
-		flameAnchor.CanTouch = false
-		flameAnchor.CanQuery = false
 		flameAnchor.Parent = course
-
 		local fire = Instance.new("Fire")
-		fire.Name = "TorchFire"
 		fire.Color = Color3.fromRGB(255, 224, 95)
 		fire.SecondaryColor = Color3.fromRGB(255, 105, 24)
 		fire.Size = 4.2
 		fire.Heat = 7
 		fire.Parent = flameAnchor
-
 		local light = Instance.new("PointLight")
-		light.Name = "TorchGlow"
 		light.Color = Color3.fromRGB(255, 164, 72)
 		light.Range = 24
 		light.Brightness = 2.4
-		light.Shadows = true
 		light.Parent = flameAnchor
 	end
 	local torchPositions = {
