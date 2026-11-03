@@ -91,7 +91,9 @@ local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim
 local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 15, Color3.fromRGB(220, 226, 235), "Light")
 local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 15, Color3.fromRGB(220, 226, 235), "Light")
 
--- El velocímetro permanece fuera del HUD de carrera.
+local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -174, 1, -116))
+local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42, nil, "Bold")
+label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216), "Light")
 
 
 local wrongWayLabel = label(
@@ -419,6 +421,8 @@ end)
 
 local function updateRaceDisplay()
  if not currentChassis or not currentChassis.Parent then return end
+ local forwardSpeed = math.abs(currentChassis.AssemblyLinearVelocity:Dot(currentChassis.CFrame.LookVector))
+ speedValue.Text = tostring(math.floor(forwardSpeed * 1.008 + 0.5))
  updateMiniMap()
  if lapStartedAt then
   timerLabel.Text = formatTime(os.clock() - lapStartedAt)
