@@ -204,7 +204,7 @@ El circuito se compila proceduralmente en tiempo de ejecución (RunTime) a trav�
 
 **Atrezo (Props):** Generación procedural de kioskos (madera, tela, iluminación Neon/PointLight), graderías, pasarelas, barreras de neumáticos y antorchas Tiki.
 
-**Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `135644677713727`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El código conserva los colores, materiales y texturas del modelo importado; no aplica recoloración automática. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
+**Vegetación:** `KartService.lua` carga el modelo original `palmera.fbx`, publicado en Roblox Studio como asset `135644677713727`, mediante `InsertService:LoadAsset`. Cada instancia se clona y normaliza según su altura real para quedar aproximadamente entre 14 y 17 studs, se posiciona usando el bounding box y se mantiene anclada, sin colisión/contacto/consulta y como masa nula. El clon aplica color y material de forma explícita a tronco y hojas. La clasificación de respaldo por altura utiliza el eje vertical local de la palmera (`finalBoxCFrame:PointToObjectSpace`) para que la inclinación de cada instancia no confunda tronco y follaje. Si la carga o el escalado falla, se genera la palmera procedural de respaldo y se emite una advertencia en Output. La integración requiere validación visual en Roblox Studio para confirmar apariencia, permisos de carga, orientación, escala y apoyo sobre el suelo. Las ubicaciones perimetrales se conservan.
 
 ### Registro de integración de palmera (2 de noviembre de 2026)
 
@@ -230,7 +230,7 @@ Los siguientes problemas figuran como resueltos en el historial técnico del pro
 
 ### Fase actual: validación visual del circuito y sistemas de lógica de carrera
 
-- **Palmeras del Beach Resort:** el asset completo `135644677713727` se carga dinámicamente y se normaliza por altura real (objetivo aproximado 14–17 studs), con ajuste por bounding box y respaldo procedural. El código conserva los colores, materiales y texturas del modelo importado; se eliminó la recoloración automática que dejaba toda la palmera verde. Pendiente probar en Roblox Studio para confirmar colores, materiales, tamaño, orientación y apoyo en el suelo.
+- **Palmeras del Beach Resort:** el asset completo `135644677713727` se carga dinámicamente y se normaliza por altura real (objetivo aproximado 14–17 studs), con ajuste por bounding box y respaldo procedural. El clon aplica marrón + `Wood` al tronco y verde + `Grass` a las hojas. La clasificación por altura se calcula en el eje local de la palmera para evitar errores cuando una instancia está inclinada. Pendiente probar en Roblox Studio para confirmar que todas las instancias, incluida la que presentó el tronco verde, se vean correctamente.
 
 - Diseñar e implementar un relleno de arena localizado entre el borde real del asfalto y los pianos, sin discos circulares completos.
 - Validar visualmente en Roblox Studio que las uniones de curvas no presenten huecos, círculos ni interferencias.
