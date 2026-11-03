@@ -556,6 +556,10 @@ local function buildTestCourse()
 			finishStructure.Name = "ImportedFinishStructure"
 			finishStructure.Parent = course
 
+			-- El modelo fue publicado con su frente girado respecto al eje transversal de la pista.
+			-- Girarlo 90 grados en Y para que el vano cruce la pista y no quede tendido sobre el asfalto.
+			finishStructure:PivotTo(finishStructure:GetPivot() * CFrame.Angles(0, math.rad(90), 0))
+
 			local _, initialBounds = finishStructure:GetBoundingBox()
 			local horizontalSpan = math.max(initialBounds.X, initialBounds.Z)
 			if horizontalSpan > 0.01 then
@@ -574,11 +578,12 @@ local function buildTestCourse()
 						end
 					end
 
-					-- Centra el bounding box sobre la recta y apoya su base en el nivel del circuito.
+					-- Conserva la rotación aplicada y solo traslada el bounding box:
+					-- centrado en la recta y con la base apoyada en el nivel del circuito.
 					local boundsCFrame, boundsSize = finishStructure:GetBoundingBox()
-					local pivotToBounds = finishStructure:GetPivot():ToObjectSpace(boundsCFrame)
-					local targetBounds = CFrame.new(gantryX, yGround + boundsSize.Y / 2, 70)
-					finishStructure:PivotTo(targetBounds * pivotToBounds:Inverse())
+					local targetBoundsPosition = Vector3.new(gantryX, yGround + boundsSize.Y / 2, 70)
+					local offset = targetBoundsPosition - boundsCFrame.Position
+					finishStructure:PivotTo(CFrame.new(offset) * finishStructure:GetPivot())
 				else
 					warn(("[BLOXY-KART][FINISH] No se pudo escalar el asset %d: %s"):format(FINISH_STRUCTURE_ASSET_ID, tostring(scaleError)))
 					finishStructure:Destroy()
