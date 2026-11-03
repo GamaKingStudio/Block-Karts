@@ -388,3 +388,11 @@ Al redactar instrucciones o entregar bloques de código al usuario:
 - Estado: corrección implementada y publicada en `recovery/stable-handling`; requiere una nueva prueba Play del usuario. La clasificación por altura es una alternativa para el FBX con nombres alterados, no una validación visual ya confirmada.
 - Archivos modificados en esta corrección: `src/ServerScriptService/KartService.lua` y `PROJECT_CONTEXT.md`.
 - Pruebas realizadas: revisión estática del bloque de clasificación y publicación/verificación del archivo. No se ejecutó Roblox Studio desde este entorno.
+
+
+### Actualización de antorchas y HUD (3 de noviembre de 2026)
+
+- Antorchas Tiki: el usuario aceptó el reemplazo procedural construido con piezas nativas en lugar del asset gris/blanco anterior `139155803475453`. Solicitó adelgazar el poste/atril. Se reduce el diámetro del poste principal de 0.62 a 0.42 studs y el listón longitudinal de realce de 0.16 a 0.10 studs; se mantienen altura, brasero, fuego, ubicaciones y resto de decoración.
+- HUD de velocidad: el usuario reportó que volvió a aparecer un velocímetro en el centro de la pantalla y pidió retirarlo, manteniendo/restaurando el indicador numérico con unidad KM/H en el lado derecho. La versión actual de `RaceHUD.client.lua` no contiene el panel ni el cálculo de velocidad; se identificó en el historial del propio archivo la implementación anterior del indicador en la esquina inferior derecha. Se restaura ese indicador lateral, calculado desde la velocidad longitudinal del chasis y convertido con el factor previamente utilizado (1.008).
+- Alcance de esta actualización: solo `KartService.lua`, `RaceHUD.client.lua` y este documento. No se modifican conducción, cámara, pista, barreras, checkpoints, minimapa ni leaderboard.
+- Estado: cambios de código publicados en la rama `recovery/stable-handling`; pendiente validación visual y funcional del usuario en Roblox Studio. No se declara probado en Play.
