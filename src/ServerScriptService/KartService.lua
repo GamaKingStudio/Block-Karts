@@ -597,14 +597,18 @@ local function buildTestCourse()
 
 		local function torchPart(name, size, offset, color, material, shape)
 			local partCFrame = CFrame.new(pos + offset)
-			-- En Roblox el eje largo de un Cylinder es X; girarlo 90° en Z lo pone vertical.
+			local partSize = size
 			if shape == "Cylinder" then
+				-- Roblox construye el cilindro con su eje longitudinal en X.
+				-- Reordenamos dimensiones para que la altura solicitada (Y)
+				-- pase a X, y luego rotamos ese eje para dejarlo vertical.
+				partSize = Vector3.new(size.Y, size.X, size.Z)
 				partCFrame = partCFrame * CFrame.Angles(0, 0, math.rad(90))
 			end
 			local part = makePart(
 				torchModel,
 				name,
-				size,
+				partSize,
 				partCFrame,
 				color,
 				material,
