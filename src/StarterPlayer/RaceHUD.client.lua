@@ -90,7 +90,27 @@ local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22),
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(150, 92), UDim2.new(1, -174, 1, -116))
 local speedValue = label(speedPanel, "SpeedValue", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 5), "0", 42, nil, "Bold")
-label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216))
+local speedUnit = label(speedPanel, "SpeedUnit", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 61), "KM/H", 12, Color3.fromRGB(190, 202, 216))
+
+-- HUD minimalista: solo texto, sin tarjetas ni fondos opacos.
+local function makeTextOnly(frame)
+ frame.BackgroundTransparency = 1
+ local corner = frame:FindFirstChildOfClass("UICorner")
+ if corner then corner:Destroy() end
+ local stroke = frame:FindFirstChildOfClass("UIStroke")
+ if stroke then stroke:Destroy() end
+end
+
+local function addTextOutline(textObject, color)
+ textObject.TextStrokeColor3 = color or Color3.fromRGB(12, 16, 24)
+ textObject.TextStrokeTransparency = 0.18
+end
+
+makeTextOnly(racePanel)
+makeTextOnly(speedPanel)
+for _, textObject in ipairs({lapLabel, timerLabel, bestLabel, checkpointLabel, speedValue, speedUnit}) do
+ addTextOutline(textObject)
+end
 
 local wrongWayLabel = label(
  hud,
