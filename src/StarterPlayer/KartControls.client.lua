@@ -251,7 +251,7 @@ local function showCameraSelection()
 	heading.BackgroundTransparency = 1
 	heading.Text = "ELIGE TU CÁMARA"
 	heading.TextColor3 = Color3.new(1, 1, 1)
-	heading.Font = typography.getFont("Title")
+	heading.FontFace = typography.getFont("Title")
 	heading.TextSize = 27
 	heading.Parent = panel
 
@@ -274,7 +274,7 @@ local function showCameraSelection()
 	status.BackgroundTransparency = 1
 	status.Text = "Selecciona una opción para continuar"
 	status.TextColor3 = Color3.fromRGB(255, 205, 95)
-	status.Font = typography.getFont("Bold")
+	status.FontFace = typography.getFont("Bold")
 	status.TextSize = 15
 	status.TextWrapped = true
 	status.Parent = panel
@@ -311,7 +311,7 @@ local function showCameraSelection()
 		name.BackgroundTransparency = 1
 		name.Text = title
 		name.TextColor3 = Color3.new(1, 1, 1)
-		name.Font = typography.getFont("Bold")
+		name.FontFace = typography.getFont("Bold")
 		name.TextSize = 17
 		name.Parent = button
 
@@ -321,7 +321,7 @@ local function showCameraSelection()
 		detail.BackgroundTransparency = 1
 		detail.Text = description
 		detail.TextColor3 = Color3.fromRGB(195, 205, 218)
-		detail.Font = typography.getFont("Light")
+		detail.FontFace = typography.getFont("Light")
 		detail.TextSize = 12
 		detail.TextWrapped = true
 		detail.Parent = button
