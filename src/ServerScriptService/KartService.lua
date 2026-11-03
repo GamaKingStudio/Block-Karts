@@ -596,11 +596,16 @@ local function buildTestCourse()
 		local metal = Color3.fromRGB(65, 58, 48)
 
 		local function torchPart(name, size, offset, color, material, shape)
+			local partCFrame = CFrame.new(pos + offset)
+			-- En Roblox el eje largo de un Cylinder es X; girarlo 90° en Z lo pone vertical.
+			if shape == "Cylinder" then
+				partCFrame = partCFrame * CFrame.Angles(0, 0, math.rad(90))
+			end
 			local part = makePart(
 				torchModel,
 				name,
 				size,
-				CFrame.new(pos + offset),
+				partCFrame,
 				color,
 				material,
 				shape
