@@ -10,6 +10,7 @@ print(("[BLOXY-KART][CLIENT][LOCAL-SCRIPT-ENTER] script=%s parent=%s player=%s")
 	script:GetFullName(), script.Parent:GetFullName(), player.Name
 ))
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
+local typography = require(ReplicatedStorage:WaitForChild("BloxyTypography"))
 local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
 local checkpointPassedRemote = raceEvents:WaitForChild("CheckpointPassed")
 local lapCompletedRemote = raceEvents:WaitForChild("LapCompleted")
@@ -130,7 +131,7 @@ local function showEnterPrompt(prompt)
 	keyBadge.Text = "E"
 	keyBadge.TextColor3 = Color3.fromRGB(28, 30, 34)
 	keyBadge.TextSize = 16
-	keyBadge.Font = Enum.Font.GothamBold
+	keyBadge.FontFace = typography.getFont("Bold")
 	keyBadge.Parent = frame
 	local keyCorner = Instance.new("UICorner")
 	keyCorner.CornerRadius = UDim.new(0, 5)
@@ -145,7 +146,7 @@ local function showEnterPrompt(prompt)
 	actionLabel.TextColor3 = Color3.fromRGB(245, 246, 248)
 	actionLabel.TextSize = 14
 	actionLabel.TextXAlignment = Enum.TextXAlignment.Left
-	actionLabel.Font = Enum.Font.GothamMedium
+	actionLabel.FontFace = typography.getFont("Light")
 	actionLabel.Parent = frame
 
 	billboard.Parent = player:WaitForChild("PlayerGui")
