@@ -1,6 +1,6 @@
 # BLOXY KARTS - Project Context
 
-Última actualización: 2 de noviembre de 2026
+Última actualización: 3 de noviembre de 2026
 
 Motor: Roblox Studio (Luau)
 
