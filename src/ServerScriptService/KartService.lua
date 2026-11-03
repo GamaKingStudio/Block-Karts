@@ -618,47 +618,42 @@ local function buildTestCourse()
 			local bottom = boxCFrame.Position.Y - boxSize.Y / 2
 			torch:PivotTo(CFrame.new(pos.X - boxCFrame.Position.X, pos.Y - bottom, pos.Z - boxCFrame.Position.Z) * torch:GetPivot())
 
-			-- Eliminar solo la llama que viene dentro del asset; conservar soporte y quemador.
-			for _, descendant in ipairs(torch:GetDescendants()) do
+			-- Quitar únicamente la llama geométrica original y sus efectos.
+			-- No tocar MeshPart.TextureID, SurfaceAppearance, Decal, Texture, Color ni Material:
+			-- el soporte y el quemador deben conservar el aspecto original del asset.
+			local descendants = torch:GetDescendants()
+			for index = #descendants, 1, -1 do
+				local descendant = descendants[index]
 				local lowerName = string.lower(descendant.Name)
-				local isFlameNamed = string.find(lowerName, "flame", 1, true) ~= nil
-					or string.find(lowerName, "fire", 1, true) ~= nil
-				local isBuiltInEffect = descendant:IsA("Fire")
+				local flameName = string.find(lowerName, "flame", 1, true)
+					or string.find(lowerName, "fire", 1, true)
+					or string.find(lowerName, "llama", 1, true)
+					or string.find(lowerName, "fuego", 1, true)
+				local flameEffect = descendant:IsA("Fire")
 					or descendant:IsA("ParticleEmitter")
 					or descendant:IsA("Beam")
 					or descendant:IsA("Trail")
-				if isFlameNamed or isBuiltInEffect then
+				if flameName and (descendant:IsA("Model") or descendant:IsA("BasePart") or descendant:IsA("Folder")) then
+					descendant:Destroy()
+				elseif flameEffect then
 					descendant:Destroy()
 				end
 			end
 
-			-- Recalcular la parte superior ahora que la llama original ya no existe:
-			-- este punto corresponde al quemador que queda en el modelo.
-			local finalBox, finalSize = torch:GetBoundingBox()
-			local bottomY = finalBox.Position.Y - finalSize.Y / 2
-			local topY = finalBox.Position.Y + finalSize.Y / 2
+			-- Mantener intactas las texturas/materiales del modelo original.
+			-- Solo fijar las piezas para que la decoración no interfiera con los karts.
 			for _, descendant in ipairs(torch:GetDescendants()) do
 				if descendant:IsA("BasePart") then
-					local heightRatio = (descendant.Position.Y - bottomY) / math.max(finalSize.Y, 0.01)
 					descendant.Anchored = true
 					descendant.CanCollide = false
 					descendant.CanTouch = false
 					descendant.CanQuery = false
 					descendant.Massless = true
-					if heightRatio >= 0.72 then
-						descendant.Color = Color3.fromRGB(112, 119, 127)
-						descendant.Material = Enum.Material.Metal
-					else
-						descendant.Color = heightRatio < 0.12 and Color3.fromRGB(78, 48, 28) or Color3.fromRGB(112, 70, 38)
-						descendant.Material = Enum.Material.Wood
-					end
-					if descendant:IsA("MeshPart") then
-						pcall(function() descendant.TextureID = "" end)
-					end
-				elseif descendant:IsA("SurfaceAppearance") or descendant:IsA("Decal") or descendant:IsA("Texture") then
-					descendant:Destroy()
 				end
 			end
+
+			local finalBox, finalSize = torch:GetBoundingBox()
+			local topY = finalBox.Position.Y + finalSize.Y / 2
 
 			-- Nuestra llama nace pegada al quemador, no por encima de la llama original.
 			local flameAnchor = Instance.new("Part")
@@ -882,13 +877,21 @@ local function buildTestCourse()
 
 	local function spawnBeachCluster(pos, umbrellaColor, towelColor, rot)
 		local cf = CFrame.new(pos) * CFrame.Angles(0, math.rad(rot or 0), 0)
-		makePart(course, "UmbrellaPole", Vector3.new(0.4, 7.5, 0.4), cf * CFrame.new(0, 3.75, 0), C_WOOD)
-		makePart(course, "UmbrellaCanopy", Vector3.new(1.8, 8.0, 8.0), cf * CFrame.new(0, 7.2, 0) * CFrame.Angles(0, 0, math.pi / 2), umbrellaColor, Enum.Material.SmoothPlastic, "Cylinder")
-		makePart(course, "Lounger1", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(-3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
-		makePart(course, "Lounger2", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
-		local towel = makePart(course, "BeachTowel", Vector3.new(3.2, 0.04, 6.0), cf * CFrame.new(0, 0.05, -3.2), towelColor)
-		towel.CanCollide = false
-		makePart(course, "BeachBall", Vector3.new(2.0, 2.0, 2.0), cf * CFrame.new(2.2, 1.0, -3.5), C_RED, Enum.Material.Plastic, "Ball")
+		local function makeDecor(name, size, cframe, color, material, shape)
+			local part = makePart(course, name, size, cframe, color, material, shape)
+			-- Las reposeras, sombrillas y accesorios son solo decorativos:
+			-- los karts pueden pasar por encima sin engancharse ni perder velocidad.
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			return part
+		end
+		makeDecor("UmbrellaPole", Vector3.new(0.4, 7.5, 0.4), cf * CFrame.new(0, 3.75, 0), C_WOOD)
+		makeDecor("UmbrellaCanopy", Vector3.new(1.8, 8.0, 8.0), cf * CFrame.new(0, 7.2, 0) * CFrame.Angles(0, 0, math.pi / 2), umbrellaColor, Enum.Material.SmoothPlastic, "Cylinder")
+		makeDecor("Lounger1", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(-3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
+		makeDecor("Lounger2", Vector3.new(2.8, 0.6, 5.8), cf * CFrame.new(3.2, 0.3, 0.5) * CFrame.Angles(math.rad(-8), 0, 0), C_WHITE)
+		makeDecor("BeachTowel", Vector3.new(3.2, 0.04, 6.0), cf * CFrame.new(0, 0.05, -3.2), towelColor)
+		makeDecor("BeachBall", Vector3.new(2.0, 2.0, 2.0), cf * CFrame.new(2.2, 1.0, -3.5), C_RED, Enum.Material.Plastic, "Ball")
 	end
 
 	spawnBeachCluster(Vector3.new(-85, yGround, 18),  C_BLUE,   C_YELLOW, 25)
