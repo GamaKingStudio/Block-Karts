@@ -658,3 +658,11 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Importante: no se modificaron los parámetros ni la lógica de ninguna cámara. Se conservan exactamente los valores actuales que el usuario aprobó.
 - Archivo modificado: src/StarterPlayer/KartControls.client.lua.
 - Validación: revisión estática del cambio y publicación en GitHub; pendiente comprobar visualmente la carga de ambos assets en Roblox Studio/Play.
+
+### Ajuste de tarjetas de selección de cámara (3 de noviembre de 2026)
+
+- Se retiraron los subtítulos descriptivos de ambas opciones; las tarjetas muestran únicamente los nombres **CLÁSICA** e **ISOMÉTRICA**.
+- El nombre de cada cámara se desplazó hacia abajo, a la posición que ocupaba el subtítulo.
+- La imagen de vista previa se amplió verticalmente de 64 a 94 píxeles, conservando su ancho, recorte y esquinas redondeadas.
+- No se modificaron los parámetros ni el comportamiento de las cámaras.
+- Cambio publicado en `src/StarterPlayer/KartControls.client.lua`; pendiente de validación visual en Roblox Studio.
