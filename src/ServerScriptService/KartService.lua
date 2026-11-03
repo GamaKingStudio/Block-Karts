@@ -621,8 +621,8 @@ local function buildTestCourse()
 		end
 
 		-- Poste de madera con vetas/bandas oscuras y un pequeño soporte superior.
-		torchPart("WoodenPole", Vector3.new(0.62, 6.7, 0.62), Vector3.new(0, 3.35, 0), wood, Enum.Material.Wood, "Cylinder")
-		torchPart("PoleHighlight", Vector3.new(0.16, 5.9, 0.16), Vector3.new(-0.2, 3.35, -0.24), woodLight, Enum.Material.Wood, "Cylinder")
+		torchPart("WoodenPole", Vector3.new(0.42, 6.7, 0.42), Vector3.new(0, 3.35, 0), wood, Enum.Material.Wood, "Cylinder")
+		torchPart("PoleHighlight", Vector3.new(0.10, 5.9, 0.10), Vector3.new(-0.2, 3.35, -0.24), woodLight, Enum.Material.Wood, "Cylinder")
 		torchPart("LowerBinding", Vector3.new(0.78, 0.18, 0.78), Vector3.new(0, 1.0, 0), woodDark, Enum.Material.Wood, "Cylinder")
 		torchPart("UpperBinding", Vector3.new(0.82, 0.2, 0.82), Vector3.new(0, 6.15, 0), metal, Enum.Material.Metal, "Cylinder")
 
