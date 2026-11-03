@@ -298,7 +298,7 @@ local function showCameraSelection()
 	status.TextWrapped = true
 	status.Parent = panel
 
-	local function addChoice(mode, title, symbol, description)
+	local function addChoice(mode, title)
 		local button = Instance.new("TextButton")
 		button.Name = mode .. "Choice"
 		button.Size = UDim2.new(0.5, -8, 1, 0)
@@ -317,7 +317,7 @@ local function showCameraSelection()
 		local preview = Instance.new("ImageLabel")
 		preview.Name = "CameraPreview"
 		preview.Position = UDim2.fromOffset(10, 8)
-		preview.Size = UDim2.new(1, -20, 0, 64)
+		preview.Size = UDim2.new(1, -20, 0, 94)
 		preview.BackgroundColor3 = Color3.fromRGB(35, 46, 60)
 		preview.BackgroundTransparency = 0
 		preview.BorderSizePixel = 0
@@ -331,7 +331,7 @@ local function showCameraSelection()
 		previewCorner.Parent = preview
 
 		local name = Instance.new("TextLabel")
-		name.Position = UDim2.fromOffset(6, 78)
+		name.Position = UDim2.fromOffset(6, 108)
 		name.Size = UDim2.new(1, -12, 0, 28)
 		name.BackgroundTransparency = 1
 		name.Text = title
@@ -340,16 +340,6 @@ local function showCameraSelection()
 		name.TextSize = 17
 		name.Parent = button
 
-		local detail = Instance.new("TextLabel")
-		detail.Position = UDim2.fromOffset(6, 108)
-		detail.Size = UDim2.new(1, -12, 0, 30)
-		detail.BackgroundTransparency = 1
-		detail.Text = description
-		detail.TextColor3 = Color3.fromRGB(195, 205, 218)
-		detail.FontFace = typography.getFont("Light")
-		detail.TextSize = 12
-		detail.TextWrapped = true
-		detail.Parent = button
 
 		button.Activated:Connect(function()
 			cameraSelectionRemote:FireServer(mode)
@@ -366,8 +356,8 @@ local function showCameraSelection()
 		end)
 	end
 
-	addChoice("Classic", "CLÁSICA", "↗", "Cámara detrás del kart")
-	addChoice("Isometric", "ISOMÉTRICA", "◇", "Vista elevada en diagonal")
+	addChoice("Classic", "CLÁSICA")
+	addChoice("Isometric", "ISOMÉTRICA")
 end
 selectionStateRemote.OnClientEvent:Connect(function(ready,total,chosen)
  if selectionGui then local status=selectionGui:FindFirstChild("ReadyStatus",true); if status then status.Text=chosen and ("¡Listo! "..ready.." / "..total.." jugadores") or ("Esperando selección "..ready.." / "..total.." jugadores") end end
