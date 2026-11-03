@@ -1,11 +1,11 @@
 -- Centralized typography roles for the BLOXY KARTS interface.
--- Temporary Roblox-native fallback until the BLOXY font family is published
--- as a Roblox font asset and its asset ID is available.
-local FontFamily = "rbxasset://fonts/families/GothamSSm.json"
+-- Font assets are installed from the Roblox Creator Store.
+-- Londrina Solid is used for display/headline text.
+-- Rajdhani is used for readable HUD text and supporting information.
 
 local Fonts = {
-	Bold = Font.new(FontFamily, Enum.FontWeight.Bold, Enum.FontStyle.Normal),
-	Light = Font.new(FontFamily, Enum.FontWeight.Light, Enum.FontStyle.Normal),
+	Bold = Font.fromId(113086061264643, Enum.FontWeight.Regular, Enum.FontStyle.Normal),
+	Light = Font.fromId(12187375422, Enum.FontWeight.Light, Enum.FontStyle.Normal),
 }
 
 local Typography = {}
