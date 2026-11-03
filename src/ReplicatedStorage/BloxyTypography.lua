@@ -2,6 +2,8 @@
 local Fonts = {
 	Bold = Font.fromEnum(Enum.Font.GothamBold),
 	Light = Font.fromEnum(Enum.Font.GothamMedium),
+	-- Highway: alternativa nativa de Roblox al estilo Impact (gruesa y condensada).
+	Title = Font.fromEnum(Enum.Font.Highway),
 }
 
 local Typography = {}
