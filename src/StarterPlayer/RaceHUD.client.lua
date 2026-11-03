@@ -69,6 +69,9 @@ countdownEvent.OnClientEvent:Connect(function(value)
   countdownLabel.TextColor3 = Color3.fromRGB(255, 205, 75)
   countdownLabel.Visible = true
  else
+  -- El cronómetro de la vuelta comienza exactamente al dar la salida.
+  lapStartedAt = os.clock()
+  timerLabel.Text = "00:00.00"
   countdownLabel.Text = "¡YA!"
   countdownLabel.TextColor3 = Color3.fromRGB(100, 255, 145)
   countdownLabel.Visible = true
@@ -306,7 +309,8 @@ end
 
 checkpointEvent.OnClientEvent:Connect(function(index, total)
  checkpointLabel.Text = ("CHECKPOINT %d / %d"):format(index, total)
- if index == 0 then
+ if index == 0 and not lapStartedAt then
+  -- Respaldo por si el evento de salida no llegó al cliente.
   lapStartedAt = os.clock()
   timerLabel.Text = "00:00.00"
  end
@@ -314,8 +318,13 @@ end)
 
 lapEvent.OnClientEvent:Connect(function(lap, lapTime, isBest)
  setLap(lap + 1)
- lapStartedAt = nil
  timerLabel.Text = formatTime(lapTime)
+ -- Si queda otra vuelta, iniciar su contador inmediatamente.
+ if lap + 1 <= totalLaps then
+  lapStartedAt = os.clock()
+ else
+  lapStartedAt = nil
+ end
  if isBest then
   bestLapTime = lapTime
   bestLabel.Text = "MEJOR " .. formatTime(bestLapTime)
