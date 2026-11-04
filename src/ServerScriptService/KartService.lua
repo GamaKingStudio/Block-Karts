@@ -127,7 +127,6 @@ end
 -- AMBIENTACIÓN BEACH RESORT: iluminación, océano y horizonte
 -- ==========================================================
 local function configureBeachLighting()
-	Lighting.Technology = Enum.Technology.Future
 	Lighting.ClockTime = 13.6
 	Lighting.Brightness = 2.8
 	Lighting.ExposureCompensation = 0.05
