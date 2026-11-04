@@ -682,3 +682,12 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Se añadieron ocho islas low-poly lejanas, con relieve rocoso, vegetación superior y algunas siluetas de palmeras. Todas las piezas son decorativas, no colisionables y no consultables.
 - No se modificaron la pista, los pianos, los guardarraíles, el arco de meta, los checkpoints, las cámaras ni la física de los karts.
 - La implementación fue revisada estáticamente y publicada en la rama `recovery/stable-handling`. **Pendiente de prueba visual en Roblox Studio** para ajustar densidad de atmósfera, escala/posición de las islas y aspecto del agua según el encuadre real.
+
+
+### Corrección de fallo en la inicialización del entorno (4 de noviembre de 2026)
+
+- Se detectó que la asignación `Lighting.Technology = Enum.Technology.Future` dentro de `configureBeachLighting()` detenía la ejecución de `KartService.lua`: Roblox no permite modificar esa propiedad desde scripts en tiempo de ejecución.
+- Se eliminó únicamente esa asignación. La tecnología de iluminación debe configurarse desde las propiedades de Lighting en Roblox Studio, no desde el script.
+- Se conservan los ajustes de iluminación que sí son modificables por script, la atmósfera, los efectos, las nubes, el océano y las islas.
+- No se modifican cámaras, pista, pianos, guardarraíles, arco de meta, checkpoints ni física/controles de karts.
+- Estado: corrección publicada en `recovery/stable-handling`; requiere actualizar y comprobar en Roblox Studio. No se ha ejecutado una prueba de runtime desde este entorno.
