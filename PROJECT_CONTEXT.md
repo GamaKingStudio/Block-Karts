@@ -695,8 +695,9 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 ### Acabado deportivo del arco y nubes de competición (4 de noviembre de 2026)
 
 - Se conserva el asset original del arco de meta (`132205617373322`), sin reemplazarlo ni alterar su geometría, escala, orientación o posición.
-- Al clon cargado se aplica una paleta deportiva blanca con acentos rojos y azules. La selección utiliza nombres descriptivos de piezas cuando están disponibles y, como respaldo, la posición relativa de cada pieza dentro del bounding box.
-- El recoloreado modifica únicamente `BasePart.Color`; no sobrescribe `MeshPart.TextureID`, `SurfaceAppearance`, decals ni texturas originales.
-- Se aumentó la cobertura y densidad de `Terrain.Clouds` para conseguir nubes volumétricas más visibles sobre el cielo existente. No se añadió un skybox externo ni se modificaron el océano, las islas o la atmósfera.
+- El modelo recibe una paleta deportiva blanca con acentos rojos y azules. La selección utiliza nombres descriptivos de piezas cuando están disponibles y, como respaldo, la posición relativa de cada pieza dentro del bounding box.
+- Se añadieron acabados diferenciados: las piezas identificadas como estructura/soporte (bastidores, vigas, postes, patas y similares) usan material `Metal` con reflejo sutil; los paneles y superficies pintadas usan `SmoothPlastic` con un brillo leve.
+- El script no sobrescribe `MeshPart.TextureID`, `SurfaceAppearance`, decals ni texturas originales del asset. El resultado es un acabado por materiales Roblox; no se incorpora una imagen de textura externa porque no se dispone de un asset de textura específico.
+- Las nubes volumétricas de `Terrain.Clouds` permanecen con mayor cobertura y densidad sobre el cielo existente. No se añadió un skybox externo ni se modificaron el océano, las islas o la atmósfera.
 - No se modificaron cámaras, trazado de pista, pianos, guardarraíles, checkpoints ni físicas.
-- Revisión estática pendiente de prueba visual en Roblox Studio para confirmar cómo responde el modelo importado a la paleta y ajustar los acentos si sus piezas no están separadas.
+- Estado: implementación publicada en `recovery/stable-handling`; revisión estática realizada. Falta validar visualmente en Roblox Studio cómo responde el modelo importado a los materiales, especialmente si sus piezas tienen nombres reconocibles. No se ha ejecutado Play desde este entorno.
