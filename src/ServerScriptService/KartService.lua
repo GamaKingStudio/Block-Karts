@@ -184,9 +184,10 @@ local function configureBeachLighting()
 			clouds.Name = "BloxyBeachClouds"
 			clouds.Parent = terrain
 		end
-		clouds.Cover = 0.32
-		clouds.Density = 0.28
-		clouds.Color = Color3.fromRGB(245, 249, 255)
+		-- Nubes más visibles y voluminosas, estilo circuito de competición.
+		clouds.Cover = 0.58
+		clouds.Density = 0.52
+		clouds.Color = Color3.fromRGB(250, 252, 255)
 	end
 end
 
@@ -762,6 +763,42 @@ local function buildTestCourse()
 			local finishStructure = sourceModel:Clone()
 			finishStructure.Name = "ImportedFinishStructure"
 			finishStructure.Parent = course
+
+			-- Livery deportiva para el arco original: base blanca con acentos rojos y azules.
+			-- Solo se ajusta Color; se conservan MeshPart.TextureID, SurfaceAppearance,
+			-- Decals y demás texturas originales del asset.
+			local function applyFinishCompetitionColors(model)
+				local boundsCFrame, boundsSize = model:GetBoundingBox()
+				local red = Color3.fromRGB(220, 40, 45)
+				local blue = Color3.fromRGB(35, 115, 220)
+				local white = Color3.fromRGB(245, 247, 250)
+
+				for _, part in ipairs(model:GetDescendants()) do
+					if part:IsA("BasePart") then
+						local partName = string.lower(part.Name)
+						local localPosition = boundsCFrame:PointToObjectSpace(part.Position)
+						local color = white
+
+						if string.find(partName, "red") or string.find(partName, "rojo") then
+							color = red
+						elseif string.find(partName, "blue") or string.find(partName, "azul") then
+							color = blue
+						elseif string.find(partName, "stripe") or string.find(partName, "trim")
+							or string.find(partName, "accent") or string.find(partName, "line") then
+							color = red
+						elseif string.find(partName, "panel") or string.find(partName, "banner")
+							or string.find(partName, "sign") then
+							color = blue
+						elseif boundsSize.X > 0 and math.abs(localPosition.X) > boundsSize.X * 0.28
+							and localPosition.Y < boundsSize.Y * 0.38 then
+							color = localPosition.X < 0 and red or blue
+						end
+
+						part.Color = color
+					end
+				end
+			end
+			applyFinishCompetitionColors(finishStructure)
 
 			-- Se conserva el giro de 90 grados que orienta el vano transversalmente
 			-- y se añade media vuelta para que el frente mire hacia el sentido correcto.
