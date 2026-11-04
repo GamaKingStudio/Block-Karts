@@ -673,3 +673,12 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Se cambió la rotación aplicada al modelo de 90° a 270° sobre su eje Y local, manteniendo el vano transversal a la pista y dando media vuelta a su frente.
 - No se alteraron asset ID, escala, posición, altura ni propiedades físicas del modelo.
 - Cambio publicado en `src/ServerScriptService/KartService.lua`; pendiente de validación visual en Roblox Studio.
+
+### Renovación de entorno e iluminación Beach Resort (4 de noviembre de 2026)
+
+- Se incorporó una ambientación tropical de mediodía cálido en `KartService.lua`: iluminación Future, exposición y luz ambiental ajustadas, atmósfera, corrección de color, Bloom y rayos solares sutiles.
+- Se añadieron nubes volumétricas mediante `Clouds` en Terrain, reutilizando la instancia existente si ya había una.
+- Se sustituyeron las dos superficies oceánicas pequeñas por una cuadrícula de 25 piezas de agua de 1800 × 1800 studs, sin colisión, que rodea la isla y evita mostrar el borde del agua cerca del circuito.
+- Se añadieron ocho islas low-poly lejanas, con relieve rocoso, vegetación superior y algunas siluetas de palmeras. Todas las piezas son decorativas, no colisionables y no consultables.
+- No se modificaron la pista, los pianos, los guardarraíles, el arco de meta, los checkpoints, las cámaras ni la física de los karts.
+- La implementación fue revisada estáticamente y publicada en la rama `recovery/stable-handling`. **Pendiente de prueba visual en Roblox Studio** para ajustar densidad de atmósfera, escala/posición de las islas y aspecto del agua según el encuadre real.

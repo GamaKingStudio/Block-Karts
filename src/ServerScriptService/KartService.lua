@@ -122,6 +122,192 @@ local function makePart(parent, name, size, cframe, color, material, shapeOrClas
 
 end
 
+
+-- ==========================================================
+-- AMBIENTACIÓN BEACH RESORT: iluminación, océano y horizonte
+-- ==========================================================
+local function configureBeachLighting()
+	Lighting.Technology = Enum.Technology.Future
+	Lighting.ClockTime = 13.6
+	Lighting.Brightness = 2.8
+	Lighting.ExposureCompensation = 0.05
+	Lighting.Ambient = Color3.fromRGB(105, 125, 150)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 170, 190)
+	Lighting.GeographicLatitude = 18
+	Lighting.ShadowSoftness = 0.45
+	Lighting.EnvironmentDiffuseScale = 0.4
+	Lighting.EnvironmentSpecularScale = 0.55
+	Lighting.ColorShift_Top = Color3.fromRGB(255, 247, 232)
+	Lighting.ColorShift_Bottom = Color3.fromRGB(225, 239, 250)
+
+	local function getEffect(className, name)
+		local effect = Lighting:FindFirstChild(name)
+		if effect and not effect:IsA(className) then
+			effect:Destroy()
+			effect = nil
+		end
+		if not effect then
+			effect = Instance.new(className)
+			effect.Name = name
+			effect.Parent = Lighting
+		end
+		return effect
+	end
+
+	local atmosphere = getEffect("Atmosphere", "BloxyBeachAtmosphere")
+	atmosphere.Color = Color3.fromRGB(199, 225, 255)
+	atmosphere.Decay = Color3.fromRGB(112, 151, 185)
+	atmosphere.Density = 0.22
+	atmosphere.Glare = 0.08
+	atmosphere.Haze = 1.15
+	atmosphere.Offset = 0.12
+
+	local colorCorrection = getEffect("ColorCorrectionEffect", "BloxyBeachColor")
+	colorCorrection.Brightness = 0.015
+	colorCorrection.Contrast = 0.055
+	colorCorrection.Saturation = 0.12
+	colorCorrection.TintColor = Color3.fromRGB(255, 248, 235)
+
+	local bloom = getEffect("BloomEffect", "BloxyBeachBloom")
+	bloom.Intensity = 0.1
+	bloom.Size = 22
+	bloom.Threshold = 1.25
+
+	local sunRays = getEffect("SunRaysEffect", "BloxyBeachSunRays")
+	sunRays.Intensity = 0.025
+	sunRays.Spread = 0.72
+
+	local terrain = Workspace:FindFirstChildOfClass("Terrain")
+	if terrain then
+		local clouds = terrain:FindFirstChildOfClass("Clouds")
+		if not clouds then
+			clouds = Instance.new("Clouds")
+			clouds.Name = "BloxyBeachClouds"
+			clouds.Parent = terrain
+		end
+		clouds.Cover = 0.32
+		clouds.Density = 0.28
+		clouds.Color = Color3.fromRGB(245, 249, 255)
+	end
+end
+
+local function buildOceanAndHorizon(course)
+	local waterColor = Color3.fromRGB(32, 142, 205)
+	-- Cuadrícula de piezas para evitar superar el tamaño máximo de una Part.
+	-- El agua queda bajo la isla y se extiende varios kilómetros alrededor.
+	for xIndex = -2, 2 do
+		for zIndex = -2, 2 do
+			local ocean = makePart(
+				course,
+				("OceanHorizon_%d_%d"):format(xIndex, zIndex),
+				Vector3.new(1800, 2, 1800),
+				CFrame.new(50 + xIndex * 1800, -0.85, zIndex * 1800),
+				waterColor,
+				Enum.Material.SmoothPlastic
+			)
+			ocean.CanCollide = false
+			ocean.CanTouch = false
+			ocean.CanQuery = false
+			ocean.CastShadow = false
+			ocean.Reflectance = 0.12
+		end
+	end
+
+	local distantIslands = {
+		{ x = -950, z = -800, width = 270, depth = 220, height = 72 },
+		{ x = -100, z = -1280, width = 330, depth = 235, height = 92 },
+		{ x = 850, z = -980, width = 300, depth = 235, height = 78 },
+		{ x = 1320, z = -100, width = 270, depth = 320, height = 100 },
+		{ x = 1020, z = 900, width = 350, depth = 270, height = 84 },
+		{ x = 100, z = 1320, width = 330, depth = 250, height = 94 },
+		{ x = -850, z = 1020, width = 310, depth = 250, height = 88 },
+		{ x = -1280, z = 100, width = 270, depth = 315, height = 78 },
+	}
+
+	local rockColor = Color3.fromRGB(105, 128, 119)
+	local rockShadow = Color3.fromRGB(83, 111, 105)
+	local islandGreen = Color3.fromRGB(75, 158, 91)
+	local islandGreenLight = Color3.fromRGB(104, 181, 105)
+	local waterY = 0.18
+
+	local function makeDistantPart(name, size, cframe, color, material, shape)
+		local part = makePart(course, name, size, cframe, color, material, shape)
+		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
+		part.CastShadow = false
+		return part
+	end
+
+	for index, island in ipairs(distantIslands) do
+		local x, z = island.x, island.z
+		local w, d, h = island.width, island.depth, island.height
+		local yaw = math.rad((index * 37) % 360)
+		local baseCF = CFrame.new(x, waterY + h * 0.27, z) * CFrame.Angles(0, yaw, 0)
+
+		makeDistantPart(
+			"DistantIslandRock_" .. index,
+			Vector3.new(w, h * 0.54, d),
+			baseCF,
+			rockColor,
+			Enum.Material.Slate
+		)
+		makeDistantPart(
+			"DistantIslandSlopeA_" .. index,
+			Vector3.new(w * 0.52, h * 0.7, d * 0.72),
+			baseCF * CFrame.new(-w * 0.22, h * 0.12, 0) * CFrame.Angles(0, math.rad(90), 0),
+			rockShadow,
+			Enum.Material.Slate,
+			"WedgePart"
+		)
+		makeDistantPart(
+			"DistantIslandSlopeB_" .. index,
+			Vector3.new(w * 0.48, h * 0.62, d * 0.7),
+			baseCF * CFrame.new(w * 0.23, h * 0.08, 0) * CFrame.Angles(0, math.rad(-90), 0),
+			rockColor,
+			Enum.Material.Slate,
+			"WedgePart"
+		)
+		makeDistantPart(
+			"DistantIslandGreenTop_" .. index,
+			Vector3.new(w * 0.78, 5, d * 0.76),
+			CFrame.new(x, waterY + h * 0.56, z) * CFrame.Angles(0, yaw, 0),
+			index % 2 == 0 and islandGreenLight or islandGreen,
+			Enum.Material.Grass
+		)
+
+		-- Palmeras pequeñas de silueta para dar escala sin competir con la pista.
+		if index == 2 or index == 5 or index == 7 then
+			local trunkHeight = h * 0.58
+			local trunkX = x + w * 0.08
+			local trunkZ = z - d * 0.06
+			local trunkTop = waterY + h * 0.56 + trunkHeight
+			makeDistantPart(
+				"DistantPalmTrunk_" .. index,
+				Vector3.new(2.8, trunkHeight, 2.8),
+				CFrame.new(trunkX, waterY + h * 0.56 + trunkHeight / 2, trunkZ),
+				Color3.fromRGB(124, 91, 57),
+				Enum.Material.Wood,
+				"Cylinder"
+			)
+			for leaf = 1, 4 do
+				local angle = math.rad((leaf - 1) * 90 + 25)
+				local leafCF = CFrame.new(trunkX, trunkTop, trunkZ)
+					* CFrame.Angles(0, angle, math.rad(8))
+					* CFrame.new(0, 0, -9)
+				makeDistantPart(
+					"DistantPalmLeaf_" .. index .. "_" .. leaf,
+					Vector3.new(16, 1.8, 5),
+					leafCF,
+					Color3.fromRGB(54, 139, 74),
+					Enum.Material.Grass,
+					"WedgePart"
+				)
+			end
+		end
+	end
+end
+
 -- ==========================================================
 -- 1. PISTA, ENTORNO Y CHECKPOINTS BEACH RESORT
 -- ==========================================================
@@ -129,11 +315,7 @@ local function buildTestCourse()
 	if mapBuilt then return end
 	mapBuilt = true
 
-	Lighting.ClockTime = 15.0
-	Lighting.Brightness = 2.4
-	Lighting.OutdoorAmbient = Color3.fromRGB(120, 140, 160)
-	Lighting.GeographicLatitude = 18
-	Lighting.ShadowSoftness = 0.2
+	configureBeachLighting()
 
 
 	local course = Workspace:FindFirstChild("KartTestCourse") or Instance.new("Folder")
@@ -169,8 +351,7 @@ local function buildTestCourse()
 	local sandFloor = makePart(course, "IslandSand", Vector3.new(650, 4, 650), CFrame.new(50, yGround - 2, 0), C_SAND, Enum.Material.Sand)
 	sandFloor.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 
-	makePart(course, "OceanShallow", Vector3.new(120, 4, 1800), CFrame.new(-200, yWaterShallow - 2, 0), C_WATER_SHALLOW, Enum.Material.Glass)
-	makePart(course, "OceanDeep", Vector3.new(1500, 4, 1800), CFrame.new(-1000, yWaterDeep - 2, 0), C_WATER_DEEP, Enum.Material.Glass)
+	buildOceanAndHorizon(course)
 	local foam = makePart(course, "ShoreFoam", Vector3.new(4, 0.05, 600), CFrame.new(-140, yWaterShallow + 0.02, 0), C_FOAM, Enum.Material.SmoothPlastic)
 	foam.CanCollide = false
 	foam.Transparency = 0.25
