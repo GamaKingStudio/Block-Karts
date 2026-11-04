@@ -795,6 +795,25 @@ local function buildTestCourse()
 						end
 
 						part.Color = color
+
+						-- Acabado por tipo de pieza: estructura metálica y paneles de pintura lisa.
+						-- No se reemplazan TextureID, SurfaceAppearance, Decals ni texturas importadas.
+						local isMetalFrame = string.find(partName, "frame")
+							or string.find(partName, "support")
+							or string.find(partName, "beam")
+							or string.find(partName, "post")
+							or string.find(partName, "leg")
+							or string.find(partName, "truss")
+							or string.find(partName, "pole")
+							or string.find(partName, "structure")
+
+						if isMetalFrame then
+							part.Material = Enum.Material.Metal
+							part.Reflectance = 0.1
+						else
+							part.Material = Enum.Material.SmoothPlastic
+							part.Reflectance = 0.025
+						end
 					end
 				end
 			end
