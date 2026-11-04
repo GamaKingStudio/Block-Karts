@@ -666,3 +666,10 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - La imagen de vista previa se amplió verticalmente de 64 a 94 píxeles, conservando su ancho, recorte y esquinas redondeadas.
 - No se modificaron los parámetros ni el comportamiento de las cámaras.
 - Cambio publicado en `src/StarterPlayer/KartControls.client.lua`; pendiente de validación visual en Roblox Studio.
+
+### Corrección de orientación del arco de meta (3 de noviembre de 2026)
+
+- El usuario detectó que el arco importado miraba hacia el sentido contrario.
+- Se cambió la rotación aplicada al modelo de 90° a 270° sobre su eje Y local, manteniendo el vano transversal a la pista y dando media vuelta a su frente.
+- No se alteraron asset ID, escala, posición, altura ni propiedades físicas del modelo.
+- Cambio publicado en `src/ServerScriptService/KartService.lua`; pendiente de validación visual en Roblox Studio.
