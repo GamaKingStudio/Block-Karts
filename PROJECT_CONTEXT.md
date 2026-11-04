@@ -691,3 +691,12 @@ Esta sección resume el estado actual para evitar que futuras iteraciones repita
 - Se conservan los ajustes de iluminación que sí son modificables por script, la atmósfera, los efectos, las nubes, el océano y las islas.
 - No se modifican cámaras, pista, pianos, guardarraíles, arco de meta, checkpoints ni física/controles de karts.
 - Estado: corrección publicada en `recovery/stable-handling`; requiere actualizar y comprobar en Roblox Studio. No se ha ejecutado una prueba de runtime desde este entorno.
+
+### Acabado deportivo del arco y nubes de competición (4 de noviembre de 2026)
+
+- Se conserva el asset original del arco de meta (`132205617373322`), sin reemplazarlo ni alterar su geometría, escala, orientación o posición.
+- Al clon cargado se aplica una paleta deportiva blanca con acentos rojos y azules. La selección utiliza nombres descriptivos de piezas cuando están disponibles y, como respaldo, la posición relativa de cada pieza dentro del bounding box.
+- El recoloreado modifica únicamente `BasePart.Color`; no sobrescribe `MeshPart.TextureID`, `SurfaceAppearance`, decals ni texturas originales.
+- Se aumentó la cobertura y densidad de `Terrain.Clouds` para conseguir nubes volumétricas más visibles sobre el cielo existente. No se añadió un skybox externo ni se modificaron el océano, las islas o la atmósfera.
+- No se modificaron cámaras, trazado de pista, pianos, guardarraíles, checkpoints ni físicas.
+- Revisión estática pendiente de prueba visual en Roblox Studio para confirmar cómo responde el modelo importado a la paleta y ajustar los acentos si sus piezas no están separadas.
