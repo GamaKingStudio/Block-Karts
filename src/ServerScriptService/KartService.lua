@@ -583,9 +583,9 @@ local function buildTestCourse()
 			finishStructure.Name = "ImportedFinishStructure"
 			finishStructure.Parent = course
 
-			-- El modelo fue publicado con su frente girado respecto al eje transversal de la pista.
-			-- Girarlo 90 grados en Y para que el vano cruce la pista y no quede tendido sobre el asfalto.
-			finishStructure:PivotTo(finishStructure:GetPivot() * CFrame.Angles(0, math.rad(90), 0))
+			-- Se conserva el giro de 90 grados que orienta el vano transversalmente
+			-- y se añade media vuelta para que el frente mire hacia el sentido correcto.
+			finishStructure:PivotTo(finishStructure:GetPivot() * CFrame.Angles(0, math.rad(270), 0))
 
 			local _, initialBounds = finishStructure:GetBoundingBox()
 			local horizontalSpan = math.max(initialBounds.X, initialBounds.Z)
