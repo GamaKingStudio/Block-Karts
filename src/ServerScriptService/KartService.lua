@@ -1655,7 +1655,13 @@ local function createKart(player, spawnIndex)
 		local scaledBoundsCFrame = importedKart:GetBoundingBox()
 		local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
 		local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
-		importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
+		-- El modelo importado tiene su frente girado 90 grados respecto al eje del kart.
+		local modelForwardCorrection = CFrame.Angles(0, math.rad(90), 0)
+		importedKart:PivotTo(targetBoundsCFrame * modelForwardCorrection * pivotOffset)
+
+		-- El chasis físico sigue controlando el kart, pero queda invisible bajo la carrocería.
+		chassis.Transparency = 1
+		chassis.CastShadow = false
 
 		-- Oculta únicamente las piezas visuales antiguas; la base física permanece intacta.
 		for _, oldPart in ipairs(model:GetChildren()) do
