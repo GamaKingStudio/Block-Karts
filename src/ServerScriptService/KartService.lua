@@ -1660,9 +1660,13 @@ local function createKart(player, spawnIndex)
 			assert(initialBounds.X > 0 and initialBounds.Y > 0 and initialBounds.Z > 0, "El modelo tiene dimensiones inválidas")
 
 			local targetWidth, targetLength, targetHeight = 8.0, 10.0, 4.8
+			-- El modelo se gira 90 grados en Y más abajo. Por eso, sus ejes
+			-- X/Z originales intercambian ancho y largo al quedar montado.
+			-- Calcular la escala con los ejes ya corregidos evita comprimir
+			-- el kart en el sentido equivocado y que la carrocería tape ruedas.
 			local scale = math.min(
-				targetWidth / initialBounds.X,
-				targetLength / initialBounds.Z,
+				targetWidth / initialBounds.Z,
+				targetLength / initialBounds.X,
 				targetHeight / initialBounds.Y
 			)
 			assert(scale > 0 and scale < 20, "La escala calculada no es válida")
