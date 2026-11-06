@@ -747,7 +747,7 @@ local function buildTestCourse()
 	-- Arco de meta: el asset completo del usuario reemplaza los postes y el banner procedural.
 	local gantryX = 0
 	local spanWidth = trackWidth + 6
-	local FINISH_STRUCTURE_ASSET_ID = 132205617373322
+	local FINISH_STRUCTURE_ASSET_ID = 86635101465127
 	local finishAssetOk, finishAssetOrError = pcall(function()
 		return InsertService:LoadAsset(FINISH_STRUCTURE_ASSET_ID)
 	end)
