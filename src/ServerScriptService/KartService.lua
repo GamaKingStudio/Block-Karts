@@ -1625,110 +1625,124 @@ local function createKart(player, spawnIndex)
 		visual("Rim_" .. w.name, Vector3.new(0.08, w.diam * 0.58, w.diam * 0.58), CFrame.new(rimOffset), C_RIM, Enum.Material.Metal, "Cylinder")
 	end
 
-	-- Reemplaza la carrocería procedural por el kart modelado del usuario.
-	-- El Chassis, VehicleSeat y fuerzas originales se conservan para no alterar la conducción.
+	-- Carga el kart original del usuario. El kart procedural solo se oculta
+	-- después de comprobar que el modelo importado quedó montado correctamente.
 	local CUSTOM_KART_ASSET_ID = 122554188649486
-	-- Recuperación temporal: mantener visible el kart procedural mientras
-	-- verificamos el asset importado. Evita ocultar la carrocería de respaldo.
-	local USE_CUSTOM_KART_MODEL = false
-	local customKartOk, customKartAsset = false, nil
-	if USE_CUSTOM_KART_MODEL then
-		customKartOk, customKartAsset = pcall(function()
-			return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
-		end)
-	end
-	local customKartModel = nil
-	local kartWheelMotors = {}
-	if customKartOk and customKartAsset then
-		customKartModel = customKartAsset:IsA("Model") and customKartAsset
-			or customKartAsset:FindFirstChildWhichIsA("Model", true)
-	end
+	local customKartAsset = nil
+	local importedKart = nil
+	local importedParts = 0
+	local customKartError = nil
+	local kartWheelMotors = wheelMotors
 
-	if customKartModel then
-		local importedKart = customKartModel:Clone()
-		importedKart.Name = "CustomKartBody"
-		local boundsCFrame, boundsSize = importedKart:GetBoundingBox()
-		local targetWidth, targetLength, targetHeight = 8.0, 10.0, 4.8
-		local scale = math.min(
-			targetWidth / math.max(boundsSize.X, 0.01),
-			targetLength / math.max(boundsSize.Z, 0.01),
-			targetHeight / math.max(boundsSize.Y, 0.01)
-		)
-		if scale > 0 and scale < 20 then
+	local loadOk, loadResult = pcall(function()
+		return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
+	end)
+
+	if loadOk and loadResult then
+		customKartAsset = loadResult
+		local setupOk, setupError = pcall(function()
+			local sourceModel = customKartAsset:IsA("Model") and customKartAsset
+				or customKartAsset:FindFirstChildWhichIsA("Model", true)
+			assert(sourceModel, "El asset no contiene un Model")
+
+			importedKart = sourceModel:Clone()
+			importedKart.Name = "CustomKartBody"
+
+			local initialParts = {}
+			for _, descendant in ipairs(importedKart:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					table.insert(initialParts, descendant)
+				end
+			end
+			assert(#initialParts > 0, "El modelo importado no contiene piezas BasePart")
+
+			local _, initialBounds = importedKart:GetBoundingBox()
+			assert(initialBounds.X > 0 and initialBounds.Y > 0 and initialBounds.Z > 0, "El modelo tiene dimensiones inválidas")
+
+			local targetWidth, targetLength, targetHeight = 8.0, 10.0, 4.8
+			local scale = math.min(
+				targetWidth / initialBounds.X,
+				targetLength / initialBounds.Z,
+				targetHeight / initialBounds.Y
+			)
+			assert(scale > 0 and scale < 20, "La escala calculada no es válida")
 			importedKart:ScaleTo(importedKart:GetScale() * scale)
-		end
 
-		-- Alinea el centro del modelo sobre el chasis y conserva la orientación del asset.
-		local scaledBoundsCFrame = importedKart:GetBoundingBox()
-		local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
-		local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
-		-- El modelo importado tiene su frente girado 90 grados respecto al eje del kart.
-		local modelForwardCorrection = CFrame.Angles(0, math.rad(-90), 0)
-		importedKart:PivotTo(targetBoundsCFrame * modelForwardCorrection * pivotOffset)
+			local scaledBoundsCFrame = importedKart:GetBoundingBox()
+			local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
+			local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
+			local modelForwardCorrection = CFrame.Angles(0, math.rad(-90), 0)
+			importedKart:PivotTo(targetBoundsCFrame * modelForwardCorrection * pivotOffset)
 
-		-- El chasis físico sigue controlando el kart, pero queda invisible bajo la carrocería.
-		chassis.Transparency = 1
-		chassis.CastShadow = false
+			importedKart.Parent = model
+			for _, part in ipairs(importedKart:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.Anchored = false
+					part.Massless = true
+					part.CanCollide = false
+					part.CanTouch = false
+					part.CanQuery = false
 
-		-- Oculta únicamente las piezas visuales antiguas; la base física permanece intacta.
-		for _, oldPart in ipairs(model:GetChildren()) do
-			if oldPart:IsA("BasePart") and oldPart ~= chassis and oldPart ~= seat then
-				oldPart.Transparency = 1
-				oldPart.CanCollide = false
-				oldPart.CanTouch = false
-				oldPart.CanQuery = false
+					local weld = Instance.new("WeldConstraint")
+					weld.Name = "CustomKartPartWeld"
+					weld.Part0 = chassis
+					weld.Part1 = part
+					weld.Parent = chassis
+					importedParts += 1
+				end
 			end
-		end
+			assert(importedParts > 0, "No se pudo unir ninguna pieza al chasis")
 
-		importedKart.Parent = model
-		local importedParts = 0
-		-- Conserva cada pieza del modelo importado en su posición original.
-		-- No se animan ruedas individuales: algunos modelos tienen ruedas compuestas
-		-- por varias piezas y un Motor6D por nombre separaba visualmente sus componentes.
-		for _, part in ipairs(importedKart:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.Anchored = false
-				part.Massless = true
-				part.CanCollide = false
-				part.CanTouch = false
-				part.CanQuery = false
+			-- Solo ahora se oculta el respaldo procedural.
+			chassis.Transparency = 1
+			chassis.CastShadow = false
+			for _, oldPart in ipairs(model:GetChildren()) do
+				if oldPart:IsA("BasePart") and oldPart ~= chassis and oldPart ~= seat then
+					oldPart.Transparency = 1
+					oldPart.CanCollide = false
+					oldPart.CanTouch = false
+					oldPart.CanQuery = false
+				end
+			end
 
+			-- Anclajes invisibles para conservar el humo de derrape trasero.
+			for _, wheel in ipairs({
+				{ name = "Wheel_RearL", offset = Vector3.new(-1.65, -0.15, 2.0) },
+				{ name = "Wheel_RearR", offset = Vector3.new(1.65, -0.15, 2.0) },
+			}) do
+				local marker = Instance.new("Part")
+				marker.Name = wheel.name
+				marker.Size = Vector3.new(0.2, 0.2, 0.2)
+				marker.Transparency = 1
+				marker.CanCollide = false
+				marker.CanTouch = false
+				marker.CanQuery = false
+				marker.Massless = true
+				marker.CFrame = chassis.CFrame * CFrame.new(wheel.offset)
+				marker.Parent = model
 				local weld = Instance.new("WeldConstraint")
-				weld.Name = "CustomKartPartWeld"
 				weld.Part0 = chassis
-				weld.Part1 = part
+				weld.Part1 = marker
 				weld.Parent = chassis
-				importedParts += 1
 			end
-		end
+		end)
 
-		-- Puntos invisibles para conservar el humo de derrape en las ruedas traseras.
-		for _, wheel in ipairs({
-			{ name = "Wheel_RearL", offset = Vector3.new(-1.65, -0.15, 2.0) },
-			{ name = "Wheel_RearR", offset = Vector3.new(1.65, -0.15, 2.0) },
-		}) do
-			local marker = Instance.new("Part")
-			marker.Name = wheel.name
-			marker.Size = Vector3.new(0.2, 0.2, 0.2)
-			marker.Transparency = 1
-			marker.CanCollide = false
-			marker.CanTouch = false
-			marker.CanQuery = false
-			marker.Massless = true
-			marker.CFrame = chassis.CFrame * CFrame.new(wheel.offset)
-			marker.Parent = model
-			local weld = Instance.new("WeldConstraint")
-			weld.Part0 = chassis
-			weld.Part1 = marker
-			weld.Parent = chassis
+		if not setupOk then
+			customKartError = setupError
+			if importedKart then importedKart:Destroy() end
+			importedKart = nil
+			importedParts = 0
+			warn(("[BLOXY-KART][SERVER][CUSTOM-KART-SETUP-FAILED] asset=%d error=%s"):format(CUSTOM_KART_ASSET_ID, tostring(setupError)))
 		end
-
-		kartWheelMotors = wheelMotors
-		print(("[BLOXY-KART][SERVER][CUSTOM-KART-LOADED] asset=%d parts=%d wheels=%d scale=%.3f"):format(CUSTOM_KART_ASSET_ID, importedParts, #wheelMotors, scale))
 	else
-		warn(("[BLOXY-KART][SERVER][CUSTOM-KART-LOAD-FAILED] asset=%d error=%s"):format(
-			CUSTOM_KART_ASSET_ID, tostring(customKartAsset)
-		))
+		customKartError = loadResult
+		warn(("[BLOXY-KART][SERVER][CUSTOM-KART-LOAD-FAILED] asset=%d error=%s"):format(CUSTOM_KART_ASSET_ID, tostring(loadResult)))
+	end
+
+	if importedKart and importedParts > 0 then
+		print(("[BLOXY-KART][SERVER][CUSTOM-KART-LOADED] asset=%d parts=%d"):format(CUSTOM_KART_ASSET_ID, importedParts))
+	else
+		warn(("[BLOXY-KART][SERVER][PROCEDURAL-FALLBACK] asset=%d reason=%s"):format(CUSTOM_KART_ASSET_ID, tostring(customKartError or "modelo no válido")))
 	end
 	if customKartAsset then customKartAsset:Destroy() end
 
