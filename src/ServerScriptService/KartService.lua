@@ -1625,6 +1625,94 @@ local function createKart(player, spawnIndex)
 		visual("Rim_" .. w.name, Vector3.new(0.08, w.diam * 0.58, w.diam * 0.58), CFrame.new(rimOffset), C_RIM, Enum.Material.Metal, "Cylinder")
 	end
 
+	-- Reemplaza la carrocería procedural por el kart modelado del usuario.
+	-- El Chassis, VehicleSeat y fuerzas originales se conservan para no alterar la conducción.
+	local CUSTOM_KART_ASSET_ID = 122554188649486
+	local customKartOk, customKartAsset = pcall(function()
+		return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
+	end)
+	local customKartModel = nil
+	if customKartOk and customKartAsset then
+		customKartModel = customKartAsset:IsA("Model") and customKartAsset
+			or customKartAsset:FindFirstChildWhichIsA("Model", true)
+	end
+
+	if customKartModel then
+		local importedKart = customKartModel:Clone()
+		importedKart.Name = "CustomKartBody"
+		local boundsCFrame, boundsSize = importedKart:GetBoundingBox()
+		local targetWidth, targetLength, targetHeight = 5.8, 7.5, 3.8
+		local scale = math.min(
+			targetWidth / math.max(boundsSize.X, 0.01),
+			targetLength / math.max(boundsSize.Z, 0.01),
+			targetHeight / math.max(boundsSize.Y, 0.01)
+		)
+		if scale > 0 and scale < 20 then
+			importedKart:ScaleTo(importedKart:GetScale() * scale)
+		end
+
+		-- Alinea el centro del modelo sobre el chasis y conserva la orientación del asset.
+		local scaledBoundsCFrame = importedKart:GetBoundingBox()
+		local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
+		local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
+		importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
+
+		-- Oculta únicamente las piezas visuales antiguas; la base física permanece intacta.
+		for _, oldPart in ipairs(model:GetChildren()) do
+			if oldPart:IsA("BasePart") and oldPart ~= chassis and oldPart ~= seat then
+				oldPart.Transparency = 1
+				oldPart.CanCollide = false
+				oldPart.CanTouch = false
+				oldPart.CanQuery = false
+			end
+		end
+
+		importedKart.Parent = model
+		local importedParts = 0
+		for _, part in ipairs(importedKart:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.Anchored = false
+				part.Massless = true
+				part.CanCollide = false
+				part.CanTouch = false
+				part.CanQuery = false
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = chassis
+				weld.Part1 = part
+				weld.Parent = chassis
+				importedParts += 1
+			end
+		end
+
+		-- Puntos invisibles para conservar el humo de derrape en las ruedas traseras.
+		for _, wheel in ipairs({
+			{ name = "Wheel_RearL", offset = Vector3.new(-1.65, -0.15, 2.0) },
+			{ name = "Wheel_RearR", offset = Vector3.new(1.65, -0.15, 2.0) },
+		}) do
+			local marker = Instance.new("Part")
+			marker.Name = wheel.name
+			marker.Size = Vector3.new(0.2, 0.2, 0.2)
+			marker.Transparency = 1
+			marker.CanCollide = false
+			marker.CanTouch = false
+			marker.CanQuery = false
+			marker.Massless = true
+			marker.CFrame = chassis.CFrame * CFrame.new(wheel.offset)
+			marker.Parent = model
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = chassis
+			weld.Part1 = marker
+			weld.Parent = chassis
+		end
+
+		print(("[BLOXY-KART][SERVER][CUSTOM-KART-LOADED] asset=%d parts=%d scale=%.3f"):format(CUSTOM_KART_ASSET_ID, importedParts, scale))
+	else
+		warn(("[BLOXY-KART][SERVER][CUSTOM-KART-LOAD-FAILED] asset=%d error=%s"):format(
+			CUSTOM_KART_ASSET_ID, tostring(customKartAsset)
+		))
+	end
+	if customKartAsset then customKartAsset:Destroy() end
+
 	local attachment = Instance.new("Attachment")
 	attachment.Name = "DriveForceAttachment"
 	attachment.Parent = chassis
