@@ -133,7 +133,7 @@ local function configureBeachLighting()
 	Lighting.Ambient = Color3.fromRGB(105, 125, 150)
 	Lighting.OutdoorAmbient = Color3.fromRGB(150, 170, 190)
 	Lighting.GeographicLatitude = 18
-	Lighting.ShadowSoftness = 0.45
+	Lighting.ShadowSoftness = 0.7
 	Lighting.EnvironmentDiffuseScale = 0.4
 	Lighting.EnvironmentSpecularScale = 0.55
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 247, 232)
@@ -394,8 +394,8 @@ local function buildTestCourse()
 		lantern.CanCollide = false
 		local light = Instance.new("PointLight")
 		light.Color = Color3.fromRGB(255, 200, 110)
-		light.Range = 14
-		light.Brightness = 1.4
+		light.Range = 28
+		light.Brightness = 0.65
 		light.Parent = lantern
 	end
 
@@ -959,8 +959,8 @@ local function buildTestCourse()
 		local light = Instance.new("PointLight")
 		light.Name = "TorchGlow"
 		light.Color = Color3.fromRGB(255, 164, 72)
-		light.Range = 24
-		light.Brightness = 2.4
+		light.Range = 36
+		light.Brightness = 1.15
 		light.Shadows = true
 		light.Parent = flameAnchor
 	end
