@@ -1568,7 +1568,7 @@ local function createKart(player, spawnIndex)
 	local seat = Instance.new("VehicleSeat")
 	seat.Name = "DriverSeat"
 	seat.Size = Vector3.new(1.8, 0.4, 1.6)
-	seat.CFrame = spawnCFrame * CFrame.new(0, 0.75, 0.25)
+	seat.CFrame = spawnCFrame * CFrame.new(0, 1.05, 0.25)
 	seat.Transparency = 1
 	seat.Anchored = false
 	seat.CanCollide = false
@@ -1641,7 +1641,7 @@ local function createKart(player, spawnIndex)
 		local importedKart = customKartModel:Clone()
 		importedKart.Name = "CustomKartBody"
 		local boundsCFrame, boundsSize = importedKart:GetBoundingBox()
-		local targetWidth, targetLength, targetHeight = 5.8, 7.5, 3.8
+		local targetWidth, targetLength, targetHeight = 8.0, 10.0, 4.8
 		local scale = math.min(
 			targetWidth / math.max(boundsSize.X, 0.01),
 			targetLength / math.max(boundsSize.Z, 0.01),
@@ -1656,7 +1656,7 @@ local function createKart(player, spawnIndex)
 		local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
 		local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
 		-- El modelo importado tiene su frente girado 90 grados respecto al eje del kart.
-		local modelForwardCorrection = CFrame.Angles(0, math.rad(90), 0)
+		local modelForwardCorrection = CFrame.Angles(0, math.rad(-90), 0)
 		importedKart:PivotTo(targetBoundsCFrame * modelForwardCorrection * pivotOffset)
 
 		-- El chasis físico sigue controlando el kart, pero queda invisible bajo la carrocería.
@@ -1675,6 +1675,7 @@ local function createKart(player, spawnIndex)
 
 		importedKart.Parent = model
 		local importedParts = 0
+		local wheelMotors = {}
 		for _, part in ipairs(importedKart:GetDescendants()) do
 			if part:IsA("BasePart") then
 				part.Anchored = false
@@ -1682,10 +1683,27 @@ local function createKart(player, spawnIndex)
 				part.CanCollide = false
 				part.CanTouch = false
 				part.CanQuery = false
-				local weld = Instance.new("WeldConstraint")
-				weld.Part0 = chassis
-				weld.Part1 = part
-				weld.Parent = chassis
+				local lowerName = string.lower(part.Name)
+				local isWheel = string.find(lowerName, "wheel", 1, true)
+					or string.find(lowerName, "rueda", 1, true)
+					or string.find(lowerName, "tire", 1, true)
+					or string.find(lowerName, "tyre", 1, true)
+					or string.find(lowerName, "llanta", 1, true)
+				if isWheel then
+					local motor = Instance.new("Motor6D")
+					motor.Name = "WheelSpin_" .. part.Name
+					motor.Part0 = chassis
+					motor.Part1 = part
+					motor.C0 = chassis.CFrame:ToObjectSpace(part.CFrame)
+					motor.C1 = CFrame.new()
+					motor.Parent = chassis
+					table.insert(wheelMotors, { motor = motor, radius = math.max(part.Size.Y, part.Size.Z) * 0.5, angle = 0 })
+				else
+					local weld = Instance.new("WeldConstraint")
+					weld.Part0 = chassis
+					weld.Part1 = part
+					weld.Parent = chassis
+				end
 				importedParts += 1
 			end
 		end
@@ -1711,7 +1729,8 @@ local function createKart(player, spawnIndex)
 			weld.Parent = chassis
 		end
 
-		print(("[BLOXY-KART][SERVER][CUSTOM-KART-LOADED] asset=%d parts=%d scale=%.3f"):format(CUSTOM_KART_ASSET_ID, importedParts, scale))
+		kartWheelMotors = wheelMotors
+		print(("[BLOXY-KART][SERVER][CUSTOM-KART-LOADED] asset=%d parts=%d wheels=%d scale=%.3f"):format(CUSTOM_KART_ASSET_ID, importedParts, #wheelMotors, scale))
 	else
 		warn(("[BLOXY-KART][SERVER][CUSTOM-KART-LOAD-FAILED] asset=%d error=%s"):format(
 			CUSTOM_KART_ASSET_ID, tostring(customKartAsset)
@@ -1755,6 +1774,7 @@ local function createKart(player, spawnIndex)
 		driveForce = driveForce,
 		spawnCFrame = spawnCFrame,
 		networkOwner = "auto",
+		wheelMotors = kartWheelMotors or {},
 		nextDiagnosticAt = 0,
 		lastDiagnosticPosition = spawnCFrame.Position,
 	}
@@ -1984,6 +2004,13 @@ RunService.Heartbeat:Connect(function()
 		local steering = isAuthorizedDriver and input and input.steering or 0
 		local chassis = kart.chassis
 		local velocity = chassis.AssemblyLinearVelocity
+		local forwardSpeed = velocity:Dot(chassis.CFrame.LookVector)
+		for _, wheelData in ipairs(kart.wheelMotors or {}) do
+			if wheelData.motor and wheelData.motor.Parent then
+				wheelData.angle = wheelData.angle + (forwardSpeed / math.max(wheelData.radius, 0.2)) * (1 / 60)
+				wheelData.motor.Transform = CFrame.Angles(wheelData.angle, 0, 0)
+			end
+		end
 		if not isAuthorizedDriver and input and (input.throttle ~= 0 or input.steering ~= 0 or input.braking) then
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 		end
