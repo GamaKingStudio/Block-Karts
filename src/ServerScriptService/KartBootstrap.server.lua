@@ -41,16 +41,16 @@ task.spawn(function()
     end
 
     local ok, err = pcall(function()
-        -- Use both legacy MeshPart texture and modern SurfaceAppearance.
-        banner.TextureID = textureId
+        -- Use only the legacy MeshPart texture. SurfaceAppearance can override TextureID.
         local surface = banner:FindFirstChildOfClass("SurfaceAppearance")
-        if not surface then
-            surface = Instance.new("SurfaceAppearance")
-            surface.Name = "BannerSurfaceAppearance"
-            surface.Parent = banner
+        if surface then
+            surface:Destroy()
         end
-        surface.ColorMap = textureId
-        surface.AlphaMode = Enum.AlphaMode.Overlay
+
+        banner.Color = Color3.fromRGB(255, 255, 255)
+        banner.Material = Enum.Material.SmoothPlastic
+        banner.Reflectance = 0
+        banner.TextureID = textureId
     end)
 
     if not ok then
@@ -58,10 +58,10 @@ task.spawn(function()
         return
     end
 
-    local surface = banner:FindFirstChildOfClass("SurfaceAppearance")
     print("[META][BOOTSTRAP] Texture assignment readback | TextureID=" .. banner.TextureID
-        .. " | SurfaceAppearance=" .. tostring(surface ~= nil)
-        .. " | ColorMap=" .. (surface and surface.ColorMap or "none"))
+        .. " | Color=" .. tostring(banner.Color)
+        .. " | Material=" .. banner.Material.Name
+        .. " | SurfaceAppearance=" .. tostring(banner:FindFirstChildOfClass("SurfaceAppearance") ~= nil))
 end)
 
 require(script.Parent:WaitForChild("KartService"))
