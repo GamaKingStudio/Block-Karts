@@ -1632,6 +1632,7 @@ local function createKart(player, spawnIndex)
 		return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
 	end)
 	local customKartModel = nil
+	local kartWheelMotors = {}
 	if customKartOk and customKartAsset then
 		customKartModel = customKartAsset:IsA("Model") and customKartAsset
 			or customKartAsset:FindFirstChildWhichIsA("Model", true)
@@ -1993,7 +1994,7 @@ remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
 	}
 end)
 
-RunService.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function(deltaTime)
 	for player, kart in pairs(activeKarts) do
 		if not kart.chassis.Parent then continue end
 		local seat = kart.seat
@@ -2007,7 +2008,7 @@ RunService.Heartbeat:Connect(function()
 		local forwardSpeed = velocity:Dot(chassis.CFrame.LookVector)
 		for _, wheelData in ipairs(kart.wheelMotors or {}) do
 			if wheelData.motor and wheelData.motor.Parent then
-				wheelData.angle = wheelData.angle + (forwardSpeed / math.max(wheelData.radius, 0.2)) * (1 / 60)
+				wheelData.angle = wheelData.angle + (forwardSpeed / math.max(wheelData.radius, 0.2)) * deltaTime
 				wheelData.motor.Transform = CFrame.Angles(wheelData.angle, 0, 0)
 			end
 		end
