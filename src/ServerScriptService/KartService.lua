@@ -1676,7 +1676,9 @@ local function createKart(player, spawnIndex)
 
 		importedKart.Parent = model
 		local importedParts = 0
-		local wheelMotors = {}
+		-- Conserva cada pieza del modelo importado en su posición original.
+		-- No se animan ruedas individuales: algunos modelos tienen ruedas compuestas
+		-- por varias piezas y un Motor6D por nombre separaba visualmente sus componentes.
 		for _, part in ipairs(importedKart:GetDescendants()) do
 			if part:IsA("BasePart") then
 				part.Anchored = false
@@ -1684,27 +1686,12 @@ local function createKart(player, spawnIndex)
 				part.CanCollide = false
 				part.CanTouch = false
 				part.CanQuery = false
-				local lowerName = string.lower(part.Name)
-				local isWheel = string.find(lowerName, "wheel", 1, true)
-					or string.find(lowerName, "rueda", 1, true)
-					or string.find(lowerName, "tire", 1, true)
-					or string.find(lowerName, "tyre", 1, true)
-					or string.find(lowerName, "llanta", 1, true)
-				if isWheel then
-					local motor = Instance.new("Motor6D")
-					motor.Name = "WheelSpin_" .. part.Name
-					motor.Part0 = chassis
-					motor.Part1 = part
-					motor.C0 = chassis.CFrame:ToObjectSpace(part.CFrame)
-					motor.C1 = CFrame.new()
-					motor.Parent = chassis
-					table.insert(wheelMotors, { motor = motor, radius = math.max(part.Size.Y, part.Size.Z) * 0.5, angle = 0 })
-				else
-					local weld = Instance.new("WeldConstraint")
-					weld.Part0 = chassis
-					weld.Part1 = part
-					weld.Parent = chassis
-				end
+
+				local weld = Instance.new("WeldConstraint")
+				weld.Name = "CustomKartPartWeld"
+				weld.Part0 = chassis
+				weld.Part1 = part
+				weld.Parent = chassis
 				importedParts += 1
 			end
 		end
@@ -2006,12 +1993,6 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		local chassis = kart.chassis
 		local velocity = chassis.AssemblyLinearVelocity
 		local forwardSpeed = velocity:Dot(chassis.CFrame.LookVector)
-		for _, wheelData in ipairs(kart.wheelMotors or {}) do
-			if wheelData.motor and wheelData.motor.Parent then
-				wheelData.angle = wheelData.angle + (forwardSpeed / math.max(wheelData.radius, 0.2)) * deltaTime
-				wheelData.motor.Transform = CFrame.Angles(wheelData.angle, 0, 0)
-			end
-		end
 		if not isAuthorizedDriver and input and (input.throttle ~= 0 or input.steering ~= 0 or input.braking) then
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 		end
