@@ -1642,7 +1642,7 @@ local function createKart(player, spawnIndex)
 		local importedKart = customKartModel:Clone()
 		importedKart.Name = "CustomKartBody"
 		local boundsCFrame, boundsSize = importedKart:GetBoundingBox()
-		local targetWidth, targetLength, targetHeight = 5.8, 7.5, 3.8
+		local targetWidth, targetLength, targetHeight = 8.0, 10.0, 4.8
 		local scale = math.min(
 			targetWidth / math.max(boundsSize.X, 0.01),
 			targetLength / math.max(boundsSize.Z, 0.01),
@@ -1657,7 +1657,7 @@ local function createKart(player, spawnIndex)
 		local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
 		local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
 		-- El modelo importado tiene su frente girado 90 grados respecto al eje del kart.
-		local modelForwardCorrection = CFrame.Angles(0, math.rad(90), 0)
+		local modelForwardCorrection = CFrame.Angles(0, math.rad(-90), 0)
 		importedKart:PivotTo(targetBoundsCFrame * modelForwardCorrection * pivotOffset)
 
 		-- El chasis físico sigue controlando el kart, pero queda invisible bajo la carrocería.
