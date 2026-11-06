@@ -1628,9 +1628,15 @@ local function createKart(player, spawnIndex)
 	-- Reemplaza la carrocería procedural por el kart modelado del usuario.
 	-- El Chassis, VehicleSeat y fuerzas originales se conservan para no alterar la conducción.
 	local CUSTOM_KART_ASSET_ID = 122554188649486
-	local customKartOk, customKartAsset = pcall(function()
-		return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
-	end)
+	-- Recuperación temporal: mantener visible el kart procedural mientras
+	-- verificamos el asset importado. Evita ocultar la carrocería de respaldo.
+	local USE_CUSTOM_KART_MODEL = false
+	local customKartOk, customKartAsset = false, nil
+	if USE_CUSTOM_KART_MODEL then
+		customKartOk, customKartAsset = pcall(function()
+			return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
+		end)
+	end
 	local customKartModel = nil
 	local kartWheelMotors = {}
 	if customKartOk and customKartAsset then
