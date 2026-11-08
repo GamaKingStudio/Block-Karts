@@ -1720,6 +1720,22 @@ local function createKart(player, spawnIndex)
 				end
 			end
 
+			-- Las ruedas del lado -X deben mirar hacia fuera, igual que las del lado +X.
+			-- El modelo importado trae las cuatro con el mismo sentido lateral.
+			for _, wheelPart in ipairs(importedKart:GetDescendants()) do
+				if wheelPart:IsA("BasePart") and (
+					wheelPart.Name == "Rueda_Delantera_Der"
+					or wheelPart.Name == "Rueda_Delantera_Izq"
+					or wheelPart.Name == "Rueda_Trasera_Der"
+					or wheelPart.Name == "Rueda_Trasera_Izq"
+				) then
+					local wheelLocalPosition = chassis.CFrame:PointToObjectSpace(wheelPart.Position)
+					if wheelLocalPosition.X < 0 then
+						wheelPart.CFrame = wheelPart.CFrame * CFrame.Angles(0, math.rad(180), 0)
+					end
+				end
+			end
+
 			importedKart.Parent = model
 			for _, part in ipairs(importedKart:GetDescendants()) do
 				if part:IsA("BasePart") then
