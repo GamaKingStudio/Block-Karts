@@ -368,7 +368,7 @@ raceCountdownRemote.OnClientEvent:Connect(function(count)
  local gui=player:FindFirstChild("PlayerGui"); if not gui then return end
  if count>0 then
   local screen=gui:FindFirstChild("BLOXYRaceCountdown") or Instance.new("ScreenGui"); screen.Name="BLOXYRaceCountdown"; screen.Parent=gui
-  local label=screen:FindFirstChild("Count") or Instance.new("TextLabel"); label.Name="Count"; label.AnchorPoint=Vector2.new(.5,.5); label.Position=UDim2.fromScale(.5,.38); label.Size=UDim2.fromOffset(180,120); label.BackgroundTransparency=1; label.TextColor3=Color3.new(1,1,1); label.Font=typography.getFont("Title"); label.TextScaled=true; label.Text=tostring(count); label.Parent=screen
+  local label=screen:FindFirstChild("Count") or Instance.new("TextLabel"); label.Name="Count"; label.AnchorPoint=Vector2.new(.5,.5); label.Position=UDim2.fromScale(.5,.38); label.Size=UDim2.fromOffset(180,120); label.BackgroundTransparency=1; label.TextColor3=Color3.new(1,1,1); label.FontFace=typography.getFont("Title"); label.TextScaled=true; label.Text=tostring(count); label.Parent=screen
  else local screen=gui:FindFirstChild("BLOXYRaceCountdown"); if screen then screen:Destroy() end end
 end)
 local function formatVector(vector)
