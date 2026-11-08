@@ -494,6 +494,87 @@ local function logSeatedAvatar(humanoid, seat)
 	))
 end
 
+-- Controles táctiles para Roblox Player en móviles.
+local mobileControlsGui
+local mobileControlButtons = {}
+
+local function createMobileControls()
+	if not UserInputService.TouchEnabled then return end
+	local playerGui = player:WaitForChild("PlayerGui")
+	local oldGui = playerGui:FindFirstChild("BLOXYMobileKartControls")
+	if oldGui then oldGui:Destroy() end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "BLOXYMobileKartControls"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 80
+	gui.Enabled = false
+	gui.Parent = playerGui
+	mobileControlsGui = gui
+
+	local function addHoldButton(name, label, position, color, onDown, onUp, size)
+		local button = Instance.new("TextButton")
+		button.Name = name
+		button.AnchorPoint = Vector2.new(0.5, 0.5)
+		button.Position = position
+		button.Size = size or UDim2.fromOffset(68, 68)
+		button.BackgroundColor3 = color
+		button.BackgroundTransparency = 0.12
+		button.BorderSizePixel = 0
+		button.Text = label
+		button.TextColor3 = Color3.new(1, 1, 1)
+		button.TextScaled = true
+		button.Font = Enum.Font.GothamBold
+		button.AutoButtonColor = true
+		button.Parent = gui
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = button
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(255, 255, 255)
+		stroke.Transparency = 0.45
+		stroke.Thickness = 2
+		stroke.Parent = button
+		button.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				onDown()
+			end
+		end)
+		button.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				onUp()
+			end
+		end)
+		mobileControlButtons[name] = button
+	end
+
+	local function bindHold(name, label, position, color, control)
+		addHoldButton(name, label, position, color,
+			function() held[control] = true; sendDriveInput() end,
+			function() held[control] = false; sendDriveInput() end)
+	end
+
+	bindHold("SteerLeft", "◀", UDim2.new(0.075, 0, 0.82, 0), Color3.fromRGB(45, 58, 76), "left")
+	bindHold("SteerRight", "▶", UDim2.new(0.175, 0, 0.82, 0), Color3.fromRGB(45, 58, 76), "right")
+	bindHold("Brake", "FRENO", UDim2.new(0.79, 0, 0.82, 0), Color3.fromRGB(170, 65, 45), "brake")
+	bindHold("Accelerate", "GAS", UDim2.new(0.91, 0, 0.82, 0), Color3.fromRGB(45, 145, 78), "forward")
+	addHoldButton("Drift", "DRIFT", UDim2.new(0.91, 0, 0.65, 0), Color3.fromRGB(190, 135, 35),
+		function() driftHeld = true end,
+		function() driftHeld = false end,
+		UDim2.fromOffset(62, 62))
+end
+
+local function setMobileControlsVisible(visible)
+	if mobileControlsGui then
+		mobileControlsGui.Enabled = visible and currentSeat ~= nil
+	end
+end
+
+if UserInputService.TouchEnabled then
+	createMobileControls()
+end
+
 local function sendDriveInput()
 	if not currentSeat then
 		return
@@ -772,6 +853,7 @@ local function bindCharacter(character)
 			hideEnterPrompt()
 			clearDriveInput()
 			currentSeat = seat
+			setMobileControlsVisible(true)
 			ContextActionService:BindActionAtPriority(
 				driveActionName,
 				onDriveAction,
@@ -793,6 +875,7 @@ local function bindCharacter(character)
 			))
 			clearDriveInput()
 			currentSeat = nil
+			setMobileControlsVisible(false)
 			if selectionGui then selectionGui:Destroy(); selectionGui=nil end
 			stopDrivingCamera()
 		end
