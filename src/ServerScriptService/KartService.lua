@@ -1727,14 +1727,14 @@ local function createKart(player, spawnIndex)
 						motor.Name = "FrontWheelSteering_" .. part.Name
 						motor.Part0 = chassis
 						motor.Part1 = part
-						motor.C0 = chassis.CFrame:ToObjectSpace(part.CFrame)
-						motor.C1 = CFrame.identity
+						-- El pivote queda exactamente en el centro de la rueda.
+						-- C0 usa los ejes del chasis para que ambas ruedas giren
+						-- sobre el mismo eje vertical y en el mismo sentido.
+						local wheelPivot = CFrame.new(part.Position)
+						motor.C0 = chassis.CFrame:ToObjectSpace(wheelPivot)
+						motor.C1 = part.CFrame:ToObjectSpace(wheelPivot)
 						motor.Parent = chassis
-						table.insert(kartWheelMotors, {
-							motor = motor,
-							baseC0 = motor.C0,
-							axis = motor.C0:VectorToObjectSpace(Vector3.yAxis),
-						})
+						table.insert(kartWheelMotors, motor)
 					else
 						local weld = Instance.new("WeldConstraint")
 						weld.Name = "CustomKartPartWeld"
@@ -2074,10 +2074,9 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		-- Dirección visual: las ruedas traseras no tienen articulación y quedan fijas.
 		-- El signo coincide con la dirección de giro del chasis (derecha = ángulo negativo).
 		local frontWheelAngle = math.rad(28) * -steering
-		for _, wheelJoint in ipairs(kart.wheelMotors or {}) do
-			if wheelJoint.motor and wheelJoint.motor.Parent then
-				wheelJoint.motor.C0 = wheelJoint.baseC0
-						* CFrame.fromAxisAngle(wheelJoint.axis, frontWheelAngle)
+		for _, wheelMotor in ipairs(kart.wheelMotors or {}) do
+			if wheelMotor.Parent then
+				wheelMotor.Transform = CFrame.Angles(0, frontWheelAngle, 0)
 			end
 		end
 
