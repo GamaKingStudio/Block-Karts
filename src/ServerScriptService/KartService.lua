@@ -1632,7 +1632,9 @@ local function createKart(player, spawnIndex)
 	local importedKart = nil
 	local importedParts = 0
 	local customKartError = nil
-	local kartWheelMotors = wheelMotors
+	-- Solo las ruedas delanteras usan articulaciones orientables.
+	-- Las traseras permanecen soldadas al chasis.
+	local kartWheelMotors = {}
 
 	local loadOk, loadResult = pcall(function()
 		return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
@@ -1715,11 +1717,31 @@ local function createKart(player, spawnIndex)
 					part.CanTouch = false
 					part.CanQuery = false
 
-					local weld = Instance.new("WeldConstraint")
-					weld.Name = "CustomKartPartWeld"
-					weld.Part0 = chassis
-					weld.Part1 = part
-					weld.Parent = chassis
+					local isFrontWheel = part.Name == "Rueda_Delantera_Der"
+						or part.Name == "Rueda_Delantera_Izq"
+
+					if isFrontWheel then
+						-- Conserva la posición y orientación originales del neumático,
+						-- pero permite girarlo alrededor del eje vertical del kart.
+						local motor = Instance.new("Motor6D")
+						motor.Name = "FrontWheelSteering_" .. part.Name
+						motor.Part0 = chassis
+						motor.Part1 = part
+						motor.C0 = chassis.CFrame:ToObjectSpace(part.CFrame)
+						motor.C1 = CFrame.identity
+						motor.Parent = chassis
+						table.insert(kartWheelMotors, {
+							motor = motor,
+							baseC0 = motor.C0,
+							axis = motor.C0:VectorToObjectSpace(Vector3.yAxis),
+						})
+					else
+						local weld = Instance.new("WeldConstraint")
+						weld.Name = "CustomKartPartWeld"
+						weld.Part0 = chassis
+						weld.Part1 = part
+						weld.Parent = chassis
+					end
 					importedParts += 1
 				end
 			end
@@ -2047,6 +2069,16 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		local forwardSpeed = velocity:Dot(chassis.CFrame.LookVector)
 		if not isAuthorizedDriver and input and (input.throttle ~= 0 or input.steering ~= 0 or input.braking) then
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+		end
+
+		-- Dirección visual: las ruedas traseras no tienen articulación y quedan fijas.
+		-- El signo coincide con la dirección de giro del chasis (derecha = ángulo negativo).
+		local frontWheelAngle = math.rad(28) * -steering
+		for _, wheelJoint in ipairs(kart.wheelMotors or {}) do
+			if wheelJoint.motor and wheelJoint.motor.Parent then
+				wheelJoint.motor.C0 = wheelJoint.baseC0
+						* CFrame.fromAxisAngle(wheelJoint.axis, frontWheelAngle)
+			end
 		end
 
 		if DIAGNOSTICS_ENABLED and os.clock() >= kart.nextDiagnosticAt then
