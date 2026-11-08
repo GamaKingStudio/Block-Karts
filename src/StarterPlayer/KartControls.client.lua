@@ -359,9 +359,27 @@ local function showCameraSelection()
 	addChoice("Classic", "CLÁSICA")
 	addChoice("Isometric", "ISOMÉTRICA")
 end
-selectionStateRemote.OnClientEvent:Connect(function(ready,total,chosen)
- if selectionGui then local status=selectionGui:FindFirstChild("ReadyStatus",true); if status then status.Text=chosen and ("¡Listo! "..ready.." / "..total.." jugadores") or ("Esperando selección "..ready.." / "..total.." jugadores") end end
- if chosen and currentSeat then local kart=getKartFromSeat(currentSeat); if kart then startDrivingCamera(kart) end end
+selectionStateRemote.OnClientEvent:Connect(function(ready, total, chosen)
+	if chosen then
+		-- La selección fue confirmada por el servidor: cerrar el selector
+		-- y dejar visible únicamente la cámara de conducción.
+		if selectionGui then
+			selectionGui:Destroy()
+			selectionGui = nil
+		end
+
+		if currentSeat then
+			local kart = getKartFromSeat(currentSeat)
+			if kart then
+				startDrivingCamera(kart)
+			end
+		end
+	elseif selectionGui then
+		local status = selectionGui:FindFirstChild("ReadyStatus", true)
+		if status then
+			status.Text = "Esperando selección " .. ready .. " / " .. total .. " jugadores"
+		end
+	end
 end)
 -- La cuenta regresiva visual pertenece exclusivamente a RaceHUD.client.lua.
 local function formatVector(vector)
