@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+print(("[BLOXY-KART][HUD][START] player=%s script=%s"):format(player.Name, script:GetFullName()))
 local config = require(ReplicatedStorage:WaitForChild("KartConfig"))
 local typography = require(ReplicatedStorage:WaitForChild("BloxyTypography"))
 local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
@@ -488,7 +489,14 @@ end
 
 local function setDriving(seat)
  local model = seat and seat:FindFirstAncestorOfClass("Model")
- if seat and seat:IsA("VehicleSeat") and model and model:GetAttribute("OwnerUserId") == player.UserId then
+ local ownerUserId = model and model:GetAttribute("OwnerUserId")
+ print(("[BLOXY-KART][HUD][SEAT] seat=%s model=%s owner=%s expected=%s"):format(
+  seat and seat:GetFullName() or "nil",
+  model and model:GetFullName() or "nil",
+  tostring(ownerUserId),
+  tostring(player.UserId)
+ ))
+ if seat and seat:IsA("VehicleSeat") and model and ownerUserId == player.UserId then
   if currentSeat == seat then return end
   currentSeat = seat
   currentChassis = model.PrimaryPart
@@ -518,8 +526,12 @@ end
 
 local function bindCharacter(character)
  local humanoid = character:WaitForChild("Humanoid")
+ -- SeatPart no siempre notifica a tiempo al cliente; Seated cubre ese caso.
  humanoid:GetPropertyChangedSignal("SeatPart"):Connect(function()
   setDriving(humanoid.SeatPart)
+ end)
+ humanoid.Seated:Connect(function(isSeated, seatPart)
+  setDriving(isSeated and seatPart or humanoid.SeatPart)
  end)
  setDriving(humanoid.SeatPart)
 end
