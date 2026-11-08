@@ -497,6 +497,7 @@ end
 -- Controles táctiles para Roblox Player en móviles.
 local mobileControlsGui
 local mobileControlButtons = {}
+local sendDriveInput
 
 local function createMobileControls()
 	if not UserInputService.TouchEnabled then return end
@@ -575,7 +576,7 @@ if UserInputService.TouchEnabled then
 	createMobileControls()
 end
 
-local function sendDriveInput()
+sendDriveInput = function()
 	if not currentSeat then
 		return
 	end
