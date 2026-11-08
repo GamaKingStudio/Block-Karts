@@ -922,6 +922,8 @@ end
 
 local function clearDriveInput()
 	clearDriftSmoke()
+	mobilePadActive = false
+	mobilePadVector = Vector2.zero
 	for key in pairs(held) do
 		held[key] = false
 	end
