@@ -1745,6 +1745,17 @@ local function createKart(player, spawnIndex)
 					part.CanTouch = false
 					part.CanQuery = false
 
+					-- El asset trae la rueda trasera con transparencia heredada.
+					-- Forzamos opacidad completa en los cuatro neumáticos.
+					if part.Name == "Rueda_Delantera_Der"
+						or part.Name == "Rueda_Delantera_Izq"
+						or part.Name == "Rueda_Trasera_Der"
+						or part.Name == "Rueda_Trasera_Izq" then
+						part.Transparency = 0
+						part.LocalTransparencyModifier = 0
+						part.CastShadow = true
+					end
+
 					local isFrontWheel = part.Name == "Rueda_Delantera_Der"
 						or part.Name == "Rueda_Delantera_Izq"
 
@@ -2100,8 +2111,8 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		end
 
 		-- Dirección visual: las ruedas traseras no tienen articulación y quedan fijas.
-		-- El signo coincide con la dirección de giro del chasis (derecha = ángulo negativo).
-		local frontWheelAngle = math.rad(28) * -steering
+		-- Invertimos el signo para que la orientación visible coincida con A/D.
+		local frontWheelAngle = math.rad(28) * steering
 		for _, wheelMotor in ipairs(kart.wheelMotors or {}) do
 			if wheelMotor.Parent then
 				wheelMotor.Transform = CFrame.Angles(0, frontWheelAngle, 0)
