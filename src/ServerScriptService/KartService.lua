@@ -1659,15 +1659,36 @@ local function createKart(player, spawnIndex)
 			-- El asset original tiene la trompa hacia su X local negativo.
 			-- El chasis de carrera apunta hacia su Z local negativo (LookVector).
 			-- Por eso el cuerpo visual necesita -90 grados respecto del chasis.
+			-- En el asset, la pieza de ejes/manguetas invade el volumen de las
+			-- cuatro ruedas. Las desplazamos hacia fuera sobre el eje lateral
+			-- original del modelo antes de escalarlo y orientarlo.
+			local originalPivot = importedKart:GetPivot()
+			local wheelNames = {
+				Rueda_Delantera_Der = true,
+				Rueda_Delantera_Izq = true,
+				Rueda_Trasera_Der = true,
+				Rueda_Trasera_Izq = true,
+			}
+			for _, descendant in ipairs(importedKart:GetDescendants()) do
+				if descendant:IsA("BasePart") and wheelNames[descendant.Name] then
+					local localPosition = originalPivot:PointToObjectSpace(descendant.Position)
+					local side = math.sign(localPosition.Z)
+					if side ~= 0 then
+						local lateralOffset = originalPivot:VectorToWorldSpace(Vector3.new(0, 0, side * 23))
+						descendant.CFrame = descendant.CFrame + lateralOffset
+					end
+				end
+			end
+
 			local _, orientedBounds = importedKart:GetBoundingBox()
 			assert(
 				orientedBounds.X > 0 and orientedBounds.Y > 0 and orientedBounds.Z > 0,
 				"El modelo tiene dimensiones inválidas"
 			)
 
-			-- En este kart el largo va sobre X y el ancho sobre Z.
-			-- Ajustamos el tamaño sin intercambiar ejes ni deformar las piezas.
-			local targetWidth, targetLength, targetHeight = 8.0, 10.0, 4.8
+			-- El largo va sobre X y el ancho sobre Z. El ancho objetivo aumenta
+			-- ligeramente para dejar espacio real entre neumáticos y ejes.
+			local targetWidth, targetLength, targetHeight = 8.5, 10.0, 4.8
 			local scale = math.min(
 				targetWidth / orientedBounds.Z,
 				targetLength / orientedBounds.X,
