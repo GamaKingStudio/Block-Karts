@@ -785,31 +785,61 @@ local function buildTestCourse()
 						newBanner.Parent = oldBanner.Parent
 						local targetSize = oldBanner.Size
 						local _, sourceSize = newBanner:GetBoundingBox()
+						-- Escalar por los dos ejes grandes de la lona; ignorar el grosor,
+						-- que puede ser muy pequeño y encoger todo el modelo.
+						local axes = {
+							{ target = targetSize.X, source = sourceSize.X },
+							{ target = targetSize.Y, source = sourceSize.Y },
+							{ target = targetSize.Z, source = sourceSize.Z },
+						}
+						table.sort(axes, function(a, b) return a.target > b.target end)
 						local scaleFactors = {}
-						if sourceSize.X > 0 then table.insert(scaleFactors, targetSize.X / sourceSize.X) end
-						if sourceSize.Y > 0 then table.insert(scaleFactors, targetSize.Y / sourceSize.Y) end
-						if sourceSize.Z > 0 then table.insert(scaleFactors, targetSize.Z / sourceSize.Z) end
+						for i = 1, 2 do
+							if axes[i].source > 0.001 then
+								table.insert(scaleFactors, axes[i].target / axes[i].source)
+							end
+						end
 						local uniformScale = math.min(table.unpack(scaleFactors))
+						print(("[BLOXY-KART][FINISH][BANNER-DIAG] oldSize=(%.3f, %.3f, %.3f) newSize=(%.3f, %.3f, %.3f) scale=%.5f"):format(
+							targetSize.X, targetSize.Y, targetSize.Z,
+							sourceSize.X, sourceSize.Y, sourceSize.Z, uniformScale
+						))
 						local scaleOk, scaleError = pcall(function()
 							newBanner:ScaleTo(uniformScale)
 						end)
 						if scaleOk then
-							local sourceBounds = newBanner:GetBoundingBox()
-							local pivotOffset = sourceBounds:ToObjectSpace(newBanner:GetPivot())
+							local scaledBounds = newBanner:GetBoundingBox()
+							local pivotOffset = scaledBounds:ToObjectSpace(newBanner:GetPivot())
 						newBanner:PivotTo(oldBanner.CFrame * pivotOffset)
+							local finalBounds, finalSize = newBanner:GetBoundingBox()
+							local partCount = 0
 							for _, bannerPart in ipairs(newBanner:GetDescendants()) do
 								if bannerPart:IsA("BasePart") then
+									partCount += 1
 									bannerPart.Anchored = true
 									bannerPart.CanCollide = false
 									bannerPart.CanTouch = false
 									bannerPart.CanQuery = false
 									bannerPart.Massless = true
+									bannerPart.LocalTransparencyModifier = 0
+									print(("[BLOXY-KART][FINISH][BANNER-PART] %s size=(%.3f, %.3f, %.3f) transparency=%.3f position=(%.3f, %.3f, %.3f)"):format(
+										bannerPart:GetFullName(), bannerPart.Size.X, bannerPart.Size.Y, bannerPart.Size.Z,
+										bannerPart.Transparency, bannerPart.Position.X, bannerPart.Position.Y, bannerPart.Position.Z
+									))
 								end
 							end
-							oldBanner:Destroy()
-							print(("[BLOXY-KART][FINISH] Lona reemplazada por el modelo %d. Escala uniforme=%.4f"):format(NEW_FINISH_BANNER_ASSET_ID, uniformScale))
+							-- Respaldo: conservar la lona original oculta, sin destruirla.
+							oldBanner.Name = "Arco_Lona_Cartel_Backup"
+							oldBanner.Transparency = 1
+							oldBanner.CanCollide = false
+							oldBanner.CanTouch = false
+							oldBanner.CanQuery = false
+							print(("[BLOXY-KART][FINISH][BANNER-PLACED] boundsPos=(%.3f, %.3f, %.3f) boundsSize=(%.3f, %.3f, %.3f) parts=%d"):format(
+								finalBounds.Position.X, finalBounds.Position.Y, finalBounds.Position.Z,
+								finalSize.X, finalSize.Y, finalSize.Z, partCount
+							))
+							print(("[BLOXY-KART][FINISH] Nueva lona colocada; respaldo original conservado. Asset=%d escala=%.5f"):format(NEW_FINISH_BANNER_ASSET_ID, uniformScale))
 						else
-							newBanner:Destroy()
 							warn(("[BLOXY-KART][FINISH] No se pudo escalar la nueva lona: %s"):format(tostring(scaleError)))
 						end
 					else
