@@ -1664,23 +1664,9 @@ local function createKart(player, spawnIndex)
 			-- En el asset, la pieza de ejes/manguetas invade el volumen de las
 			-- cuatro ruedas. Las desplazamos hacia fuera sobre el eje lateral
 			-- original del modelo antes de escalarlo y orientarlo.
-			local originalPivot = importedKart:GetPivot()
-			local wheelNames = {
-				Rueda_Delantera_Der = true,
-				Rueda_Delantera_Izq = true,
-				Rueda_Trasera_Der = true,
-				Rueda_Trasera_Izq = true,
-			}
-			for _, descendant in ipairs(importedKart:GetDescendants()) do
-				if descendant:IsA("BasePart") and wheelNames[descendant.Name] then
-					local localPosition = originalPivot:PointToObjectSpace(descendant.Position)
-					local side = math.sign(localPosition.Z)
-					if side ~= 0 then
-						local lateralOffset = originalPivot:VectorToWorldSpace(Vector3.new(0, 0, side * 23))
-						descendant.CFrame = descendant.CFrame + lateralOffset
-					end
-				end
-			end
+			-- Se conservan las posiciones laterales originales de las cuatro ruedas.
+			-- El desplazamiento artificial anterior (+/-23 unidades) separaba
+			-- los neumáticos del chasis y ensanchaba innecesariamente el kart.
 
 			local _, orientedBounds = importedKart:GetBoundingBox()
 			assert(
