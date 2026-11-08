@@ -1656,11 +1656,10 @@ local function createKart(player, spawnIndex)
 			end
 			assert(#initialParts > 0, "El modelo importado no contiene piezas BasePart")
 
-			-- Primero orientamos el modelo y DESPUÉS medimos su caja real.
-			-- GetBoundingBox devuelve dimensiones respecto de la orientación
-			-- actual del modelo; intercambiar X/Z manualmente antes de girarlo
-			-- puede aplicar una escala equivocada y meter las ruedas en la carrocería.
-			local modelForwardCorrection = CFrame.Angles(0, math.rad(-90), 0)
+			-- Corregimos el sentido de avance del modelo respecto del chasis antes
+			-- de medirlo. El asset venía orientado en el sentido contrario al
+			-- que necesita el kart dentro de la pista.
+			local modelForwardCorrection = CFrame.Angles(0, math.rad(90), 0)
 			importedKart:PivotTo(importedKart:GetPivot() * modelForwardCorrection)
 
 			local _, orientedBounds = importedKart:GetBoundingBox()
