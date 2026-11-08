@@ -1694,6 +1694,37 @@ local function createKart(player, spawnIndex)
 			local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
 			importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
 
+			-- Alinea el punto más bajo de los cuatro neumáticos con la superficie
+			-- real de la pista. Evita que el cuerpo parezca suspendido por encima
+			-- del suelo debido al margen incluido en el bounding box del asset.
+			local wheelNamesForGrounding = {
+				Rueda_Delantera_Der = true,
+				Rueda_Delantera_Izq = true,
+				Rueda_Trasera_Der = true,
+				Rueda_Trasera_Izq = true,
+			}
+			local lowestWheelY = math.huge
+			for _, wheelPart in ipairs(importedKart:GetDescendants()) do
+				if wheelPart:IsA("BasePart") and wheelNamesForGrounding[wheelPart.Name] then
+					local cf = wheelPart.CFrame
+					local size = wheelPart.Size
+					local halfHeight =
+						math.abs(cf.RightVector.Y) * size.X / 2
+						+ math.abs(cf.UpVector.Y) * size.Y / 2
+						+ math.abs(cf.LookVector.Y) * size.Z / 2
+					lowestWheelY = math.min(lowestWheelY, wheelPart.Position.Y - halfHeight)
+				end
+			end
+			if lowestWheelY < math.huge then
+				local groundOffset = (COURSE_SURFACE_Y + 0.03) - lowestWheelY
+				importedKart:PivotTo(importedKart:GetPivot() + Vector3.new(0, groundOffset, 0))
+				print(("[CUSTOM-KART-GROUND] lowestWheelY=%.3f targetY=%.3f offset=%.3f"):format(
+					lowestWheelY, COURSE_SURFACE_Y + 0.03, groundOffset
+				))
+			else
+				warn("[CUSTOM-KART-GROUND] No se encontraron las cuatro ruedas por nombre; se conserva la altura anterior.")
+			end
+
 			-- Diagnóstico visual: registra la orientación real de cada neumático
 			-- respecto del chasis, sin alterar la geometría ni el manejo.
 			local wheelDiagnosticNames = {
@@ -1758,8 +1789,18 @@ local function createKart(player, spawnIndex)
 					part.Transparency = 0
 					part.LocalTransparencyModifier = 0
 					part.Color = diagnosticPalette[((diagnosticPartIndex - 1) % #diagnosticPalette) + 1]
+					-- Reduce reflejos especulares que provocan una mitad de la carrocería
+					-- demasiado brillante/oscura según el ángulo de la luz.
+					part.Reflectance = 0
+					local isKartWheel = part.Name == "Rueda_Delantera_Der"
+						or part.Name == "Rueda_Delantera_Izq"
+						or part.Name == "Rueda_Trasera_Der"
+						or part.Name == "Rueda_Trasera_Izq"
+					part.Material = isKartWheel and Enum.Material.Rubber or Enum.Material.SmoothPlastic
 					if part:IsA("MeshPart") then
-						part.DoubleSided = true
+						-- DoubleSided se mantiene para los neumáticos, que lo necesitan
+						-- por la orientación de sus caras; no se fuerza en la carrocería.
+						part.DoubleSided = isKartWheel
 					end
 					print(("[CUSTOM-KART-PART-DIAG] #%d name=%s class=%s transparency=%.2f localTransparency=%.2f color=%s"):format(
 						diagnosticPartIndex,
