@@ -1,11 +1,11 @@
--- BLOXY KARTS - Apply the uploaded artwork to the existing finish banner.
--- Exact hierarchy supplied by the developer: KartTestCourse/ImportedFinishStructure/meta/Arco_Meta_Root/Arco_Lona_Cartel
--- No parts are moved, resized, replaced, or recolored.
+-- BLOXY KARTS - Replace the artwork on the existing finish banner.
+-- The existing model and UV layout are preserved. Every texture channel on
+-- the specific banner object is updated so SurfaceAppearance cannot keep
+-- displaying the previous artwork.
 
 local Workspace = game:GetService("Workspace")
 
 local TEXTURE_ID = "rbxassetid://97691853861481"
-local EXPECTED_MESH_ID = "120071389923358"
 
 print("[META] Looking for KartTestCourse/ImportedFinishStructure/meta/Arco_Meta_Root/Arco_Lona_Cartel")
 
@@ -25,31 +25,68 @@ if not banner then
     return
 end
 
-local candidates = {}
-if banner:IsA("MeshPart") then
-    table.insert(candidates, banner)
+local meshCount = 0
+local surfaceCount = 0
+local decalCount = 0
+local textureCount = 0
+local specialMeshCount = 0
+
+local function applyToPart(part)
+    if part:IsA("MeshPart") then
+        part.TextureID = TEXTURE_ID
+        meshCount += 1
+        print("[META][MESH] " .. part:GetFullName() .. " | MeshId=" .. part.MeshId .. " | TextureID=" .. part.TextureID)
+    end
+
+    for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("SurfaceAppearance") then
+            child.ColorMap = TEXTURE_ID
+            surfaceCount += 1
+            print("[META][SURFACE] " .. child:GetFullName() .. " | ColorMap=" .. child.ColorMap)
+        elseif child:IsA("Decal") then
+            child.Texture = TEXTURE_ID
+            decalCount += 1
+            print("[META][DECAL] " .. child:GetFullName() .. " | Texture=" .. child.Texture)
+        elseif child:IsA("Texture") then
+            child.Texture = TEXTURE_ID
+            textureCount += 1
+            print("[META][TEXTURE] " .. child:GetFullName() .. " | Texture=" .. child.Texture)
+        elseif child:IsA("SpecialMesh") then
+            child.TextureId = TEXTURE_ID
+            specialMeshCount += 1
+            print("[META][SPECIALMESH] " .. child:GetFullName() .. " | TextureId=" .. child.TextureId)
+        end
+    end
+end
+
+if banner:IsA("BasePart") then
+    applyToPart(banner)
 end
 for _, item in ipairs(banner:GetDescendants()) do
-    if item:IsA("MeshPart") then
-        table.insert(candidates, item)
+    if item:IsA("BasePart") then
+        applyToPart(item)
+    elseif item:IsA("Decal") then
+        item.Texture = TEXTURE_ID
+        decalCount += 1
+        print("[META][DECAL] " .. item:GetFullName() .. " | Texture=" .. item.Texture)
+    elseif item:IsA("Texture") then
+        item.Texture = TEXTURE_ID
+        textureCount += 1
+        print("[META][TEXTURE] " .. item:GetFullName() .. " | Texture=" .. item.Texture)
+    elseif item:IsA("SurfaceAppearance") then
+        item.ColorMap = TEXTURE_ID
+        surfaceCount += 1
+        print("[META][SURFACE] " .. item:GetFullName() .. " | ColorMap=" .. item.ColorMap)
+    elseif item:IsA("SpecialMesh") then
+        item.TextureId = TEXTURE_ID
+        specialMeshCount += 1
+        print("[META][SPECIALMESH] " .. item:GetFullName() .. " | TextureId=" .. item.TextureId)
     end
 end
 
-print("[META] Found banner object: " .. banner:GetFullName() .. " | class=" .. banner.ClassName .. " | MeshParts=" .. #candidates)
-
-local matches = {}
-for _, part in ipairs(candidates) do
-    print("[META][INSPECT] " .. part:GetFullName() .. " | MeshId=" .. part.MeshId .. " | TextureID=" .. part.TextureID)
-    if string.match(part.MeshId, "%d+") == EXPECTED_MESH_ID then
-        table.insert(matches, part)
-    end
-end
-
-if #matches == 1 then
-    matches[1].TextureID = TEXTURE_ID
-    print("[META] Texture applied to " .. matches[1]:GetFullName() .. " | TextureID=" .. matches[1].TextureID)
-elseif #matches == 0 then
-    warn("[META] Target found, but no MeshPart has expected MeshId " .. EXPECTED_MESH_ID .. ". See INSPECT output; nothing changed.")
-else
-    warn("[META] Multiple MeshParts match expected MeshId. Nothing changed to avoid ambiguity.")
+print(("[META][RESULT] banner=%s meshes=%d surfaceAppearances=%d decals=%d textures=%d specialMeshes=%d newTexture=%s"):format(
+    banner:GetFullName(), meshCount, surfaceCount, decalCount, textureCount, specialMeshCount, TEXTURE_ID
+))
+if meshCount + surfaceCount + decalCount + textureCount + specialMeshCount == 0 then
+    warn("[META] Banner object exists but contains no supported texture target.")
 end
