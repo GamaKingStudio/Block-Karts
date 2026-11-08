@@ -1708,6 +1708,32 @@ local function createKart(player, spawnIndex)
 			local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
 			importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
 
+			-- Diagnóstico visual: registra la orientación real de cada neumático
+			-- respecto del chasis, sin alterar la geometría ni el manejo.
+			local wheelDiagnosticNames = {
+				Rueda_Delantera_Der = true,
+				Rueda_Delantera_Izq = true,
+				Rueda_Trasera_Der = true,
+				Rueda_Trasera_Izq = true,
+			}
+			print(("[CUSTOM-KART-WHEEL-DIAG] bounds=(%.2f, %.2f, %.2f) scale=%.5f"):format(
+				orientedBounds.X, orientedBounds.Y, orientedBounds.Z, scale
+			))
+			for _, wheelPart in ipairs(importedKart:GetDescendants()) do
+				if wheelPart:IsA("BasePart") and wheelDiagnosticNames[wheelPart.Name] then
+					local localCF = chassis.CFrame:ToObjectSpace(wheelPart.CFrame)
+					local localSize = wheelPart.Size
+					print(("[CUSTOM-KART-WHEEL-DIAG] %s pos=(%.3f, %.3f, %.3f) size=(%.3f, %.3f, %.3f) right=(%.3f, %.3f, %.3f) up=(%.3f, %.3f, %.3f) look=(%.3f, %.3f, %.3f)"):format(
+						wheelPart.Name,
+						localCF.Position.X, localCF.Position.Y, localCF.Position.Z,
+						localSize.X, localSize.Y, localSize.Z,
+						localCF.RightVector.X, localCF.RightVector.Y, localCF.RightVector.Z,
+						localCF.UpVector.X, localCF.UpVector.Y, localCF.UpVector.Z,
+						localCF.LookVector.X, localCF.LookVector.Y, localCF.LookVector.Z
+					))
+				end
+			end
+
 			importedKart.Parent = model
 			for _, part in ipairs(importedKart:GetDescendants()) do
 				if part:IsA("BasePart") then
