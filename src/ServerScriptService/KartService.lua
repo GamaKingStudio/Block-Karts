@@ -1744,6 +1744,11 @@ local function createKart(player, spawnIndex)
 					part.CanCollide = false
 					part.CanTouch = false
 					part.CanQuery = false
+					-- El modelo importado puede tener caras de malla orientadas hacia dentro.
+					-- Renderizar ambos lados evita transparencias al mirar el costado derecho.
+					if part:IsA("MeshPart") then
+						part.DoubleSided = true
+					end
 
 					-- El asset trae la rueda trasera con transparencia heredada.
 					-- Forzamos opacidad completa en los cuatro neumáticos.
