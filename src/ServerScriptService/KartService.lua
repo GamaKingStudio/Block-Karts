@@ -1656,27 +1656,35 @@ local function createKart(player, spawnIndex)
 			end
 			assert(#initialParts > 0, "El modelo importado no contiene piezas BasePart")
 
-			local _, initialBounds = importedKart:GetBoundingBox()
-			assert(initialBounds.X > 0 and initialBounds.Y > 0 and initialBounds.Z > 0, "El modelo tiene dimensiones inválidas")
+			-- Primero orientamos el modelo y DESPUÉS medimos su caja real.
+			-- GetBoundingBox devuelve dimensiones respecto de la orientación
+			-- actual del modelo; intercambiar X/Z manualmente antes de girarlo
+			-- puede aplicar una escala equivocada y meter las ruedas en la carrocería.
+			local modelForwardCorrection = CFrame.Angles(0, math.rad(-90), 0)
+			importedKart:PivotTo(importedKart:GetPivot() * modelForwardCorrection)
 
+			local _, orientedBounds = importedKart:GetBoundingBox()
+			assert(
+				orientedBounds.X > 0 and orientedBounds.Y > 0 and orientedBounds.Z > 0,
+				"El modelo tiene dimensiones inválidas"
+			)
+
+			-- Tamaño visual objetivo del kart ya orientado, sin deformar sus piezas.
 			local targetWidth, targetLength, targetHeight = 8.0, 10.0, 4.8
-			-- El modelo se gira 90 grados en Y más abajo. Por eso, sus ejes
-			-- X/Z originales intercambian ancho y largo al quedar montado.
-			-- Calcular la escala con los ejes ya corregidos evita comprimir
-			-- el kart en el sentido equivocado y que la carrocería tape ruedas.
 			local scale = math.min(
-				targetWidth / initialBounds.Z,
-				targetLength / initialBounds.X,
-				targetHeight / initialBounds.Y
+				targetWidth / orientedBounds.X,
+				targetLength / orientedBounds.Z,
+				targetHeight / orientedBounds.Y
 			)
 			assert(scale > 0 and scale < 20, "La escala calculada no es válida")
 			importedKart:ScaleTo(importedKart:GetScale() * scale)
 
+			-- Centramos la caja geométrica (no el pivote arbitrario del asset)
+			-- sobre el chasis y conservamos la orientación ya corregida.
 			local scaledBoundsCFrame = importedKart:GetBoundingBox()
 			local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
 			local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
-			local modelForwardCorrection = CFrame.Angles(0, math.rad(-90), 0)
-			importedKart:PivotTo(targetBoundsCFrame * modelForwardCorrection * pivotOffset)
+			importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
 
 			importedKart.Parent = model
 			for _, part in ipairs(importedKart:GetDescendants()) do
