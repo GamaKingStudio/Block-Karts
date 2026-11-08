@@ -363,14 +363,7 @@ selectionStateRemote.OnClientEvent:Connect(function(ready,total,chosen)
  if selectionGui then local status=selectionGui:FindFirstChild("ReadyStatus",true); if status then status.Text=chosen and ("¡Listo! "..ready.." / "..total.." jugadores") or ("Esperando selección "..ready.." / "..total.." jugadores") end end
  if chosen and currentSeat then local kart=getKartFromSeat(currentSeat); if kart then startDrivingCamera(kart) end end
 end)
-raceCountdownRemote.OnClientEvent:Connect(function(count)
- if selectionGui then selectionGui:Destroy(); selectionGui=nil end
- local gui=player:FindFirstChild("PlayerGui"); if not gui then return end
- if count>0 then
-  local screen=gui:FindFirstChild("BLOXYRaceCountdown") or Instance.new("ScreenGui"); screen.Name="BLOXYRaceCountdown"; screen.Parent=gui
-  local label=screen:FindFirstChild("Count") or Instance.new("TextLabel"); label.Name="Count"; label.AnchorPoint=Vector2.new(.5,.5); label.Position=UDim2.fromScale(.5,.38); label.Size=UDim2.fromOffset(180,120); label.BackgroundTransparency=1; label.TextColor3=Color3.new(1,1,1); label.FontFace=typography.getFont("Title"); label.TextScaled=true; label.Text=tostring(count); label.Parent=screen
- else local screen=gui:FindFirstChild("BLOXYRaceCountdown"); if screen then screen:Destroy() end end
-end)
+-- La cuenta regresiva visual pertenece exclusivamente a RaceHUD.client.lua.
 local function formatVector(vector)
 	if not vector then
 		return "nil"
