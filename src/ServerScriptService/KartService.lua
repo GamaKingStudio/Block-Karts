@@ -1737,18 +1737,43 @@ local function createKart(player, spawnIndex)
 			end
 
 			importedKart.Parent = model
+			local diagnosticPalette = {
+				Color3.fromRGB(235, 65, 65),   -- rojo
+				Color3.fromRGB(65, 155, 245),  -- azul
+				Color3.fromRGB(70, 205, 115),  -- verde
+				Color3.fromRGB(255, 190, 55),  -- amarillo
+				Color3.fromRGB(175, 95, 225),  -- violeta
+				Color3.fromRGB(45, 210, 205),  -- turquesa
+				Color3.fromRGB(245, 125, 45),  -- naranja
+				Color3.fromRGB(235, 105, 175), -- rosa
+			}
+			local diagnosticPartIndex = 0
 			for _, part in ipairs(importedKart:GetDescendants()) do
 				if part:IsA("BasePart") then
+					diagnosticPartIndex += 1
+					-- Modo diagnóstico temporal: cada pieza queda opaca y con un
+					-- color distinto para localizar exactamente la carrocería afectada.
+					local originalTransparency = part.Transparency
+					local originalLocalTransparency = part.LocalTransparencyModifier
+					part.Transparency = 0
+					part.LocalTransparencyModifier = 0
+					part.Color = diagnosticPalette[((diagnosticPartIndex - 1) % #diagnosticPalette) + 1]
+					if part:IsA("MeshPart") then
+						part.DoubleSided = true
+					end
+					print(("[CUSTOM-KART-PART-DIAG] #%d name=%s class=%s transparency=%.2f localTransparency=%.2f color=%s"):format(
+						diagnosticPartIndex,
+						part.Name,
+						part.ClassName,
+						originalTransparency,
+						originalLocalTransparency,
+						tostring(part.Color)
+					))
 					part.Anchored = false
 					part.Massless = true
 					part.CanCollide = false
 					part.CanTouch = false
 					part.CanQuery = false
-					-- El modelo importado puede tener caras de malla orientadas hacia dentro.
-					-- Renderizar ambos lados evita transparencias al mirar el costado derecho.
-					if part:IsA("MeshPart") then
-						part.DoubleSided = true
-					end
 
 					-- El asset trae la rueda trasera con transparencia heredada.
 					-- Forzamos opacidad completa en los cuatro neumáticos.
