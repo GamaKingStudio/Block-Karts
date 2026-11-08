@@ -4,7 +4,7 @@
 
 local Workspace = game:GetService("Workspace")
 
-local TEXTURE_ID = "rbxassetid://71542588828532"
+local TEXTURE_ID = "rbxassetid://97691853861481"
 local EXPECTED_MESH_ID = "120071389923358"
 
 print("[META] Looking for KartTestCourse/ImportedFinishStructure/meta/Arco_Meta_Root/Arco_Lona_Cartel")
