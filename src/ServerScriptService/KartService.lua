@@ -1656,10 +1656,9 @@ local function createKart(player, spawnIndex)
 			end
 			assert(#initialParts > 0, "El modelo importado no contiene piezas BasePart")
 
-			-- El asset original tiene la trompa hacia X negativo y las ruedas
-			-- delanteras/traseras alineadas sobre ese mismo eje. El chasis también
-			-- avanza hacia X negativo (spawnCFrame.LookVector), por lo que NO se
-			-- debe girar el modelo: hacerlo lo deja avanzando de costado.
+			-- El asset original tiene la trompa hacia su X local negativo.
+			-- El chasis de carrera apunta hacia su Z local negativo (LookVector).
+			-- Por eso el cuerpo visual necesita -90 grados respecto del chasis.
 			local _, orientedBounds = importedKart:GetBoundingBox()
 			assert(
 				orientedBounds.X > 0 and orientedBounds.Y > 0 and orientedBounds.Z > 0,
@@ -1680,7 +1679,9 @@ local function createKart(player, spawnIndex)
 			-- Centramos la caja geométrica (no el pivote arbitrario del asset)
 			-- sobre el chasis y conservamos la orientación ya corregida.
 			local scaledBoundsCFrame = importedKart:GetBoundingBox()
-			local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
+			local targetBoundsCFrame = spawnCFrame
+				* CFrame.Angles(0, math.rad(-90), 0)
+				* CFrame.new(0, 0.75, 0)
 			local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
 			importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
 
