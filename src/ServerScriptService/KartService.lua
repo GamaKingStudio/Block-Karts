@@ -1798,9 +1798,10 @@ local function createKart(player, spawnIndex)
 						or part.Name == "Rueda_Trasera_Izq"
 					part.Material = isKartWheel and Enum.Material.Rubber or Enum.Material.SmoothPlastic
 					if part:IsA("MeshPart") then
-						-- DoubleSided se mantiene para los neumáticos, que lo necesitan
-						-- por la orientación de sus caras; no se fuerza en la carrocería.
-						part.DoubleSided = isKartWheel
+						-- El asset importado tiene caras con normales orientadas hacia
+						-- dentro en algunos paneles laterales. Doble cara evita que la
+						-- carrocería desaparezca al verla desde el lado opuesto.
+						part.DoubleSided = true
 					end
 					print(("[CUSTOM-KART-PART-DIAG] #%d name=%s class=%s transparency=%.2f localTransparency=%.2f color=%s"):format(
 						diagnosticPartIndex,
