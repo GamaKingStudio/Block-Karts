@@ -764,6 +764,65 @@ local function buildTestCourse()
 			finishStructure.Name = "ImportedFinishStructure"
 			finishStructure.Parent = course
 
+			-- Reemplaza únicamente la lona del arco por el nuevo modelo del usuario.
+			-- Se conserva el marco original y se alinea el modelo nuevo al espacio
+			-- que ocupaba Arco_Lona_Cartel.
+			local NEW_FINISH_BANNER_ASSET_ID = 77625250062263
+			local oldBanner = finishStructure:FindFirstChild("Arco_Lona_Cartel", true)
+			if oldBanner and oldBanner:IsA("BasePart") then
+				local bannerAssetOk, bannerAssetOrError = pcall(function()
+					return InsertService:LoadAsset(NEW_FINISH_BANNER_ASSET_ID)
+				end)
+				if bannerAssetOk and bannerAssetOrError then
+					local loadedBannerAsset = bannerAssetOrError
+					local bannerSource = loadedBannerAsset
+					if not bannerSource:IsA("Model") then
+						bannerSource = loadedBannerAsset:FindFirstChildWhichIsA("Model", true)
+					end
+					if bannerSource then
+						local newBanner = bannerSource:Clone()
+						newBanner.Name = "Arco_Lona_Cartel"
+						newBanner.Parent = oldBanner.Parent
+						local targetSize = oldBanner.Size
+						local _, sourceSize = newBanner:GetBoundingBox()
+						local scaleFactors = {}
+						if sourceSize.X > 0 then table.insert(scaleFactors, targetSize.X / sourceSize.X) end
+						if sourceSize.Y > 0 then table.insert(scaleFactors, targetSize.Y / sourceSize.Y) end
+						if sourceSize.Z > 0 then table.insert(scaleFactors, targetSize.Z / sourceSize.Z) end
+						local uniformScale = math.min(table.unpack(scaleFactors))
+						local scaleOk, scaleError = pcall(function()
+							newBanner:ScaleTo(uniformScale)
+						end)
+						if scaleOk then
+							local sourceBounds = newBanner:GetBoundingBox()
+							local pivotOffset = sourceBounds:ToObjectSpace(newBanner:GetPivot())
+						newBanner:PivotTo(oldBanner.CFrame * pivotOffset)
+							for _, bannerPart in ipairs(newBanner:GetDescendants()) do
+								if bannerPart:IsA("BasePart") then
+									bannerPart.Anchored = true
+									bannerPart.CanCollide = false
+									bannerPart.CanTouch = false
+									bannerPart.CanQuery = false
+									bannerPart.Massless = true
+								end
+							end
+							oldBanner:Destroy()
+							print(("[BLOXY-KART][FINISH] Lona reemplazada por el modelo %d. Escala uniforme=%.4f"):format(NEW_FINISH_BANNER_ASSET_ID, uniformScale))
+						else
+							newBanner:Destroy()
+							warn(("[BLOXY-KART][FINISH] No se pudo escalar la nueva lona: %s"):format(tostring(scaleError)))
+						end
+					else
+						warn(("[BLOXY-KART][FINISH] El asset %d no contiene un Model."):format(NEW_FINISH_BANNER_ASSET_ID))
+					end
+					loadedBannerAsset:Destroy()
+				else
+					warn(("[BLOXY-KART][FINISH] No se pudo cargar el modelo de lona %d: %s"):format(NEW_FINISH_BANNER_ASSET_ID, tostring(bannerAssetOrError)))
+				end
+			else
+				warn("[BLOXY-KART][FINISH] No se encontró Arco_Lona_Cartel como BasePart; se conserva la lona original.")
+			end
+
 			-- Livery deportiva para el arco original: base blanca con acentos rojos y azules.
 			-- Solo se ajusta Color; se conservan MeshPart.TextureID, SurfaceAppearance,
 			-- Decals y demás texturas originales del asset.
