@@ -53,6 +53,8 @@ local drivingBaseFieldOfView
 local shownEnterPrompt
 local enterPromptBillboard
 local held = { forward = false, reverse = false, left = false, right = false, brake = false }
+local mobilePadVector = Vector2.zero
+local mobilePadActive = false
 local driftHeld = false
 local isDrifting = false
 local driftStartTime = 0
@@ -494,10 +496,25 @@ local function logSeatedAvatar(humanoid, seat)
 	))
 end
 
--- Controles táctiles para Roblox Player en móviles.
+-- Controles táctiles: pad analógico izquierdo y drift independiente a la derecha.
 local mobileControlsGui
-local mobileControlButtons = {}
 local sendDriveInput
+
+local function getDriveAxes(canDrive)
+	if not canDrive then
+		return 0, 0
+	end
+	if mobilePadActive then
+		local throttle = -mobilePadVector.Y
+		local steering = mobilePadVector.X
+		if math.abs(throttle) < 0.12 then throttle = 0 end
+		if math.abs(steering) < 0.12 then steering = 0 end
+		return math.clamp(throttle, -1, 1), math.clamp(steering, -1, 1)
+	end
+	local throttle = (held.forward and 1 or 0) - (held.reverse and 1 or 0)
+	local steering = (held.right and 1 or 0) - (held.left and 1 or 0)
+	return throttle, steering
+end
 
 local function createMobileControls()
 	if not UserInputService.TouchEnabled then return end
@@ -509,61 +526,143 @@ local function createMobileControls()
 	gui.Name = "BLOXYMobileKartControls"
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 80
+	gui.DisplayOrder = 120
 	gui.Enabled = false
 	gui.Parent = playerGui
 	mobileControlsGui = gui
 
-	local function addHoldButton(name, label, position, color, onDown, onUp, size)
-		local button = Instance.new("TextButton")
-		button.Name = name
-		button.AnchorPoint = Vector2.new(0.5, 0.5)
-		button.Position = position
-		button.Size = size or UDim2.fromOffset(68, 68)
-		button.BackgroundColor3 = color
-		button.BackgroundTransparency = 0.12
-		button.BorderSizePixel = 0
-		button.Text = label
-		button.TextColor3 = Color3.new(1, 1, 1)
-		button.TextScaled = true
-		button.Font = Enum.Font.GothamBold
-		button.AutoButtonColor = true
-		button.Parent = gui
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = button
-		local stroke = Instance.new("UIStroke")
-		stroke.Color = Color3.fromRGB(255, 255, 255)
-		stroke.Transparency = 0.45
-		stroke.Thickness = 2
-		stroke.Parent = button
-		button.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-				onDown()
-			end
-		end)
-		button.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-				onUp()
-			end
-		end)
-		mobileControlButtons[name] = button
-	end
+	local pad = Instance.new("TextButton")
+	pad.Name = "DrivePad"
+	pad.AnchorPoint = Vector2.new(0.5, 0.5)
+	pad.Position = UDim2.new(0.16, 0, 0.79, 0)
+	pad.Size = UDim2.fromOffset(154, 154)
+	pad.BackgroundColor3 = Color3.fromRGB(31, 42, 56)
+	pad.BackgroundTransparency = 0.2
+	pad.BorderSizePixel = 0
+	pad.Text = ""
+	pad.AutoButtonColor = false
+	pad.Parent = gui
+	local padCorner = Instance.new("UICorner")
+	padCorner.CornerRadius = UDim.new(1, 0)
+	padCorner.Parent = pad
+	local padStroke = Instance.new("UIStroke")
+	padStroke.Color = Color3.fromRGB(220, 230, 242)
+	padStroke.Transparency = 0.35
+	padStroke.Thickness = 2
+	padStroke.Parent = pad
 
-	local function bindHold(name, label, position, color, control)
-		addHoldButton(name, label, position, color,
-			function() held[control] = true; sendDriveInput() end,
-			function() held[control] = false; sendDriveInput() end)
+	local function addPadHint(name, label, position, size)
+		local hint = Instance.new("TextLabel")
+		hint.Name = name
+		hint.AnchorPoint = Vector2.new(0.5, 0.5)
+		hint.Position = position
+		hint.Size = size
+		hint.BackgroundTransparency = 1
+		hint.Text = label
+		hint.TextColor3 = Color3.fromRGB(235, 240, 247)
+		hint.TextTransparency = 0.2
+		hint.TextScaled = true
+		hint.Font = Enum.Font.GothamBold
+		hint.ZIndex = 2
+		hint.Parent = pad
 	end
+	addPadHint("GasHint", "GAS ▲", UDim2.fromScale(0.5, 0.17), UDim2.fromScale(0.7, 0.2))
+	addPadHint("ReverseHint", "▼ REV", UDim2.fromScale(0.5, 0.83), UDim2.fromScale(0.7, 0.2))
+	addPadHint("LeftHint", "◀", UDim2.fromScale(0.17, 0.5), UDim2.fromScale(0.22, 0.3))
+	addPadHint("RightHint", "▶", UDim2.fromScale(0.83, 0.5), UDim2.fromScale(0.22, 0.3))
 
-	bindHold("SteerLeft", "◀", UDim2.new(0.075, 0, 0.82, 0), Color3.fromRGB(45, 58, 76), "left")
-	bindHold("SteerRight", "▶", UDim2.new(0.175, 0, 0.82, 0), Color3.fromRGB(45, 58, 76), "right")
-	bindHold("Brake", "FRENO", UDim2.new(0.79, 0, 0.82, 0), Color3.fromRGB(170, 65, 45), "brake")
-	bindHold("Accelerate", "GAS", UDim2.new(0.91, 0, 0.82, 0), Color3.fromRGB(45, 145, 78), "forward")
-	addHoldButton("Drift", "DRIFT", UDim2.new(0.91, 0, 0.65, 0), Color3.fromRGB(190, 135, 35),
-		function() driftHeld = true end,
-		function() driftHeld = false end,
-		UDim2.fromOffset(62, 62))
+	local knob = Instance.new("Frame")
+	knob.Name = "Thumb"
+	knob.AnchorPoint = Vector2.new(0.5, 0.5)
+	knob.Position = UDim2.fromScale(0.5, 0.5)
+	knob.Size = UDim2.fromOffset(58, 58)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 197, 72)
+	knob.BackgroundTransparency = 0.08
+	knob.BorderSizePixel = 0
+	knob.ZIndex = 3
+	knob.Parent = pad
+	local knobCorner = Instance.new("UICorner")
+	knobCorner.CornerRadius = UDim.new(1, 0)
+	knobCorner.Parent = knob
+	local knobStroke = Instance.new("UIStroke")
+	knobStroke.Color = Color3.fromRGB(255, 255, 255)
+	knobStroke.Transparency = 0.15
+	knobStroke.Thickness = 2
+	knobStroke.Parent = knob
+
+	local activePadInput
+	local function updatePad(screenPosition)
+		local center = pad.AbsolutePosition + pad.AbsoluteSize / 2
+		local radius = math.min(pad.AbsoluteSize.X, pad.AbsoluteSize.Y) * 0.5 - knob.AbsoluteSize.X * 0.5
+		local offset = Vector2.new(screenPosition.X - center.X, screenPosition.Y - center.Y)
+		if offset.Magnitude > radius then
+			offset = offset.Unit * radius
+		end
+		mobilePadVector = Vector2.new(offset.X / radius, offset.Y / radius)
+		knob.Position = UDim2.new(0.5, offset.X, 0.5, offset.Y)
+		if sendDriveInput then sendDriveInput() end
+	end
+	local function resetPad()
+		activePadInput = nil
+		mobilePadActive = false
+		mobilePadVector = Vector2.zero
+		knob.Position = UDim2.fromScale(0.5, 0.5)
+		if sendDriveInput then sendDriveInput() end
+	end
+	pad.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			activePadInput = input
+			mobilePadActive = true
+			updatePad(input.Position)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if activePadInput and input == activePadInput then
+			updatePad(input.Position)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if activePadInput and input == activePadInput then
+			resetPad()
+		end
+	end)
+
+	local driftButton = Instance.new("TextButton")
+	driftButton.Name = "Drift"
+	driftButton.AnchorPoint = Vector2.new(0.5, 0.5)
+	driftButton.Position = UDim2.new(0.87, 0, 0.79, 0)
+	driftButton.Size = UDim2.fromOffset(86, 86)
+	driftButton.BackgroundColor3 = Color3.fromRGB(190, 135, 35)
+	driftButton.BackgroundTransparency = 0.08
+	driftButton.BorderSizePixel = 0
+	driftButton.Text = "DRIFT"
+	driftButton.TextColor3 = Color3.new(1, 1, 1)
+	driftButton.TextScaled = true
+	driftButton.Font = Enum.Font.GothamBold
+	driftButton.AutoButtonColor = true
+	driftButton.Parent = gui
+	local driftCorner = Instance.new("UICorner")
+	driftCorner.CornerRadius = UDim.new(1, 0)
+	driftCorner.Parent = driftButton
+	local driftStroke = Instance.new("UIStroke")
+	driftStroke.Color = Color3.fromRGB(255, 255, 255)
+	driftStroke.Transparency = 0.25
+	driftStroke.Thickness = 2
+	driftStroke.Parent = driftButton
+
+	local activeDriftInput
+	driftButton.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			activeDriftInput = input
+			driftHeld = true
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if activeDriftInput and input == activeDriftInput then
+			activeDriftInput = nil
+			driftHeld = false
+		end
+	end)
 end
 
 local function setMobileControlsVisible(visible)
@@ -580,9 +679,7 @@ sendDriveInput = function()
 	if not currentSeat then
 		return
 	end
-	local canDrive = player:GetAttribute("RaceStarted") == true
-	local throttle = canDrive and ((held.forward and 1 or 0) - (held.reverse and 1 or 0)) or 0
-	local steering = canDrive and ((held.right and 1 or 0) - (held.left and 1 or 0)) or 0
+	local throttle, steering = getDriveAxes(player:GetAttribute("RaceStarted") == true)
 	controlRemote:FireServer(throttle, steering, held.brake)
 end
 
@@ -686,8 +783,7 @@ local function simulateOwnedKart()
 	local forwardSpeed = velocity:Dot(forward)
 	local lateralSpeed = velocity:Dot(right)
 	local canDrive = player:GetAttribute("RaceStarted") == true
-	local throttle = canDrive and ((held.forward and 1 or 0) - (held.reverse and 1 or 0)) or 0
-	local steering = canDrive and ((held.right and 1 or 0) - (held.left and 1 or 0)) or 0
+	local throttle, steering = getDriveAxes(canDrive)
 	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
 	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
 	local travelDirection = forwardSpeed >= 0 and 1 or -1
