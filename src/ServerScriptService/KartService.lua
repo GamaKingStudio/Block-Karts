@@ -1656,6 +1656,29 @@ local function createKart(player, spawnIndex)
 			end
 			assert(#initialParts > 0, "El modelo importado no contiene piezas BasePart")
 
+			-- Diagnóstico temporal del asset original: permite conocer sus ejes
+			-- reales y la ubicación de ruedas/piezas antes de aplicar correcciones.
+			local sourceBoundsCFrame, sourceBoundsSize = importedKart:GetBoundingBox()
+			local sourcePivot = importedKart:GetPivot()
+			print(string.format(
+				"[CUSTOM KART DIAG] Pivot=(%.2f, %.2f, %.2f) Bounds=(%.2f, %.2f, %.2f)",
+				sourcePivot.Position.X, sourcePivot.Position.Y, sourcePivot.Position.Z,
+				sourceBoundsSize.X, sourceBoundsSize.Y, sourceBoundsSize.Z
+			))
+			for index, part in ipairs(initialParts) do
+				if index > 80 then
+					print("[CUSTOM KART DIAG] ... listado limitado a 80 piezas")
+					break
+				end
+				local relative = sourcePivot:ToObjectSpace(part.CFrame)
+				print(string.format(
+					"[CUSTOM KART PART %02d] %s | Pos=(%.2f, %.2f, %.2f) Size=(%.2f, %.2f, %.2f)",
+					index, part:GetFullName(),
+					relative.Position.X, relative.Position.Y, relative.Position.Z,
+					part.Size.X, part.Size.Y, part.Size.Z
+				))
+			end
+
 			-- Corregimos el sentido de avance del modelo respecto del chasis antes
 			-- de medirlo. El asset venía orientado en el sentido contrario al
 			-- que necesita el kart dentro de la pista.
