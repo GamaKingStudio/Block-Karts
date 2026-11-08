@@ -1754,6 +1754,11 @@ local function createKart(player, spawnIndex)
 						part.Transparency = 0
 						part.LocalTransparencyModifier = 0
 						part.CastShadow = true
+						-- Algunas mallas importadas tienen caras visibles solo desde un lado.
+						-- Al invertir la rueda izquierda, DoubleSided evita el efecto hueco/transparente.
+						if part:IsA("MeshPart") then
+							part.DoubleSided = true
+						end
 					end
 
 					local isFrontWheel = part.Name == "Rueda_Delantera_Der"
