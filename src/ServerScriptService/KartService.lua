@@ -1769,49 +1769,62 @@ local function createKart(player, spawnIndex)
 			end
 
 			importedKart.Parent = model
-			local diagnosticPalette = {
-				Color3.fromRGB(235, 65, 65),   -- rojo
-				Color3.fromRGB(65, 155, 245),  -- azul
-				Color3.fromRGB(70, 205, 115),  -- verde
-				Color3.fromRGB(255, 190, 55),  -- amarillo
-				Color3.fromRGB(175, 95, 225),  -- violeta
-				Color3.fromRGB(45, 210, 205),  -- turquesa
-				Color3.fromRGB(245, 125, 45),  -- naranja
-				Color3.fromRGB(235, 105, 175), -- rosa
+			-- Paleta definitiva del kart: rojo/amarillo en carrocería,
+			-- grises en chasis y neumáticos. Se asigna por nombre para no
+			-- alterar la geometría ni las articulaciones del modelo.
+			local kartColors = {
+				red = Color3.fromRGB(190, 28, 35),
+				yellow = Color3.fromRGB(255, 195, 25),
+				chassis = Color3.fromRGB(112, 118, 125),
+				tire = Color3.fromRGB(48, 51, 56),
+				seat = Color3.fromRGB(45, 47, 51),
+				metal = Color3.fromRGB(135, 140, 146),
 			}
-			local diagnosticPartIndex = 0
+			local kartWheelNames = {
+				Rueda_Delantera_Der = true,
+				Rueda_Delantera_Izq = true,
+				Rueda_Trasera_Der = true,
+				Rueda_Trasera_Izq = true,
+			}
 			for _, part in ipairs(importedKart:GetDescendants()) do
 				if part:IsA("BasePart") then
-					diagnosticPartIndex += 1
-					-- Modo diagnóstico temporal: cada pieza queda opaca y con un
-					-- color distinto para localizar exactamente la carrocería afectada.
-					local originalTransparency = part.Transparency
-					local originalLocalTransparency = part.LocalTransparencyModifier
 					part.Transparency = 0
 					part.LocalTransparencyModifier = 0
-					part.Color = diagnosticPalette[((diagnosticPartIndex - 1) % #diagnosticPalette) + 1]
-					-- Reduce reflejos especulares que provocan una mitad de la carrocería
-					-- demasiado brillante/oscura según el ángulo de la luz.
 					part.Reflectance = 0
-					local isKartWheel = part.Name == "Rueda_Delantera_Der"
-						or part.Name == "Rueda_Delantera_Izq"
-						or part.Name == "Rueda_Trasera_Der"
-						or part.Name == "Rueda_Trasera_Izq"
-					part.Material = isKartWheel and Enum.Material.Rubber or Enum.Material.SmoothPlastic
+
+					local name = part.Name
+					if kartWheelNames[name] then
+						-- La rueda importada es una sola MeshPart; por ahora se
+						-- pinta completa de gris oscuro. El centro requiere una
+						-- pieza de tapa independiente o una textura UV específica.
+						part.Color = kartColors.tire
+						part.Material = Enum.Material.Rubber
+					elseif name == "Carroceria_Frontal" or name == "Carroceria_Pontones" then
+						part.Color = kartColors.red
+						part.Material = Enum.Material.SmoothPlastic
+					elseif name == "Carroceria_Columna_Trompa" or name == "Carroceria_Piso_Azul" then
+						part.Color = kartColors.yellow
+						part.Material = Enum.Material.SmoothPlastic
+					elseif name:find("Chasis_", 1, true) then
+						part.Color = kartColors.chassis
+						part.Material = Enum.Material.Metal
+					elseif name == "Equipamiento_Asiento" then
+						part.Color = kartColors.seat
+						part.Material = Enum.Material.SmoothPlastic
+					elseif name == "Equipamiento_Motor_Escapes" then
+						part.Color = kartColors.metal
+						part.Material = Enum.Material.Metal
+					elseif name == "Equipamiento_Volante" then
+						part.Color = kartColors.yellow
+						part.Material = Enum.Material.SmoothPlastic
+					else
+						-- Cualquier pieza adicional conserva un acabado neutro.
+						part.Color = kartColors.chassis
+						part.Material = Enum.Material.SmoothPlastic
+					end
 					if part:IsA("MeshPart") then
-						-- El asset importado tiene caras con normales orientadas hacia
-						-- dentro en algunos paneles laterales. Doble cara evita que la
-						-- carrocería desaparezca al verla desde el lado opuesto.
 						part.DoubleSided = true
 					end
-					print(("[CUSTOM-KART-PART-DIAG] #%d name=%s class=%s transparency=%.2f localTransparency=%.2f color=%s"):format(
-						diagnosticPartIndex,
-						part.Name,
-						part.ClassName,
-						originalTransparency,
-						originalLocalTransparency,
-						tostring(part.Color)
-					))
 					part.Anchored = false
 					part.Massless = true
 					part.CanCollide = false
