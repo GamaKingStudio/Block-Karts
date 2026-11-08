@@ -747,7 +747,7 @@ local function buildTestCourse()
 	-- Arco de meta: el asset completo del usuario reemplaza los postes y el banner procedural.
 	local gantryX = 0
 	local spanWidth = trackWidth + 6
-	local FINISH_STRUCTURE_ASSET_ID = 86635101465127
+	local FINISH_STRUCTURE_ASSET_ID = 77625250062263
 	local finishAssetOk, finishAssetOrError = pcall(function()
 		return InsertService:LoadAsset(FINISH_STRUCTURE_ASSET_ID)
 	end)
@@ -764,94 +764,6 @@ local function buildTestCourse()
 			finishStructure.Name = "ImportedFinishStructure"
 			finishStructure.Parent = course
 
-			-- Reemplaza únicamente la lona del arco por el nuevo modelo del usuario.
-			-- Se conserva el marco original y se alinea el modelo nuevo al espacio
-			-- que ocupaba Arco_Lona_Cartel.
-			local NEW_FINISH_BANNER_ASSET_ID = 77625250062263
-			local oldBanner = finishStructure:FindFirstChild("Arco_Lona_Cartel", true)
-			if oldBanner and oldBanner:IsA("BasePart") then
-				local bannerAssetOk, bannerAssetOrError = pcall(function()
-					return InsertService:LoadAsset(NEW_FINISH_BANNER_ASSET_ID)
-				end)
-				if bannerAssetOk and bannerAssetOrError then
-					local loadedBannerAsset = bannerAssetOrError
-					local bannerSource = loadedBannerAsset
-					if not bannerSource:IsA("Model") then
-						bannerSource = loadedBannerAsset:FindFirstChildWhichIsA("Model", true)
-					end
-					if bannerSource then
-						local newBanner = bannerSource:Clone()
-						newBanner.Name = "Arco_Lona_Cartel"
-						newBanner.Parent = oldBanner.Parent
-						local targetSize = oldBanner.Size
-						local _, sourceSize = newBanner:GetBoundingBox()
-						-- Escalar por los dos ejes grandes de la lona; ignorar el grosor,
-						-- que puede ser muy pequeño y encoger todo el modelo.
-						local axes = {
-							{ target = targetSize.X, source = sourceSize.X },
-							{ target = targetSize.Y, source = sourceSize.Y },
-							{ target = targetSize.Z, source = sourceSize.Z },
-						}
-						table.sort(axes, function(a, b) return a.target > b.target end)
-						local scaleFactors = {}
-						for i = 1, 2 do
-							if axes[i].source > 0.001 then
-								table.insert(scaleFactors, axes[i].target / axes[i].source)
-							end
-						end
-						local uniformScale = math.min(table.unpack(scaleFactors))
-						print(("[BLOXY-KART][FINISH][BANNER-DIAG] oldSize=(%.3f, %.3f, %.3f) newSize=(%.3f, %.3f, %.3f) scale=%.5f"):format(
-							targetSize.X, targetSize.Y, targetSize.Z,
-							sourceSize.X, sourceSize.Y, sourceSize.Z, uniformScale
-						))
-						local scaleOk, scaleError = pcall(function()
-							newBanner:ScaleTo(uniformScale)
-						end)
-						if scaleOk then
-							local scaledBounds = newBanner:GetBoundingBox()
-							local pivotOffset = scaledBounds:ToObjectSpace(newBanner:GetPivot())
-						newBanner:PivotTo(oldBanner.CFrame * pivotOffset)
-							local finalBounds, finalSize = newBanner:GetBoundingBox()
-							local partCount = 0
-							for _, bannerPart in ipairs(newBanner:GetDescendants()) do
-								if bannerPart:IsA("BasePart") then
-									partCount += 1
-									bannerPart.Anchored = true
-									bannerPart.CanCollide = false
-									bannerPart.CanTouch = false
-									bannerPart.CanQuery = false
-									bannerPart.Massless = true
-									bannerPart.LocalTransparencyModifier = 0
-									print(("[BLOXY-KART][FINISH][BANNER-PART] %s size=(%.3f, %.3f, %.3f) transparency=%.3f position=(%.3f, %.3f, %.3f)"):format(
-										bannerPart:GetFullName(), bannerPart.Size.X, bannerPart.Size.Y, bannerPart.Size.Z,
-										bannerPart.Transparency, bannerPart.Position.X, bannerPart.Position.Y, bannerPart.Position.Z
-									))
-								end
-							end
-							-- Respaldo: conservar la lona original oculta, sin destruirla.
-							oldBanner.Name = "Arco_Lona_Cartel_Backup"
-							oldBanner.Transparency = 1
-							oldBanner.CanCollide = false
-							oldBanner.CanTouch = false
-							oldBanner.CanQuery = false
-							print(("[BLOXY-KART][FINISH][BANNER-PLACED] boundsPos=(%.3f, %.3f, %.3f) boundsSize=(%.3f, %.3f, %.3f) parts=%d"):format(
-								finalBounds.Position.X, finalBounds.Position.Y, finalBounds.Position.Z,
-								finalSize.X, finalSize.Y, finalSize.Z, partCount
-							))
-							print(("[BLOXY-KART][FINISH] Nueva lona colocada; respaldo original conservado. Asset=%d escala=%.5f"):format(NEW_FINISH_BANNER_ASSET_ID, uniformScale))
-						else
-							warn(("[BLOXY-KART][FINISH] No se pudo escalar la nueva lona: %s"):format(tostring(scaleError)))
-						end
-					else
-						warn(("[BLOXY-KART][FINISH] El asset %d no contiene un Model."):format(NEW_FINISH_BANNER_ASSET_ID))
-					end
-					loadedBannerAsset:Destroy()
-				else
-					warn(("[BLOXY-KART][FINISH] No se pudo cargar el modelo de lona %d: %s"):format(NEW_FINISH_BANNER_ASSET_ID, tostring(bannerAssetOrError)))
-				end
-			else
-				warn("[BLOXY-KART][FINISH] No se encontró Arco_Lona_Cartel como BasePart; se conserva la lona original.")
-			end
 
 			-- Livery deportiva para el arco original: base blanca con acentos rojos y azules.
 			-- Solo se ajusta Color; se conservan MeshPart.TextureID, SurfaceAppearance,
