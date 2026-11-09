@@ -198,10 +198,11 @@ local function tryStartRace()
     raceCountdownRemote:FireClient(p, 0)
    end
   end
+  -- El rival permanece oculto y detenido durante toda la primera vuelta.
+  -- Se activa únicamente al cruzar la meta y tener grabada la vuelta del jugador.
   if cpuRace then
-    cpuRace.started = true
-    cpuRace.startedAt = os.clock()
-end
+    cpuRace.started = false
+  end
  end)
 end
 cameraSelectionRemote.OnServerEvent:Connect(function(p, mode)
@@ -2551,12 +2552,19 @@ local function onCheckpointTouched(hitPart, triggerPart)
                         cpuRace.ghostDuration = recordedGhost.duration
                         cpuRace.estimatedLapDuration = recordedGhost.duration
                         cpuRace.ghostIndex = 1
-                        cpuRace.startedAt = now
-                        for _, ghostPart in ipairs(cpuRace.kart.model:GetDescendants()) do
-                            if ghostPart:IsA("BasePart") and ghostPart.Transparency < 1 then
-                                ghostPart.Transparency = math.max(ghostPart.Transparency, 0.42)
+
+                        -- Recupera la visibilidad original y muestra el fantasma
+                        -- justo al comenzar la segunda vuelta.
+                        for hiddenPart, originalTransparency in pairs(cpuRace.hiddenTransparency or {}) do
+                            if hiddenPart and hiddenPart.Parent then
+                                hiddenPart.Transparency = math.max(originalTransparency, 0.42)
+                                if hiddenPart:IsA("BasePart") then
+                                    hiddenPart.LocalTransparencyModifier = 0
+                                end
                             end
                         end
+                        cpuRace.hiddenTransparency = nil
+
                         if not cpuRace.kart.model:FindFirstChild("FirstLapGhostHighlight") then
                             local highlight = Instance.new("Highlight")
                             highlight.Name = "FirstLapGhostHighlight"
@@ -2567,7 +2575,10 @@ local function onCheckpointTouched(hitPart, triggerPart)
                             highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                             highlight.Parent = cpuRace.kart.model
                         end
-                        print(("[CPU-GHOST] Fantasma activado para la vuelta 2: %d muestras, %.2fs"):format(#recordedGhost.samples, lapTime))
+
+                        cpuRace.startedAt = now
+                        cpuRace.started = true
+                        print(("[CPU-GHOST] Fantasma visible y en marcha desde la vuelta 2: %d muestras, %.2fs"):format(#recordedGhost.samples, lapTime))
                     else
                         print(("[CPU-GHOST] Primera vuelta guardada: %d muestras, %.2fs. Se usará en la próxima carrera."):format(#recordedGhost.samples, lapTime))
                     end
@@ -2915,31 +2926,33 @@ local function createCpuOpponent(player)
  if finish then table.insert(route, finish.Position) end
  if #route < 28 then warn(("[CPU] Ruta incompleta: %d puntos."):format(#route)); return end
  local routeDistance = 0
-  for i = 1, #route - 1 do routeDistance += (route[i + 1] - route[i]).Magnitude end
-  local savedGhost = ghostRecords[player.UserId]
- if savedGhost and savedGhost.samples and #savedGhost.samples >= 2 then
-  for _, descendant in ipairs(kart.model:GetDescendants()) do
-   if descendant:IsA("BasePart") and descendant.Transparency < 1 then
-    descendant.Transparency = math.max(descendant.Transparency, 0.42)
-   end
+ for i = 1, #route - 1 do routeDistance += (route[i + 1] - route[i]).Magnitude end
+
+ -- Guarda la transparencia original de cada pieza y oculta por completo
+ -- el kart rival hasta que el jugador complete su primera vuelta.
+ local hiddenTransparency = {}
+ for _, descendant in ipairs(kart.model:GetDescendants()) do
+  if descendant:IsA("BasePart") then
+   hiddenTransparency[descendant] = descendant.Transparency
+   descendant.Transparency = 1
+   descendant.LocalTransparencyModifier = 0
+  elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+   hiddenTransparency[descendant] = descendant.Transparency
+   descendant.Transparency = 1
   end
-  local highlight = Instance.new("Highlight")
-  highlight.Name = "FirstLapGhostHighlight"
-  highlight.FillColor = Color3.fromRGB(50, 220, 255)
-  highlight.FillTransparency = 0.68
-  highlight.OutlineColor = Color3.fromRGB(80, 235, 255)
-  highlight.OutlineTransparency = 0.12
-  highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-  highlight.Parent = kart.model
-  cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1,
-   ghostSamples = savedGhost.samples, ghostDuration = savedGhost.duration, ghostIndex = 1,
-   estimatedLapDuration = savedGhost.duration }
-  print(("[CPU-GHOST] Reproduciendo tu primera vuelta (%.2fs)."):format(savedGhost.duration))
- else
-  cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1,
-   estimatedLapDuration = routeDistance / 37 }
-  print("[CPU] Aún no hay vuelta grabada; se usará el rival de checkpoints esta vez.")
  end
+
+ cpuRace = {
+  kart = kart,
+  route = route,
+  targetIndex = 1,
+  started = false,
+  speed = 37,
+  laps = 1,
+  hiddenTransparency = hiddenTransparency,
+  estimatedLapDuration = routeDistance / 37,
+ }
+ print("[CPU-GHOST] Rival oculto: esperando que el jugador complete la primera vuelta.")
 end
 
 local function enterCpuRoom(player)
