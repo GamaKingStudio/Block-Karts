@@ -125,7 +125,7 @@ for _, xOffset in ipairs({-13, 13}) do
 end
 
 -- Parking / display bays around the perimeter, enough open space for a busy lobby.
-for row, zOffset in ipairs({-72, -34, 42, 78}) do
+for row, zOffset in ipairs({-72, -34, 78}) do
     for col, xOffset in ipairs({-88, -58, 58, 88}) do
         local bx, bz = x + xOffset, z + zOffset
         part("ParkingBay_" .. row .. "_" .. col, Vector3.new(25, 0.08, 30), Vector3.new(bx, floorY + 0.34, bz), Color3.fromRGB(57, 60, 62), Enum.Material.Asphalt)
@@ -209,10 +209,8 @@ for _, side in ipairs({-1, 1}) do
     end
 end
 
--- A small reception / gathering island in the central area, outside the driving aisle.
-part("ReceptionDesk", Vector3.new(24, 4, 7), Vector3.new(x, floorY + 2.2, z + 16), black, Enum.Material.Metal)
-part("ReceptionCounter", Vector3.new(26, 0.7, 8), Vector3.new(x, floorY + 4.5, z + 16), steelLight, Enum.Material.DiamondPlate)
-sign("ReceptionSign", "RACE CONTROL", Vector3.new(18, 4, 0.7), Vector3.new(x, floorY + 8, z + 11), black, yellow)
+-- Overhead race-control sign keeps the central gathering floor completely open.
+sign("ReceptionSign", "RACE CONTROL  |  SELECT YOUR RACE", Vector3.new(32, 5, 0.8), Vector3.new(x, floorY + 19, z + 12), black, yellow)
 
 -- Invisible locator remains at the existing player lobby spawn position.
 local marker = part("GarageLocator", Vector3.new(2, 2, 2), Vector3.new(x, floorY + 2, z + 12), yellow, Enum.Material.Neon)
