@@ -124,6 +124,16 @@ local function saveRaceWin(player)
   else warn("[GARAGE-LEADERBOARD] No se pudo guardar la victoria de " .. player.Name) end
  end)
 end
+
+task.spawn(function()
+ local garage = Workspace:WaitForChild("BlockKartsGarage", 120)
+ if garage then
+  task.wait(2)
+  refreshLeaderboard("TimesBoard", bestLapStore, true, formatLapTime)
+  refreshLeaderboard("WinsBoard", winsStore, false, function(value) return tostring(value) end)
+ end
+end)
+
 local raceInProgress = false
 local countdownToken = 0
 local roomBusyPlayer = nil
