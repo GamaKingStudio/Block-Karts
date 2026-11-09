@@ -397,8 +397,7 @@ local function buildOceanAndHorizon(course)
 			"DistantIslandRock_" .. index,
 			Vector3.new(w, h * 0.54, d),
 			baseCF,
-			rockColor,			Enum.Material.Slate
-		)
+			rockColor,			Enum.Material.Slate		)
 		makeDistantPart(
 			"DistantIslandSlopeA_" .. index,
 			Vector3.new(w * 0.52, h * 0.7, d * 0.72),
@@ -797,8 +796,7 @@ local function buildTestCourse()
 			for _, pz in ipairs({ -4.2, 4.2 }) do
 				makePart(course, "KioskPost", Vector3.new(0.8, 7.5, 0.8), cf * CFrame.new(px, 3.95, pz), C_DARKWOOD, Enum.Material.Wood)
 			end		end
-		makePart(course, "KioskCounter", Vector3.new(10.5, 3.4, 2.2), cf * CFrame.new(0, 1.7, 3.2), C_WOOD, Enum.Material.WoodPlanks)
-		makePart(course, "KioskCounterTop", Vector3.new(11.2, 0.3, 2.8), cf * CFrame.new(0, 3.5, 3.2), C_DARKWOOD, Enum.Material.Wood)
+		makePart(course, "KioskCounter", Vector3.new(10.5, 3.4, 2.2), cf * CFrame.new(0, 1.7, 3.2), C_WOOD, Enum.Material.WoodPlanks)		makePart(course, "KioskCounterTop", Vector3.new(11.2, 0.3, 2.8), cf * CFrame.new(0, 3.5, 3.2), C_DARKWOOD, Enum.Material.Wood)
 		local roofCF = cf * CFrame.new(0, 8.0, 0) * CFrame.Angles(math.rad(8), 0, 0)
 		makePart(course, "KioskRoof", Vector3.new(13.5, 0.6, 11.5), roofCF, canopyColor, Enum.Material.Fabric)
 		makePart(course, "KioskValance", Vector3.new(13.5, 1.2, 0.3), roofCF * CFrame.new(0, -0.6, 5.75), C_WHITE, Enum.Material.Fabric)
@@ -1197,8 +1195,7 @@ local function buildTestCourse()
 			sourceModel = loadedFinishAsset:FindFirstChildWhichIsA("Model", true)
 		end
 		if sourceModel then
-			local finishStructure = sourceModel:Clone()
-			finishStructure.Name = "ImportedFinishStructure"
+			local finishStructure = sourceModel:Clone()			finishStructure.Name = "ImportedFinishStructure"
 			finishStructure.Parent = course
 
 
@@ -1597,8 +1594,7 @@ local function buildTestCourse()
 	end
 	-- Reposeras importadas desde el asset del usuario. Se carga una plantilla
 	-- y se clona para cada puesto de playa, conservando colores y materiales.
-	local LOUNGER_ASSET_ID = 110854388215298
-	local loungerTemplate = nil
+	local LOUNGER_ASSET_ID = 110854388215298	local loungerTemplate = nil
 	local loungerLoadOk, loungerAssetOrError = pcall(function()
 		return InsertService:LoadAsset(LOUNGER_ASSET_ID)
 	end)
@@ -1997,8 +1993,7 @@ local function createKart(player, spawnIndex)
 	)
 
 	local chassis = makePart(model, "Chassis", Vector3.new(4.8, 0.4, 6.4), spawnCFrame, Color3.fromRGB(25, 27, 30), Enum.Material.Metal)
-	chassis.Anchored = false
-	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
+	chassis.Anchored = false	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 	model.PrimaryPart = chassis
 
 	local C_BLACK   = Color3.fromRGB(26, 28, 32)
@@ -2398,7 +2393,6 @@ local function createKart(player, spawnIndex)
 					oldPart.CanQuery = false
 				end
 			end
-
 			-- Anclajes invisibles para conservar el humo de derrape trasero.
 			for _, wheel in ipairs({
 				{ name = "Wheel_RearL", source = "Rueda_Trasera_Izq", offset = Vector3.new(-1.65, -0.15, 2.0) },
@@ -2549,7 +2543,11 @@ local function onCheckpointTouched(hitPart, triggerPart)
 	local kartModel = hitPart:FindFirstAncestorOfClass("Model")
 	while kartModel and typeof(kartModel:GetAttribute("OwnerUserId")) ~= "number" do
 		local parent = kartModel.Parent
-		kartModel = parent and parent:FindFirstAncestorOfClass("Model") or nil
+		if parent and parent:IsA("Model") then
+			kartModel = parent
+		else
+			kartModel = parent and parent:FindFirstAncestorOfClass("Model") or nil
+		end
 	end
 	if not kartModel then return end
 
@@ -2797,8 +2795,7 @@ local function placeCharacterInGarage(player, character)
 			player:SetAttribute("RaceCamera", nil)
 			selectedCameras[player] = nil
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
-			publishSelectionState()
-		end
+			publishSelectionState()		end
 		return
 	end
 
@@ -3197,8 +3194,7 @@ task.spawn(function()
  if not garage then warn("[GARAGE] No se encontró BlockKartsGarage."); return end
  local pad = garage:WaitForChild("RoomEntryPad_1vCPU", 30)
  if not pad or not pad:IsA("BasePart") then warn("[GARAGE] No se encontró RoomEntryPad_1vCPU."); return end
- local debounce = {}
- pad.Touched:Connect(function(hit)
+ local debounce = {} pad.Touched:Connect(function(hit)
   local character = hit and hit:FindFirstAncestorOfClass("Model")
   local player = character and Players:GetPlayerFromCharacter(character)
   if not player or debounce[player] then return end
