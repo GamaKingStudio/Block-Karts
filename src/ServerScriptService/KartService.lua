@@ -67,6 +67,63 @@ local mapBuilt = false
 local raceData = {}
 local ghostRecords = {}
 local selectedCameras = {}
+
+-- Estadísticas persistentes para los marcadores del garaje.
+local bestLapStore = DataStoreService:GetOrderedDataStore("BloxyKartz_BestLapMs_v1")
+local winsStore = DataStoreService:GetOrderedDataStore("BloxyKartz_RaceWins_v1")
+local function formatLapTime(milliseconds)
+ local total = math.max(0, tonumber(milliseconds) or 0) / 1000
+ return string.format("%02d:%06.3f", math.floor(total / 60), total % 60)
+end
+local function refreshLeaderboard(boardName, store, ascending, valueFormatter)
+ task.spawn(function()
+  local garage = Workspace:FindFirstChild("BlockKartsGarage")
+  local board = garage and garage:FindFirstChild(boardName)
+  local display = board and board:FindFirstChild("LeaderboardDisplay")
+  local panel = display and display:FindFirstChild("Panel")
+  if not panel then return end
+  local ok, pages = pcall(function() return store:GetSortedAsync(ascending, 5) end)
+  if not ok or not pages then warn("[GARAGE-LEADERBOARD] No se pudieron leer " .. boardName); return end
+  local page = pages:GetCurrentPage()
+  for i = 1, 5 do
+   local row = panel:FindFirstChild("LeaderboardRow" .. i)
+   local entry = page[i]
+   if row then
+    if entry then
+     local username = "Piloto"
+     local userId = tonumber(entry.key)
+     if userId then
+      local nameOk, name = pcall(function() return Players:GetNameFromUserIdAsync(userId) end)
+      if nameOk and name then username = name end
+     end
+     row.Text = string.format("%d   %-16s   %s", i, username, valueFormatter(entry.value))
+    else row.Text = string.format("%d   ---", i) end
+   end
+  end
+ end)
+end
+local function saveBestLap(player, lapTime)
+ task.spawn(function()
+  local value = math.floor(lapTime * 1000 + 0.5)
+  local ok = pcall(function()
+   bestLapStore:UpdateAsync(tostring(player.UserId), function(old)
+    if type(old) == "number" then return math.min(old, value) end
+    return value
+   end)
+  end)
+  if ok then refreshLeaderboard("TimesBoard", bestLapStore, true, formatLapTime)
+  else warn("[GARAGE-LEADERBOARD] No se pudo guardar el mejor tiempo de " .. player.Name) end
+ end)
+end
+local function saveRaceWin(player)
+ task.spawn(function()
+  local ok = pcall(function()
+   winsStore:UpdateAsync(tostring(player.UserId), function(old) return (tonumber(old) or 0) + 1 end)
+  end)
+  if ok then refreshLeaderboard("WinsBoard", winsStore, false, function(value) return tostring(value) end)
+  else warn("[GARAGE-LEADERBOARD] No se pudo guardar la victoria de " .. player.Name) end
+ end)
+end
 local raceInProgress = false
 local countdownToken = 0
 local roomBusyPlayer = nil
@@ -116,7 +173,7 @@ local function tryStartRace()
    local k = activeKarts[p]
    if k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent == p.Character then
     local d = raceData[p]
-    if d then d.LapStartTime = os.clock(); d.CanFinishLap = false end
+    if d then d.LapStartTime = os.clock(); d.RaceStartTime = d.LapStartTime; d.RaceCompleted = false; d.GhostSamples = {}; d.LastGhostSampleAt = 0; d.CanFinishLap = false end
     p:SetAttribute("RaceStarted", true)
     raceCountdownRemote:FireClient(p, 0)
    end
@@ -2409,6 +2466,8 @@ local function initPlayerRaceData(player, spawnCFrame)
 		LastValidCFrame = spawnCFrame,
 		LapStartTime = 0.0,
 		BestLapTime = nil,
+        RaceStartTime = 0,
+        RaceCompleted = false,
 		GhostSamples = {},
 		LastGhostSampleAt = 0,
 		CanFinishLap = false,
@@ -2455,6 +2514,7 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			local isBest = (pData.BestLapTime == nil) or (lapTime < pData.BestLapTime)
 			if isBest then
 				pData.BestLapTime = lapTime
+                saveBestLap(player, lapTime)
 			end
             -- Guarda la primera vuelta real para usarla como fantasma en la siguiente carrera.
             if pData.CurrentLap == 1 and #pData.GhostSamples >= 2 then
@@ -2464,6 +2524,19 @@ local function onCheckpointTouched(hitPart, triggerPart)
             end
 
 			lapCompletedRemote:FireClient(player, pData.CurrentLap, lapTime, isBest)
+            if pData.CurrentLap >= (KartConfig.TOTAL_LAPS or 3) and not pData.RaceCompleted then
+                pData.RaceCompleted = true
+                local totalTime = now - (pData.RaceStartTime > 0 and pData.RaceStartTime or now)
+                local referenceLap = cpuRace and (cpuRace.ghostDuration or cpuRace.estimatedLapDuration)
+                local referenceTime = referenceLap and referenceLap * (KartConfig.TOTAL_LAPS or 3) or math.huge
+                if totalTime <= referenceTime then
+                    saveRaceWin(player)
+                    player:SetAttribute("RaceResult", "VICTORIA")
+                else
+                    player:SetAttribute("RaceResult", "COMPLETADA")
+                end
+                print(("[RACE] %s terminó en %.2fs; referencia CPU %.2fs"):format(player.Name, totalTime, referenceTime))
+            end
 			pData.CurrentLap = pData.CurrentLap + 1
 			player:SetAttribute("RaceLap", pData.CurrentLap)
 			player:SetAttribute("RaceCheckpoint", 0)
@@ -2788,7 +2861,9 @@ local function createCpuOpponent(player)
  end
  if finish then table.insert(route, finish.Position) end
  if #route < 28 then warn(("[CPU] Ruta incompleta: %d puntos."):format(#route)); return end
- local savedGhost = ghostRecords[player.UserId]
+ local routeDistance = 0
+  for i = 1, #route - 1 do routeDistance += (route[i + 1] - route[i]).Magnitude end
+  local savedGhost = ghostRecords[player.UserId]
  if savedGhost and savedGhost.samples and #savedGhost.samples >= 2 then
   for _, descendant in ipairs(kart.model:GetDescendants()) do
    if descendant:IsA("BasePart") and descendant.Transparency < 1 then
@@ -2804,10 +2879,12 @@ local function createCpuOpponent(player)
   highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
   highlight.Parent = kart.model
   cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1,
-   ghostSamples = savedGhost.samples, ghostDuration = savedGhost.duration, ghostIndex = 1 }
+   ghostSamples = savedGhost.samples, ghostDuration = savedGhost.duration, ghostIndex = 1,
+   estimatedLapDuration = savedGhost.duration }
   print(("[CPU-GHOST] Reproduciendo tu primera vuelta (%.2fs)."):format(savedGhost.duration))
  else
-  cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1 }
+  cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1,
+   estimatedLapDuration = routeDistance / 37 }
   print("[CPU] Aún no hay vuelta grabada; se usará el rival de checkpoints esta vez.")
  end
 end
