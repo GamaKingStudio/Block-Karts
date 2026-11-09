@@ -1,8 +1,5 @@
--- BLOCK KARTS | INDUSTRIAL GARAGE LOBBY
--- Builds the enclosed industrial garage beside Pista 1 (Playa).
--- This script only creates the lobby environment and physical room-entry pads.
--- It does not edit KartTestCourse, CourseCheckpoints, track geometry, cameras or kart handling.
-
+-- BLOCK KARTS | UNDERGROUND MEGA GARAGE
+-- Lobby-only geometry. This script never edits the Playa track or its checkpoints.
 local Workspace = game:GetService("Workspace")
 
 local COURSE_NAME = "KartTestCourse"
@@ -12,8 +9,7 @@ local GARAGE_ORIGIN = Vector3.new(520, 1, 0)
 local existing = Workspace:FindFirstChild(GARAGE_NAME)
 if existing then existing:Destroy() end
 
-local course = Workspace:WaitForChild(COURSE_NAME, 120)
-if not course then
+if not Workspace:WaitForChild(COURSE_NAME, 120) then
     warn("[GARAGE] KartTestCourse was not found; garage was not built.")
     return
 end
@@ -21,6 +17,7 @@ end
 local model = Instance.new("Model")
 model.Name = GARAGE_NAME
 model:SetAttribute("GeneratedByGarageBuilder", true)
+model:SetAttribute("GarageStyle", "Underground")
 model.Parent = Workspace
 
 local function part(name, size, position, color, material, parent, shape)
@@ -38,17 +35,16 @@ local function part(name, size, position, color, material, parent, shape)
     return p
 end
 
-local function sign(name, text, size, position, faceColor, textColor, parent)
+local function sign(name, text, size, position, faceColor, textColor, parent, face)
     local board = part(name, size, position, faceColor, Enum.Material.Metal, parent)
     board.CanCollide = false
     board.CanTouch = false
     local gui = Instance.new("SurfaceGui")
     gui.Name = "SignSurface"
-    gui.Face = Enum.NormalId.Front
+    gui.Face = face or Enum.NormalId.Front
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = 45
+    gui.PixelsPerStud = 35
     gui.Parent = board
-
     local label = Instance.new("TextLabel")
     label.Name = "Text"
     label.Size = UDim2.fromScale(1, 1)
@@ -57,161 +53,173 @@ local function sign(name, text, size, position, faceColor, textColor, parent)
     label.TextColor3 = textColor
     label.TextScaled = true
     label.Font = Enum.Font.LondrinaSolid
-    label.TextStrokeTransparency = 0.35
+    label.TextStrokeTransparency = 0.3
     label.Parent = gui
     return board
 end
 
-local baseX, baseY, baseZ = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
-local floorY = baseY + 2.25
+local x, y, z = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
+local floorY = y + 2.25
+local width, depth = 250, 220
+local halfW, halfD = width / 2, depth / 2
+local wallH = 34
+local wallT = 4
+local ceilingY = floorY + wallH
 
-local concrete = Color3.fromRGB(65, 67, 69)
-local concreteDark = Color3.fromRGB(39, 42, 45)
-local steel = Color3.fromRGB(83, 89, 94)
-local steelLight = Color3.fromRGB(117, 123, 127)
-local black = Color3.fromRGB(19, 21, 23)
-local rubber = Color3.fromRGB(28, 29, 30)
-local safetyYellow = Color3.fromRGB(235, 173, 45)
-local warmWhite = Color3.fromRGB(245, 239, 220)
+local concrete = Color3.fromRGB(67, 69, 71)
+local concreteDark = Color3.fromRGB(35, 38, 41)
+local concreteMid = Color3.fromRGB(52, 56, 60)
+local steel = Color3.fromRGB(83, 90, 96)
+local steelLight = Color3.fromRGB(121, 127, 132)
+local black = Color3.fromRGB(16, 19, 22)
+local yellow = Color3.fromRGB(235, 174, 48)
+local warmWhite = Color3.fromRGB(240, 232, 211)
 local cyan = Color3.fromRGB(35, 190, 205)
-local red = Color3.fromRGB(174, 57, 45)
+local red = Color3.fromRGB(190, 62, 48)
 
--- Foundation and worn concrete workshop floor.
-part("GarageFoundation", Vector3.new(176, 4, 142), Vector3.new(baseX, baseY, baseZ), concreteDark, Enum.Material.Concrete)
-part("GarageFloor", Vector3.new(168, 0.5, 134), Vector3.new(baseX, floorY, baseZ), concrete, Enum.Material.Concrete)
+-- Huge underground concrete bunker floor and foundation.
+part("GarageFoundation", Vector3.new(width + 12, 5, depth + 12), Vector3.new(x, y, z), concreteDark, Enum.Material.Concrete)
+part("GarageFloor", Vector3.new(width - 8, 0.6, depth - 8), Vector3.new(x, floorY, z), concrete, Enum.Material.Concrete)
 
--- Subtle service-bay markings, leaving the central driving aisle clear.
-for _, xOffset in ipairs({-39, 39}) do
-    part("ServiceBayLine_" .. xOffset, Vector3.new(0.35, 0.08, 34), Vector3.new(baseX + xOffset, floorY + 0.29, baseZ - 5), safetyYellow, Enum.Material.SmoothPlastic)
-    part("ServiceBayRearLine_" .. xOffset, Vector3.new(24, 0.08, 0.35), Vector3.new(baseX + xOffset, floorY + 0.29, baseZ - 22), safetyYellow, Enum.Material.SmoothPlastic)
-end
-part("CentralDriveLane", Vector3.new(13, 0.08, 46), Vector3.new(baseX, floorY + 0.3, baseZ + 5), Color3.fromRGB(78, 80, 81), Enum.Material.Asphalt)
-
--- Fully enclosed workshop shell. The front has a wide garage opening with a raised lintel.
+-- Full perimeter walls. The front wall is continuous: there is NO open entrance.
 local shell = Instance.new("Folder")
 shell.Name = "GarageBuilding"
 shell.Parent = model
 
-part("RearConcreteWall", Vector3.new(124, 25, 3), Vector3.new(baseX, floorY + 12.5, baseZ - 29), concreteDark, Enum.Material.Concrete, shell)
-part("LeftConcreteWall", Vector3.new(3, 25, 62), Vector3.new(baseX - 61, floorY + 12.5, baseZ), concreteDark, Enum.Material.Concrete, shell)
-part("RightConcreteWall", Vector3.new(3, 25, 62), Vector3.new(baseX + 61, floorY + 12.5, baseZ), concreteDark, Enum.Material.Concrete, shell)
+part("RearConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, z - halfD + wallT/2), concreteDark, Enum.Material.Concrete, shell)
+part("FrontConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, z + halfD - wallT/2), concreteDark, Enum.Material.Concrete, shell)
+part("LeftConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x - halfW + wallT/2, floorY + wallH/2, z), concreteDark, Enum.Material.Concrete, shell)
+part("RightConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x + halfW - wallT/2, floorY + wallH/2, z), concreteDark, Enum.Material.Concrete, shell)
 
-part("FrontWallLeft", Vector3.new(43, 25, 3), Vector3.new(baseX - 40.5, floorY + 12.5, baseZ + 29), concreteDark, Enum.Material.Concrete, shell)
-part("FrontWallRight", Vector3.new(43, 25, 3), Vector3.new(baseX + 40.5, floorY + 12.5, baseZ + 29), concreteDark, Enum.Material.Concrete, shell)
-part("FrontGarageHeader", Vector3.new(39, 6, 3), Vector3.new(baseX, floorY + 22, baseZ + 29), steel, Enum.Material.Metal, shell)
-
--- Heavy roof and exposed structural beams.
-part("GarageRoof", Vector3.new(128, 3, 66), Vector3.new(baseX, floorY + 26.5, baseZ - 1), black, Enum.Material.Metal, shell)
-for _, xOffset in ipairs({-58, -30, 0, 30, 58}) do
-    part("RoofCrossBeam_" .. xOffset, Vector3.new(1.4, 1.4, 64), Vector3.new(baseX + xOffset, floorY + 24.5, baseZ - 1), steel, Enum.Material.DiamondPlate, shell)
+-- Heavy sealed ceiling slab and exposed underground structural girders.
+part("GarageRoof", Vector3.new(width + 8, 5, depth + 8), Vector3.new(x, ceilingY + 2, z), black, Enum.Material.Concrete, shell)
+for _, zOffset in ipairs({-88, -44, 0, 44, 88}) do
+    part("RoofBeam_" .. zOffset, Vector3.new(width - 12, 1.6, 2.4), Vector3.new(x, ceilingY - 1.2, z + zOffset), steel, Enum.Material.DiamondPlate, shell)
 end
-for _, xOffset in ipairs({-60, -30, 30, 60}) do
-    part("FrontSteelColumn_" .. xOffset, Vector3.new(2.5, 25, 3.2), Vector3.new(baseX + xOffset, floorY + 12.5, baseZ + 27.5), steelLight, Enum.Material.DiamondPlate, shell)
+for _, xOffset in ipairs({-108, -54, 0, 54, 108}) do
+    part("RoofCrossBeam_" .. xOffset, Vector3.new(2.2, 1.6, depth - 16), Vector3.new(x + xOffset, ceilingY - 1.3, z), steel, Enum.Material.DiamondPlate, shell)
 end
 
--- Industrial fascia and main sign above the entrance.
-part("EntranceTopBeam", Vector3.new(128, 2, 3.5), Vector3.new(baseX, floorY + 25, baseZ + 29), safetyYellow, Enum.Material.Metal, shell)
-sign("MainSign", "BLOCK KARTS  |  WORKSHOP", Vector3.new(48, 7, 0.8), Vector3.new(baseX, floorY + 17, baseZ + 30.9), black, warmWhite, shell)
-
--- Back-wall workshop details: metal cabinets, workbench, pegboards and tool silhouettes.
-for _, xOffset in ipairs({-48, -31, 31, 48}) do
-    local cabinet = part("ToolCabinet_" .. xOffset, Vector3.new(12, 8, 4), Vector3.new(baseX + xOffset, floorY + 4.2, baseZ - 25), steel, Enum.Material.DiamondPlate)
-    part("CabinetDoor_" .. xOffset, Vector3.new(5.2, 6.4, 0.18), Vector3.new(baseX + xOffset - 2.8, floorY + 4.2, baseZ - 22.85), concreteDark, Enum.Material.Metal)
-    part("CabinetHandle_" .. xOffset, Vector3.new(0.25, 1.2, 0.25), Vector3.new(baseX + xOffset - 2.8, floorY + 4.2, baseZ - 22.65), safetyYellow, Enum.Material.Metal)
-    cabinet:SetAttribute("WorkshopProp", true)
-end
-
-part("RearWorkbenchTop", Vector3.new(38, 1, 5), Vector3.new(baseX, floorY + 5.3, baseZ - 24), Color3.fromRGB(91, 76, 59), Enum.Material.Wood)
-for _, xOffset in ipairs({-16, 16}) do
-    part("WorkbenchLeg_" .. xOffset, Vector3.new(1.2, 5, 4), Vector3.new(baseX + xOffset, floorY + 2.7, baseZ - 24), steel, Enum.Material.Metal)
-end
-part("ToolPegboard", Vector3.new(38, 7, 0.7), Vector3.new(baseX, floorY + 11, baseZ - 27), steel, Enum.Material.DiamondPlate)
-for i = -5, 5 do
-    part("ToolPeg_" .. i, Vector3.new(0.45, 2.1, 0.3), Vector3.new(baseX + i * 3, floorY + 11, baseZ - 26.4), safetyYellow, Enum.Material.Metal)
-end
-
--- Shelving and stacked tires along both side walls.
-for _, side in ipairs({-1, 1}) do
-    local x = baseX + side * 54
-    for shelf = 1, 3 do
-        local y = floorY + 3 + shelf * 4
-        part("SideShelf_" .. side .. "_" .. shelf, Vector3.new(8, 0.6, 15), Vector3.new(x - side * 4, y, baseZ - 5), steel, Enum.Material.DiamondPlate)
-    end
-    for stack = 1, 3 do
-        local tire = part("TireStack_" .. side .. "_" .. stack, Vector3.new(3.4, 1.7, 3.4), Vector3.new(x - side * 4, floorY + 1.25 + stack * 1.8, baseZ + 14), rubber, Enum.Material.SmoothPlastic, nil, Enum.PartType.Cylinder)
-        tire.Orientation = Vector3.new(0, 0, 90)
+-- Reinforced concrete columns create scale and make the structure feel subterranean.
+for _, xOffset in ipairs({-108, -54, 0, 54, 108}) do
+    for _, zOffset in ipairs({-88, 0, 88}) do
+        if not (xOffset == 0 and zOffset == 0) then
+            local pillar = part("ReinforcedPillar_" .. xOffset .. "_" .. zOffset, Vector3.new(4.5, wallH - 1, 4.5), Vector3.new(x + xOffset, floorY + (wallH - 1)/2, z + zOffset), concreteMid, Enum.Material.Concrete)
+            part("PillarSafetyBand_" .. xOffset .. "_" .. zOffset, Vector3.new(4.58, 1.2, 4.58), Vector3.new(x + xOffset, floorY + 2.2, z + zOffset), yellow, Enum.Material.Metal)
+        end
     end
 end
 
--- Display platforms for karts: kept away from the driving lane and entrance pads.
-for i, xOffset in ipairs({-35, 0, 35}) do
-    local x = baseX + xOffset
-    part("KartDisplay_" .. i, Vector3.new(22, 0.8, 15), Vector3.new(x, floorY + 0.7, baseZ - 7), black, Enum.Material.Metal)
-    part("DisplayEdge_" .. i, Vector3.new(22.4, 0.25, 15.4), Vector3.new(x, floorY + 1.2, baseZ - 7), i == 2 and safetyYellow or steelLight, Enum.Material.DiamondPlate)
-    part("DisplayTop_" .. i, Vector3.new(20.5, 0.18, 13.5), Vector3.new(x, floorY + 1.35, baseZ - 7), steel, Enum.Material.Metal)
+-- Front shutter is a sealed decorative industrial door panel, not an opening.
+local shutterZ = z + halfD - wallT - 0.08
+part("ClosedSecurityShutter", Vector3.new(104, 22, 0.7), Vector3.new(x, floorY + 11, shutterZ), steel, Enum.Material.DiamondPlate)
+for row = 1, 18 do
+    part("ShutterRib_" .. row, Vector3.new(103.5, 0.22, 0.9), Vector3.new(x, floorY + 0.7 + row * 1.15, shutterZ - 0.48), steelLight, Enum.Material.Metal)
+end
+sign("MainSign", "BLOCK KARTS  |  UNDERGROUND RACE GARAGE", Vector3.new(74, 8, 0.9), Vector3.new(x, floorY + 27, shutterZ - 0.65), black, warmWhite)
+
+-- Large floor markings and a wide central circulation lane for many players.
+part("MainDriveAisle", Vector3.new(24, 0.1, depth - 38), Vector3.new(x, floorY + 0.36, z), Color3.fromRGB(78, 81, 83), Enum.Material.Asphalt)
+for _, xOffset in ipairs({-13, 13}) do
+    part("AisleLine_" .. xOffset, Vector3.new(0.35, 0.08, depth - 42), Vector3.new(x + xOffset, floorY + 0.43, z), yellow, Enum.Material.SmoothPlastic)
 end
 
--- Ranking panels integrated into the rear wall.
-sign("WinsBoard", "MEJORES PILOTOS  |  VICTORIAS", Vector3.new(27, 9, 0.8), Vector3.new(baseX - 35, floorY + 17, baseZ - 27.1), black, safetyYellow)
-sign("TimesBoard", "MEJORES TIEMPOS", Vector3.new(27, 9, 0.8), Vector3.new(baseX + 35, floorY + 17, baseZ - 27.1), black, cyan)
+-- Parking / display bays around the perimeter, enough open space for a busy lobby.
+for row, zOffset in ipairs({-72, -34, 42, 78}) do
+    for col, xOffset in ipairs({-88, -58, 58, 88}) do
+        local bx, bz = x + xOffset, z + zOffset
+        part("ParkingBay_" .. row .. "_" .. col, Vector3.new(25, 0.08, 30), Vector3.new(bx, floorY + 0.34, bz), Color3.fromRGB(57, 60, 62), Enum.Material.Asphalt)
+        for _, edgeX in ipairs({-12, 12}) do
+            part("ParkingLine_" .. row .. "_" .. col .. "_" .. edgeX, Vector3.new(0.3, 0.08, 29), Vector3.new(bx + edgeX, floorY + 0.42, bz), yellow, Enum.Material.SmoothPlastic)
+        end
+    end
+end
 
--- Physical race portals. CPU keeps the existing backend name/position.
--- The 1vUser pad is deliberately named for the upcoming matchmaking connection.
+-- Kart display platforms along the rear half of the bunker.
+for i, xOffset in ipairs({-78, -26, 26, 78}) do
+    local px, pz = x + xOffset, z - 79
+    part("KartDisplay_" .. i, Vector3.new(25, 0.8, 18), Vector3.new(px, floorY + 0.8, pz), black, Enum.Material.Metal)
+    part("DisplayEdge_" .. i, Vector3.new(25.5, 0.25, 18.5), Vector3.new(px, floorY + 1.3, pz), i % 2 == 0 and cyan or yellow, Enum.Material.DiamondPlate)
+    part("DisplayTop_" .. i, Vector3.new(23.5, 0.18, 16.5), Vector3.new(px, floorY + 1.45, pz), steel, Enum.Material.Metal)
+end
+
+-- Workshop stations, tool cabinets and tire racks along the rear wall.
+for _, xOffset in ipairs({-104, -82, 82, 104}) do
+    part("ToolCabinet_" .. xOffset, Vector3.new(13, 9, 5), Vector3.new(x + xOffset, floorY + 4.8, z - 101), steel, Enum.Material.DiamondPlate)
+    part("CabinetDoor_" .. xOffset, Vector3.new(5.5, 7, 0.2), Vector3.new(x + xOffset - 3, floorY + 4.8, z - 98.35), concreteDark, Enum.Material.Metal)
+end
+part("RearWorkbench", Vector3.new(46, 1, 6), Vector3.new(x, floorY + 5.4, z - 101), Color3.fromRGB(91, 76, 59), Enum.Material.Wood)
+part("WorkshopPegboard", Vector3.new(46, 8, 0.7), Vector3.new(x, floorY + 12, z - 107), steel, Enum.Material.DiamondPlate)
+
+-- Ranking boards mounted on the left and right interior walls.
+local wins = sign("WinsBoard", "MEJORES PILOTOS  |  VICTORIAS", Vector3.new(34, 11, 0.8), Vector3.new(x - halfW + 3.2, floorY + 23, z - 4), black, yellow)
+wins.Orientation = Vector3.new(0, 90, 0)
+local times = sign("TimesBoard", "MEJORES TIEMPOS", Vector3.new(34, 11, 0.8), Vector3.new(x + halfW - 3.2, floorY + 23, z - 4), black, cyan)
+times.Orientation = Vector3.new(0, -90, 0)
+
+-- Two distinct physical portals in the front half of the interior.
 local function createRoomPad(name, roomType, labelText, xOffset, glowColor)
-    local pad = part(name, Vector3.new(22, 0.55, 17), Vector3.new(baseX + xOffset, floorY + 0.55, baseZ + 15), glowColor, Enum.Material.Neon)
+    local px, pz = x + xOffset, z + 48
+    local pad = part(name, Vector3.new(30, 0.7, 24), Vector3.new(px, floorY + 0.7, pz), glowColor, Enum.Material.Neon)
     pad:SetAttribute("LobbyRoomType", roomType)
     pad:SetAttribute("RoomCapacity", 1)
     pad.CanCollide = true
     pad.CanTouch = true
 
-    local trim = part(name .. "_Trim", Vector3.new(23, 0.2, 18), Vector3.new(baseX + xOffset, floorY + 0.2, baseZ + 15), safetyYellow, Enum.Material.Metal)
+    local trim = part(name .. "_Trim", Vector3.new(31, 0.22, 25), Vector3.new(px, floorY + 0.28, pz), yellow, Enum.Material.Metal)
     trim.CanCollide = false
-    local board = sign(name .. "_Sign", labelText, Vector3.new(22, 4.5, 0.8), Vector3.new(baseX + xOffset, floorY + 7, baseZ + 5.7), black, warmWhite)
+    local board = sign(name .. "_Sign", labelText, Vector3.new(29, 6, 1), Vector3.new(px, floorY + 10, pz - 14), black, warmWhite)
     board.Orientation = Vector3.new(0, 180, 0)
     board.CanCollide = false
-
     local light = Instance.new("PointLight")
     light.Color = glowColor
-    light.Brightness = 1.1
-    light.Range = 18
+    light.Brightness = 1.8
+    light.Range = 28
     light.Parent = pad
     return pad
 end
 
-createRoomPad("RoomEntryPad_1vCPU", "1vCPU", "ENTRAR  |  1 VS COMPUTADORA", 28, cyan)
-createRoomPad("RoomEntryPad_1vUser", "1vUser", "ENTRAR  |  1 VS USUARIO", -28, red)
+createRoomPad("RoomEntryPad_1vCPU", "1vCPU", "ENTRAR  |  1 VS COMPUTADORA", 48, cyan)
+createRoomPad("RoomEntryPad_1vUser", "1vUser", "ENTRAR  |  1 VS USUARIO", -48, red)
 
--- Industrial ceiling lights and wall-mounted lamps.
-for _, xOffset in ipairs({-42, -14, 14, 42}) do
-    local lamp = part("CeilingLight_" .. xOffset, Vector3.new(15, 0.45, 2.4), Vector3.new(baseX + xOffset, floorY + 24.5, baseZ - 2), warmWhite, Enum.Material.Neon)
-    lamp.CanCollide = false
-    lamp.CanTouch = false
-    local point = Instance.new("PointLight")
-    point.Color = Color3.fromRGB(255, 239, 207)
-    point.Brightness = 1.7
-    point.Range = 32
-    point.Parent = lamp
+-- Industrial overhead light rows and low wall strips. No outdoor sunlight is needed.
+for _, zOffset in ipairs({-82, -42, 0, 42, 82}) do
+    for _, xOffset in ipairs({-82, -27, 27, 82}) do
+        local lamp = part("CeilingLight_" .. xOffset .. "_" .. zOffset, Vector3.new(18, 0.5, 3), Vector3.new(x + xOffset, ceilingY - 3.2, z + zOffset), warmWhite, Enum.Material.Neon)
+        lamp.CanCollide = false
+        lamp.CanTouch = false
+        local light = Instance.new("PointLight")
+        light.Color = Color3.fromRGB(255, 235, 205)
+        light.Brightness = 1.35
+        light.Range = 34
+        light.Parent = lamp
+    end
 end
 
 for _, side in ipairs({-1, 1}) do
-    local wallLamp = part("WallLamp_" .. side, Vector3.new(1, 5, 2), Vector3.new(baseX + side * 59, floorY + 17, baseZ + 4), warmWhite, Enum.Material.Neon)
-    wallLamp.CanCollide = false
-    wallLamp.CanTouch = false
-    local light = Instance.new("PointLight")
-    light.Color = Color3.fromRGB(255, 225, 180)
-    light.Brightness = 1.0
-    light.Range = 22
-    light.Parent = wallLamp
+    for _, zOffset in ipairs({-72, -24, 24, 72}) do
+        local strip = part("WallLight_" .. side .. "_" .. zOffset, Vector3.new(0.7, 4, 14), Vector3.new(x + side * (halfW - 2.5), floorY + 18, z + zOffset), side == -1 and cyan or red, Enum.Material.Neon)
+        strip.CanCollide = false
+        strip.CanTouch = false
+        local light = Instance.new("PointLight")
+        light.Color = strip.Color
+        light.Brightness = 0.8
+        light.Range = 18
+        light.Parent = strip
+    end
 end
 
--- Arrival lane inside the entrance.
-part("ArrivalLane", Vector3.new(14, 0.12, 20), Vector3.new(baseX, floorY + 0.32, baseZ + 21), Color3.fromRGB(52, 55, 57), Enum.Material.Asphalt)
+-- A small reception / gathering island in the central area, outside the driving aisle.
+part("ReceptionDesk", Vector3.new(24, 4, 7), Vector3.new(x, floorY + 2.2, z + 16), black, Enum.Material.Metal)
+part("ReceptionCounter", Vector3.new(26, 0.7, 8), Vector3.new(x, floorY + 4.5, z + 16), steelLight, Enum.Material.DiamondPlate)
+sign("ReceptionSign", "RACE CONTROL", Vector3.new(18, 4, 0.7), Vector3.new(x, floorY + 8, z + 11), black, yellow)
 
-local marker = part("GarageLocator", Vector3.new(2, 2, 2), Vector3.new(baseX, floorY + 2, baseZ + 58), safetyYellow, Enum.Material.Neon)
+-- Invisible locator remains at the existing player lobby spawn position.
+local marker = part("GarageLocator", Vector3.new(2, 2, 2), Vector3.new(x, floorY + 2, z + 12), yellow, Enum.Material.Neon)
 marker.Transparency = 1
 marker.CanCollide = false
 marker.CanTouch = false
 marker.CanQuery = false
 model.PrimaryPart = marker
 
-print(("[GARAGE] Enclosed industrial lobby built at %s. Pista 1 (Playa) was not modified."):format(tostring(GARAGE_ORIGIN)))
+print(("[GARAGE] Underground mega garage built at %s (%d x %d). Playa track untouched."):format(tostring(GARAGE_ORIGIN), width, depth))
