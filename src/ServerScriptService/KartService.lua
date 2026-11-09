@@ -988,8 +988,8 @@ local function buildTestCourse()
 		Vector3.new(-165, yGround, 105),
 		Vector3.new(175, yGround, -105),
 		Vector3.new(175, yGround, -35),
-		Vector3.new(175, yGround, 35),
-		Vector3.new(125, yGround, 145),
+		Vector3.new(270, yGround, 35),
+		Vector3.new(270, yGround, 145),
 		Vector3.new(28, yGround, 25),
 		Vector3.new(67, yGround, 25),
 		Vector3.new(28, yGround, -45),
@@ -1159,8 +1159,8 @@ local function buildTestCourse()
 		{ pos = Vector3.new(175, yGround, -220), tilt = 8, yaw = 160, scale = 1.05 },
 		{ pos = Vector3.new(195, yGround, -130), tilt = -6, yaw = 210, scale = 1.15 },
 		{ pos = Vector3.new(195, yGround, -30), tilt = 7, yaw = -60, scale = 1.05 },
-		{ pos = Vector3.new(195, yGround, 70), tilt = -5, yaw = 30, scale = 1.1 },
-		{ pos = Vector3.new(115, yGround, 205), tilt = 6, yaw = -80, scale = 1.0 },
+		{ pos = Vector3.new(285, yGround, 70), tilt = -5, yaw = 30, scale = 1.1 },
+		{ pos = Vector3.new(280, yGround, 245), tilt = 6, yaw = -80, scale = 1.0 },
 		{ pos = Vector3.new(-35, yGround, 205), tilt = -6, yaw = 50, scale = 0.95 },
 	}
 	for _, p in ipairs(palmData) do
@@ -1306,8 +1306,8 @@ local function buildTestCourse()
 	spawnBeachCluster(Vector3.new(-145, yGround, 155), 25)
 	spawnBeachCluster(Vector3.new(-85, yGround, 155), -15)
 	spawnBeachCluster(Vector3.new(-25, yGround, 155), 40)
-	spawnBeachCluster(Vector3.new(35, yGround, 155), -30)
-	spawnBeachCluster(Vector3.new(95, yGround, 155), 10)
+	spawnBeachCluster(Vector3.new(35, yGround, 270), -30)
+	spawnBeachCluster(Vector3.new(95, yGround, 270), 10)
 
 	-- Dos rincones de playa en los claros interiores de arena.
 	-- Se mantienen separados del asfalto y de las barreras.
@@ -1418,7 +1418,7 @@ local function buildTestCourse()
 		{ offset = Vector3.new(285, 0, 185), rot = -35, lean = 15, scale = 0.92 },
 		{ offset = Vector3.new(255, 0, 205), rot = 18, lean = 10, scale = 1.02 },
 		-- Costado oriental, visibles desde las curvas del lado derecho.
-		{ offset = Vector3.new(265, 0, 90), rot = 65, lean = 14, scale = 0.98 },
+		{ offset = Vector3.new(315, 0, -80), rot = 65, lean = 14, scale = 0.98 },
 		{ offset = Vector3.new(185, 0, -5), rot = -55, lean = 9, scale = 1.06 },
 		{ offset = Vector3.new(170, 0, -95), rot = 25, lean = 16, scale = 0.94 },
 		-- Sector norte y noroeste, junto a los claros de arena.
@@ -1426,7 +1426,7 @@ local function buildTestCourse()
 		{ offset = Vector3.new(5, 0, -185), rot = 50, lean = 7, scale = 0.95 },
 		{ offset = Vector3.new(-85, 0, -175), rot = -65, lean = 15, scale = 1.03 },
 		-- Sector sur, repartidas para que el atrezo se lea desde distintos tramos.
-		{ offset = Vector3.new(65, 0, 175), rot = -15, lean = 11, scale = 0.97 },
+		{ offset = Vector3.new(315, 0, 255), rot = -15, lean = 11, scale = 0.97 },
 		{ offset = Vector3.new(-35, 0, 175), rot = 40, lean = 17, scale = 1.05 },
 		{ offset = Vector3.new(-125, 0, 145), rot = -45, lean = 10, scale = 0.93 },
 		{ offset = Vector3.new(-155, 0, -105), rot = 20, lean = 13, scale = 1.01 },
