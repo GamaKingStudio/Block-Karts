@@ -2581,7 +2581,7 @@ startRaceFromLobbyRemote.OnServerEvent:Connect(function(player)
 	spawnPlayerKart(player)
 end)
 
-local function addCpuPilot(kart)
+local function addFallbackCpuPilot(kart)
  if not kart or not kart.chassis or not kart.chassis.Parent then return end
  local rng = Random.new()
  local suitColors = {
@@ -2646,13 +2646,121 @@ local function addCpuPilot(kart)
  kart.model:SetAttribute("HasCpuPilot", true)
 end
 
-local function createCpuOpponent()
+local function getRandomFriend(player)
+ if not player or not player.Parent then return nil end
+
+ local ok, pages = pcall(function()
+  return Players:GetFriendsAsync(player.UserId)
+ end)
+ if not ok or not pages then
+  warn("[CPU] No se pudo consultar la lista de amigos; se usará piloto de respaldo.")
+  return nil
+ end
+
+ local selected = nil
+ local seen = 0
+ local pageCount = 0
+ repeat
+  local pageOk, currentPage = pcall(function()
+   return pages:GetCurrentPage()
+  end)
+  if not pageOk or type(currentPage) ~= "table" then break end
+
+  for _, friend in ipairs(currentPage) do
+   if friend and tonumber(friend.Id) then
+    seen += 1
+    -- Reservoir sampling: each friend in the complete list has the same chance.
+    if math.random(1, seen) == 1 then
+     selected = {
+      UserId = tonumber(friend.Id),
+      Username = tostring(friend.Username or "Friend"),
+      DisplayName = tostring(friend.DisplayName or friend.Username or "Friend"),
+     }
+    end
+   end
+  end
+
+  pageCount += 1
+  if pages.IsFinished or pageCount >= 30 then break end
+  local advanced = pcall(function()
+   pages:AdvanceToNextPageAsync()
+  end)
+  if not advanced then break end
+ until false
+
+ if selected then
+  print(("[CPU] Amigo elegido para el rival: %s (%d)"):format(selected.Username, selected.UserId))
+ else
+  print("[CPU] El jugador no tiene amigos disponibles para usar como rival.")
+ end
+ return selected
+end
+
+local function addCpuPilot(kart, player)
+ if not kart or not kart.chassis or not kart.chassis.Parent then return end
+
+ local friend = getRandomFriend(player)
+ if friend then
+  local ok, avatar = pcall(function()
+   return Players:CreateHumanoidModelFromUserIdAsync(friend.UserId)
+  end)
+
+  if ok and avatar and avatar:IsA("Model") then
+   local root = avatar:FindFirstChild("HumanoidRootPart")
+   local humanoid = avatar:FindFirstChildOfClass("Humanoid")
+   if root and humanoid then
+    avatar.Name = "CPU_FriendPilot_" .. friend.Username
+    avatar.Parent = kart.model
+    avatar:PivotTo(kart.chassis.CFrame * CFrame.new(0, 1.65, 0))
+
+    for _, descendant in ipairs(avatar:GetDescendants()) do
+     if descendant:IsA("BasePart") then
+      descendant.Anchored = false
+      descendant.Massless = true
+      descendant.CanCollide = false
+      descendant.CanTouch = false
+      descendant.CanQuery = false
+     end
+    end
+
+    humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+    humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+    humanoid.AutoRotate = false
+    humanoid.WalkSpeed = 0
+    humanoid.JumpPower = 0
+    humanoid.PlatformStand = true
+
+    local weld = Instance.new("WeldConstraint")
+    weld.Name = "CPU_FriendPilotWeld"
+    weld.Part0 = kart.chassis
+    weld.Part1 = root
+    weld.Parent = root
+
+    kart.model:SetAttribute("CpuFriendUserId", friend.UserId)
+    kart.model:SetAttribute("CpuFriendUsername", friend.Username)
+    kart.model:SetAttribute("CpuFriendDisplayName", friend.DisplayName)
+    kart.model:SetAttribute("HasCpuPilot", true)
+    print(("[CPU] Avatar de amigo cargado: %s"):format(friend.Username))
+    return
+   end
+
+   avatar:Destroy()
+  else
+   warn(("[CPU] No se pudo cargar el avatar de %s; se usará piloto de respaldo."):format(friend.Username))
+  end
+ end
+
+ addFallbackCpuPilot(kart)
+ kart.model:SetAttribute("CpuFriendUsername", "CPU")
+end
+
+local function createCpuOpponent(player)
  if cpuKart then cpuKart.model:Destroy(); cpuKart = nil end
  local kart = createKart({ UserId = -999001 }, 2)
  kart.model.Name = "Kart_CPU_01"
  kart.model:SetAttribute("IsCPUOpponent", true)
  kart.model:SetAttribute("OwnerUserId", -999001)
- addCpuPilot(kart)
+ addCpuPilot(kart, player)
  kart.chassis.Anchored = true
  kart.driveForce.Enabled = false
  cpuKart = kart
@@ -2681,7 +2789,7 @@ local function enterCpuRoom(player)
  player:SetAttribute("RaceStarted", false)
  player:SetAttribute("RaceCountdownActive", false)
  selectedCameras[player] = nil
- createCpuOpponent()
+ createCpuOpponent(player)
  if not cpuKart or not cpuRace then
   player:SetAttribute("InRaceRoom", false)
   player:SetAttribute("InGarage", true)
