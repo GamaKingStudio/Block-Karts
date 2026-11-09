@@ -3162,8 +3162,44 @@ local function returnPlayerToLobby(player)
 
  local character = player.Character
  local humanoid = character and character:FindFirstChildOfClass("Humanoid")
- if humanoid then humanoid.Sit = false end
- if character then task.spawn(placeCharacterInGarage, player, character) end
+ local root = character and character:FindFirstChild("HumanoidRootPart")
+
+ if character and humanoid and root then
+  humanoid.Sit = false
+  pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+
+  -- Usa el localizador físico del garage como fuente de verdad para el spawn.
+  -- El traslado se hace aquí, de forma síncrona, antes de confirmar el retorno.
+  local garage = Workspace:FindFirstChild("BlockKartsGarage")
+  local locator = garage and garage:FindFirstChild("GarageLocator", true)
+  local targetCFrame = locator and (CFrame.new(locator.Position + Vector3.new(0, 1.25, 0))
+   * CFrame.Angles(0, math.rad(180), 0)) or GARAGE_SPAWN_CFRAME
+
+  root.AssemblyLinearVelocity = Vector3.zero
+  root.AssemblyAngularVelocity = Vector3.zero
+  character:PivotTo(targetCFrame)
+  root.CFrame = targetCFrame
+
+  -- Un segundo ajuste tras un ciclo de física evita que la desocupación del
+  -- VehicleSeat o la propiedad de red devuelvan el avatar a la pista.
+  RunService.Heartbeat:Wait()
+  if player.Character == character and root.Parent then
+   humanoid.Sit = false
+   root.AssemblyLinearVelocity = Vector3.zero
+   root.AssemblyAngularVelocity = Vector3.zero
+   character:PivotTo(targetCFrame)
+   root.CFrame = targetCFrame
+   pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Running) end)
+   print(("[GARAGE][RETURN] %s teletransportado a garage: target=%s actual=%s locator=%s"):format(
+    player.Name, tostring(targetCFrame.Position), tostring(root.Position), tostring(locator ~= nil)
+   ))
+  else
+   warn(("[GARAGE][RETURN] No se pudo confirmar el personaje de %s después del traslado."):format(player.Name))
+  end
+ else
+  warn(("[GARAGE][RETURN] Falta Character/Humanoid/RootPart para %s."):format(player.Name))
+ end
+
  returnedToLobbyRemote:FireClient(player)
  print(("[RACE] %s volvió al lobby."):format(player.Name))
 end
