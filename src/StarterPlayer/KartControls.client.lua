@@ -427,6 +427,28 @@ local function logSeatedAvatar(humanoid, seat)
 	end
 	local kart = getKartFromSeat(seat)
 	local chassis = kart and kart.PrimaryPart
+
+	-- Roblox may apply a local transparency modifier while the player is seated.
+	-- Restore opacity on the imported kart body for its actual driver only.
+	if character == player.Character then
+		local customBody = kart and kart:FindFirstChild("CustomKartBody")
+		if customBody then
+			local restoredParts = 0
+			for _, item in ipairs(customBody:GetDescendants()) do
+				if item:IsA("BasePart") then
+					item.LocalTransparencyModifier = 0
+					item.Transparency = 0
+					restoredParts += 1
+				elseif item:IsA("Decal") or item:IsA("Texture") then
+					item.Transparency = 0
+				end
+			end
+			print(("[BLOXY-KART][CLIENT][KART-VISIBILITY] restored=%d imported body parts"):format(restoredParts))
+		else
+			warn("[BLOXY-KART][CLIENT][KART-VISIBILITY] CustomKartBody not found on the seated kart.")
+		end
+	end
+
 	local root = character:FindFirstChild("HumanoidRootPart")
 	local head = character:FindFirstChild("Head")
 	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
