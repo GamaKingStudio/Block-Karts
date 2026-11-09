@@ -79,7 +79,7 @@ end
 
 local black = Color3.fromRGB(16, 19, 22)
 
-local function leaderboardBoard(name, title, size, position, accent, parent)
+local function leaderboardBoard(name, title, size, position, accent, parent, face)
     -- A real physical scoreboard panel mounted to the garage wall.
     local board = part(name, size, position, black, Enum.Material.DiamondPlate, parent)
     board.CanCollide = true
@@ -87,7 +87,7 @@ local function leaderboardBoard(name, title, size, position, accent, parent)
 
     local gui = Instance.new("SurfaceGui")
     gui.Name = "LeaderboardDisplay"
-    gui.Face = Enum.NormalId.Front
+    gui.Face = face or Enum.NormalId.Front
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     gui.PixelsPerStud = 32
     gui.LightInfluence = 0.12
@@ -241,11 +241,11 @@ end
 part("RearWorkbench", Vector3.new(46, 1, 6), Vector3.new(x, floorY + 5.4, z - 101), Color3.fromRGB(91, 76, 59), Enum.Material.Wood)
 part("WorkshopPegboard", Vector3.new(46, 8, 0.7), Vector3.new(x, floorY + 12, z - 107), steel, Enum.Material.DiamondPlate)
 
--- Physical leaderboard screens mounted directly on the left and right interior walls.
-local wins = leaderboardBoard("WinsBoard", "MEJORES PILOTOS  |  VICTORIAS", Vector3.new(34, 11, 0.8), Vector3.new(x - halfW + 3.2, floorY + 23, z - 4), yellow)
-wins.Orientation = Vector3.new(0, 90, 0)
-local times = leaderboardBoard("TimesBoard", "MEJORES TIEMPOS", Vector3.new(34, 11, 0.8), Vector3.new(x + halfW - 3.2, floorY + 23, z - 4), cyan)
-times.Orientation = Vector3.new(0, -90, 0)
+-- Two physical scoreboards side-by-side on the front wall, flanking the garage shutter.
+-- Their display faces into the garage; no floating text or freestanding black blocks.
+local boardZ = shutterZ - 0.72
+local wins = leaderboardBoard("WinsBoard", "CARRERAS GANADAS", Vector3.new(34, 11, 0.8), Vector3.new(x - 82, floorY + 22, boardZ), yellow, nil, Enum.NormalId.Front)
+local times = leaderboardBoard("TimesBoard", "MEJORES TIEMPOS", Vector3.new(34, 11, 0.8), Vector3.new(x + 82, floorY + 22, boardZ), cyan, nil, Enum.NormalId.Front)
 
 -- Two distinct physical portals in the front half of the interior.
 local function createRoomPad(name, roomType, labelText, xOffset, glowColor)
@@ -260,6 +260,9 @@ local function createRoomPad(name, roomType, labelText, xOffset, glowColor)
     trim.CanCollide = false
     local board = sign(name .. "_Sign", labelText, Vector3.new(29, 6, 1), Vector3.new(px, floorY + 10, pz - 14), black, warmWhite)
     board.Orientation = Vector3.new(0, 180, 0)
+    -- Keep the label readable but remove the bulky black backing block above each portal.
+    board.Transparency = 1
+    board.CastShadow = false
     board.CanCollide = false
     local light = Instance.new("PointLight")
     light.Color = glowColor
