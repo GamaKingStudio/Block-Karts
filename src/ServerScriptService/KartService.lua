@@ -67,27 +67,69 @@ local raceData = {}
 local selectedCameras = {}
 local raceInProgress = false
 local countdownToken = 0
+local roomBusyPlayer = nil
+local cpuKart = nil
+local cpuRace = nil
+local function getRacePlayers()
+ local list = {}
+ for _, p in ipairs(Players:GetPlayers()) do
+  if p:GetAttribute("InRaceRoom") == true and activeKarts[p] then table.insert(list, p) end
+ end
+ return list
+end
 local function publishSelectionState()
- local list=Players:GetPlayers(); local ready=0
- for _,p in ipairs(list) do local k=activeKarts[p]; if selectedCameras[p] and k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent==p.Character then ready+=1 end end
- for _,p in ipairs(list) do selectionStateRemote:FireClient(p,ready,#list,selectedCameras[p]~=nil) end
+ local list = getRacePlayers()
+ local ready = 0
+ for _, p in ipairs(list) do
+  local k = activeKarts[p]
+  if selectedCameras[p] and k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent == p.Character then ready += 1 end
+ end
+ for _, p in ipairs(list) do selectionStateRemote:FireClient(p, ready, #list, selectedCameras[p] ~= nil) end
 end
 local function tryStartRace()
  if raceInProgress then return end
- local list=Players:GetPlayers(); if #list==0 then return end
- for _,p in ipairs(list) do local k=activeKarts[p]; if not k or not k.seat.Parent or not k.seat.Occupant or k.seat.Occupant.Parent~=p.Character or not selectedCameras[p] then publishSelectionState(); return end end
- raceInProgress=true; countdownToken+=1; local token=countdownToken
- for _,p in ipairs(list) do p:SetAttribute("RaceCountdownActive",true); p:SetAttribute("RaceStarted",false); driverInputs[p]={throttle=0,steering=0,braking=false} end
+ local list = getRacePlayers()
+ if #list ~= 1 then return end
+ for _, p in ipairs(list) do
+  local k = activeKarts[p]
+  if not k or not k.seat.Parent or not k.seat.Occupant or k.seat.Occupant.Parent ~= p.Character or not selectedCameras[p] then publishSelectionState(); return end
+ end
+ raceInProgress = true
+ countdownToken += 1
+ local token = countdownToken
+ for _, p in ipairs(list) do
+  p:SetAttribute("RaceCountdownActive", true)
+  p:SetAttribute("RaceStarted", false)
+  driverInputs[p] = { throttle = 0, steering = 0, braking = false }
+ end
+ if cpuRace then cpuRace.started = false end
  task.spawn(function()
-  for n=5,1,-1 do if token~=countdownToken then return end; raceCountdownRemote:FireAllClients(n); task.wait(1) end
-  if token~=countdownToken then return end
-  for _,p in ipairs(Players:GetPlayers()) do local k=activeKarts[p]; if k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent==p.Character then local d=raceData[p]; if d then d.LapStartTime=os.clock(); d.CanFinishLap=false end; p:SetAttribute("RaceStarted",true); raceCountdownRemote:FireClient(p,0) end end
+  for n = 5, 1, -1 do
+   if token ~= countdownToken then return end
+   for _, p in ipairs(list) do raceCountdownRemote:FireClient(p, n) end
+   task.wait(1)
+  end
+  if token ~= countdownToken then return end
+  for _, p in ipairs(list) do
+   local k = activeKarts[p]
+   if k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent == p.Character then
+    local d = raceData[p]
+    if d then d.LapStartTime = os.clock(); d.CanFinishLap = false end
+    p:SetAttribute("RaceStarted", true)
+    raceCountdownRemote:FireClient(p, 0)
+   end
+  end
+  if cpuRace then cpuRace.started = true end
  end)
 end
-cameraSelectionRemote.OnServerEvent:Connect(function(p,mode)
- if raceInProgress or (mode~="Classic" and mode~="Isometric") then return end
- local k=activeKarts[p]; if not k or not k.seat.Parent or not k.seat.Occupant or k.seat.Occupant.Parent~=p.Character then return end
- selectedCameras[p]=mode; p:SetAttribute("RaceCamera",mode); publishSelectionState(); tryStartRace()
+cameraSelectionRemote.OnServerEvent:Connect(function(p, mode)
+ if raceInProgress or p:GetAttribute("InRaceRoom") ~= true or (mode ~= "Classic" and mode ~= "Isometric") then return end
+ local k = activeKarts[p]
+ if not k or not k.seat.Parent or not k.seat.Occupant or k.seat.Occupant.Parent ~= p.Character then return end
+ selectedCameras[p] = mode
+ p:SetAttribute("RaceCamera", mode)
+ publishSelectionState()
+ tryStartRace()
 end)
 
 local function makePart(parent, name, size, cframe, color, material, shapeOrClass)
@@ -2535,8 +2577,93 @@ local function spawnPlayerKart(player)
 end
 
 startRaceFromLobbyRemote.OnServerEvent:Connect(function(player)
-	if activeKarts[player] or player:GetAttribute("InGarage") ~= true then return end
+	if activeKarts[player] or player:GetAttribute("InGarage") ~= true or player:GetAttribute("InRaceRoom") ~= true then return end
 	spawnPlayerKart(player)
+end)
+
+local function createCpuOpponent()
+ if cpuKart then cpuKart.model:Destroy(); cpuKart = nil end
+ local kart = createKart({ UserId = -999001 }, 2)
+ kart.model.Name = "Kart_CPU_01"
+ kart.model:SetAttribute("IsCPUOpponent", true)
+ kart.model:SetAttribute("OwnerUserId", -999001)
+ kart.chassis.Anchored = true
+ kart.driveForce.Enabled = false
+ cpuKart = kart
+ local folder = Workspace:WaitForChild("CourseCheckpoints", 10)
+ if not folder then warn("[CPU] No se encontró CourseCheckpoints."); return end
+ local route = {}
+ local finish = folder:FindFirstChild("FinishLine")
+ if finish then table.insert(route, finish.Position) end
+ for i = 1, TOTAL_INTERMEDIATE_CHECKPOINTS do
+  local cp = folder:FindFirstChild("Checkpoint_" .. i)
+  if cp then table.insert(route, cp.Position) end
+ end
+ if finish then table.insert(route, finish.Position) end
+ if #route < 28 then warn(("[CPU] Ruta incompleta: %d puntos."):format(#route)); return end
+ cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1 }
+ print("[CPU] Rival preparado con la ruta real de checkpoints de Playa.")
+end
+
+local function enterCpuRoom(player)
+ if roomBusyPlayer or raceInProgress then return end
+ if player:GetAttribute("InGarage") ~= true or activeKarts[player] then return end
+ roomBusyPlayer = player
+ player:SetAttribute("InRaceRoom", true)
+ player:SetAttribute("RoomStatus", "PREPARANDO")
+ player:SetAttribute("InGarage", false)
+ player:SetAttribute("RaceStarted", false)
+ player:SetAttribute("RaceCountdownActive", false)
+ selectedCameras[player] = nil
+ createCpuOpponent()
+ if not cpuKart or not cpuRace then
+  player:SetAttribute("InRaceRoom", false)
+  player:SetAttribute("InGarage", true)
+  roomBusyPlayer = nil
+  return
+ end
+ spawnPlayerKart(player)
+ player:SetAttribute("RoomStatus", "ELIGE CÁMARA")
+ task.defer(publishSelectionState)
+end
+
+task.spawn(function()
+ local garage = Workspace:WaitForChild("BlockKartsGarage", 120)
+ if not garage then warn("[GARAGE] No se encontró BlockKartsGarage."); return end
+ local pad = garage:WaitForChild("RoomEntryPad_1vCPU", 30)
+ if not pad or not pad:IsA("BasePart") then warn("[GARAGE] No se encontró RoomEntryPad_1vCPU."); return end
+ local debounce = {}
+ pad.Touched:Connect(function(hit)
+  local character = hit and hit:FindFirstAncestorOfClass("Model")
+  local player = character and Players:GetPlayerFromCharacter(character)
+  if not player or debounce[player] then return end
+  debounce[player] = true
+  task.delay(1.5, function() debounce[player] = nil end)
+  enterCpuRoom(player)
+ end)
+ print("[GARAGE] Sala física 1 VS COMPUTADORA conectada.")
+end)
+
+RunService.Heartbeat:Connect(function(dt)
+ local state = cpuRace
+ if not state or not state.started or not state.kart or not state.kart.chassis.Parent then return end
+ local chassis = state.kart.chassis
+ local target = state.route[state.targetIndex]
+ if not target then return end
+ local destination = Vector3.new(target.X, COURSE_SURFACE_Y + 1.8, target.Z)
+ local current = chassis.Position
+ local flatDestination = Vector3.new(destination.X, current.Y, destination.Z)
+ local offset = flatDestination - current
+ local distance = offset.Magnitude
+ if distance < 5 then
+  state.targetIndex += 1
+  if state.targetIndex > #state.route then state.targetIndex = 2; state.laps += 1 end
+  return
+ end
+ local direction = offset.Unit
+ local nextPosition = current + direction * math.min(distance, state.speed * math.min(dt, 0.05))
+ chassis.CFrame = CFrame.lookAt(nextPosition, nextPosition + direction)
+ chassis.AssemblyLinearVelocity = direction * state.speed
 end)
 
 remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
@@ -2620,7 +2747,21 @@ Players.PlayerRemoving:Connect(function(player)
 	selectedCameras[player] = nil
 	driverInputs[player] = nil
 	raceData[player] = nil
-	if raceInProgress then raceInProgress=false; countdownToken+=1; for _,p in ipairs(Players:GetPlayers()) do p:SetAttribute("RaceStarted",false); p:SetAttribute("RaceCountdownActive",false) end end
+	if roomBusyPlayer == player then
+		roomBusyPlayer = nil
+		if cpuKart then cpuKart.model:Destroy(); cpuKart = nil end
+		cpuRace = nil
+		raceInProgress = false
+		countdownToken += 1
+	end
+	if raceInProgress then
+		raceInProgress = false
+		countdownToken += 1
+		for _, p in ipairs(Players:GetPlayers()) do
+			p:SetAttribute("RaceStarted", false)
+			p:SetAttribute("RaceCountdownActive", false)
+		end
+	end
 	task.defer(function() publishSelectionState(); tryStartRace() end)
 end)
 
