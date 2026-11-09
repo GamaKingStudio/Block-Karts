@@ -105,7 +105,7 @@ part("GarageRoof", Vector3.new(128, 3, 66), Vector3.new(baseX, floorY + 26.5, ba
 for _, xOffset in ipairs({-58, -30, 0, 30, 58}) do
     part("RoofCrossBeam_" .. xOffset, Vector3.new(1.4, 1.4, 64), Vector3.new(baseX + xOffset, floorY + 24.5, baseZ - 1), steel, Enum.Material.DiamondPlate, shell)
 end
-for _, xOffset in ipairs({-60, -30, 0, 30, 60}) do
+for _, xOffset in ipairs({-60, -30, 30, 60}) do
     part("FrontSteelColumn_" .. xOffset, Vector3.new(2.5, 25, 3.2), Vector3.new(baseX + xOffset, floorY + 12.5, baseZ + 27.5), steelLight, Enum.Material.DiamondPlate, shell)
 end
 
@@ -167,6 +167,7 @@ local function createRoomPad(name, roomType, labelText, xOffset, glowColor)
     local trim = part(name .. "_Trim", Vector3.new(23, 0.2, 18), Vector3.new(baseX + xOffset, floorY + 0.2, baseZ + 15), safetyYellow, Enum.Material.Metal)
     trim.CanCollide = false
     local board = sign(name .. "_Sign", labelText, Vector3.new(22, 4.5, 0.8), Vector3.new(baseX + xOffset, floorY + 7, baseZ + 5.7), black, warmWhite)
+    board.Orientation = Vector3.new(0, 180, 0)
     board.CanCollide = false
 
     local light = Instance.new("PointLight")
