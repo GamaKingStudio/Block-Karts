@@ -52,7 +52,7 @@ local function sign(name, text, size, position, faceColor, textColor, parent, fa
     label.Text = text
     label.TextColor3 = textColor
     label.TextScaled = true
-    label.Font = Enum.Font.LondrinaSolid
+    label.Font = Enum.Font.GothamBold
     label.TextStrokeTransparency = 0.3
     label.Parent = gui
     return board
