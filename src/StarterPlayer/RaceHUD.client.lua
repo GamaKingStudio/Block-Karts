@@ -14,6 +14,7 @@ local wrongWayEvent = raceEvents:WaitForChild("WrongWayStateChanged")
 local raceFinishedEvent = raceEvents:WaitForChild("RaceFinished")
 local returnToLobbyEvent = raceEvents:WaitForChild("ReturnToLobby")
 local anotherRaceEvent = raceEvents:WaitForChild("AnotherRace")
+local returnedToLobbyEvent = raceEvents:WaitForChild("ReturnedToLobby")
 
 local previous = playerGui:FindFirstChild("BLOXYRaceHUD")
 if previous then previous:Destroy() end
@@ -159,6 +160,10 @@ local finishPosition = label(finishPanel, "FinishPosition", UDim2.new(1, -24, 0,
 local finishBestLap = label(finishPanel, "FinishBestLap", UDim2.new(1, -24, 0, 32), UDim2.fromOffset(12, 108), "MEJOR VUELTA: --:--.--", 20, Color3.fromRGB(255, 220, 145), "Light")
 local finishTotalTime = label(finishPanel, "FinishTotalTime", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 145), "TIEMPO TOTAL: --:--.--", 19, Color3.fromRGB(220, 226, 235), "Light")
 local finishCountdown = label(finishPanel, "FinishCountdown", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 184), "Volviendo al lobby en 5...", 17, Color3.fromRGB(255, 220, 145), "Light")
+finishCountdown.ZIndex = 51
+finishCountdown.TextStrokeColor3 = Color3.fromRGB(12, 16, 24)
+finishCountdown.TextStrokeTransparency = 0.04
+finishCountdown.TextSize = 22
 local function finishActionButton(name, text, position, width)
  local button = Instance.new("TextButton")
  button.Name = name
@@ -556,6 +561,25 @@ anotherRaceButton.Activated:Connect(function()
  finishCountdownToken += 1
  finishPanel.Visible = false
  anotherRaceEvent:FireServer()
+end)
+
+returnedToLobbyEvent.OnClientEvent:Connect(function()
+ finishCountdownToken += 1
+ finishPanel.Visible = false
+ hud.Enabled = false
+ currentSeat = nil
+ currentChassis = nil
+ if renderConnection then
+  renderConnection:Disconnect()
+  renderConnection = nil
+ end
+end)
+
+player:GetAttributeChangedSignal("RaceResult"):Connect(function()
+ if player:GetAttribute("RaceResult") == nil then
+  finishCountdownToken += 1
+  finishPanel.Visible = false
+ end
 end)
 
 -- Respaldo: atributos replicados muestran el resultado aunque el RemoteEvent
