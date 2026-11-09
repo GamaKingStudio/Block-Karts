@@ -488,16 +488,42 @@ lapEvent.OnClientEvent:Connect(function(lap, lapTime, isBest)
  end
 end)
 
-raceFinishedEvent.OnClientEvent:Connect(function(position, bestTime, totalTime, resultText)
+local function showRaceFinished(position, bestTime, totalTime)
+ -- El resultado debe seguir visible aunque el asiento se desocupe al cruzar meta.
+ hud.Enabled = true
  lapStartedAt = nil
  wrongWayLabel.Visible = false
- finishPosition.Text = position == 1 and "1.er LUGAR" or "2.º LUGAR"
+ finishPosition.Text = position == 1 and "1.er LUGAR" or (position == 2 and "2.º LUGAR" or (tostring(position) .. "° LUGAR"))
  finishPosition.TextColor3 = position == 1 and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(225, 235, 245)
  finishBestLap.Text = "MEJOR VUELTA: " .. (bestTime and bestTime > 0 and formatTime(bestTime) or "--:--.--")
  finishTotalTime.Text = "TIEMPO TOTAL: " .. formatTime(totalTime or 0)
  finishTitle.Text = "¡CARRERA TERMINADA!"
  finishPanel.Visible = true
+end
+
+raceFinishedEvent.OnClientEvent:Connect(function(position, bestTime, totalTime)
+ showRaceFinished(position, bestTime, totalTime)
 end)
+
+-- Respaldo: atributos replicados muestran el resultado aunque el RemoteEvent
+-- llegue mientras el HUD cambia de estado o el jugador sale del asiento.
+player:GetAttributeChangedSignal("RaceResult"):Connect(function()
+ if player:GetAttribute("RaceResult") then
+  showRaceFinished(
+   player:GetAttribute("RaceFinalPosition") or 1,
+   player:GetAttribute("RaceBestLapTime") or 0,
+   player:GetAttribute("RaceTotalTime") or 0
+  )
+ end
+end)
+
+if player:GetAttribute("RaceResult") then
+ showRaceFinished(
+  player:GetAttribute("RaceFinalPosition") or 1,
+  player:GetAttribute("RaceBestLapTime") or 0,
+  player:GetAttribute("RaceTotalTime") or 0
+ )
+end
 
 wrongWayEvent.OnClientEvent:Connect(function(isWrongWay)
  wrongWayLabel.Visible = isWrongWay
@@ -541,8 +567,8 @@ local function setDriving(seat)
  else
   currentSeat = nil
   currentChassis = nil
-  hud.Enabled = false
-  wrongWayLabel.Visible = false
+  hud.Enabled = player:GetAttribute("RaceResult") ~= nil
+   wrongWayLabel.Visible = false
   if renderConnection then
    renderConnection:Disconnect()
    renderConnection = nil
