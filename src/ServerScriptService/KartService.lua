@@ -680,27 +680,29 @@ local function buildTestCourse()
 
 	for sideIndex, side in ipairs({ -1, 1 }) do
 		local railPoints = {}
-		for i = 1, #waypoints do
-			local previousIndex = (i == 1) and (#waypoints - 1) or (i - 1)
-			local nextIndex = (i == #waypoints) and 2 or (i + 1)
+		-- El último waypoint repite el primero. Trabajamos solo con los
+		-- vértices únicos y usamos el anterior real del circuito (no el duplicado).
+		for i = 1, uniqueCount do
+			local previousIndex = (i - 2) % uniqueCount + 1
+			local nextIndex = i % uniqueCount + 1
 			local incoming = horizontalDirection(waypoints[previousIndex], waypoints[i])
 			local outgoing = horizontalDirection(waypoints[i], waypoints[nextIndex])
-			local normalIn = sideNormal(incoming)
-			local normalOut = sideNormal(outgoing)
+			local normalIn = sideNormal(incoming) * side
+			local normalOut = sideNormal(outgoing) * side
 			local bisector = normalIn + normalOut
 			if bisector.Magnitude < 0.001 then
 				bisector = normalOut
 			else
 				bisector = bisector.Unit
 			end
-			local denominator = math.abs(bisector:Dot(normalOut))
-			local miterDistance = guardrailOffset / math.max(denominator, 0.35)
-			miterDistance = math.min(miterDistance, guardrailOffset * 1.8)
-			railPoints[i] = waypoints[i] + bisector * (side * miterDistance)
+			local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.5)
+			-- Limita los picos en curvas cerradas para que la baranda no
+			-- atraviese la pista ni se proyecte hacia el interior del giro.
+			local miterDistance = math.min(guardrailOffset / denominator, guardrailOffset * 1.35)
+			railPoints[i] = waypoints[i] + bisector * miterDistance
 		end
-
-		-- O último waypoint repete o primeiro: força o fechamento exato do circuito.
-		railPoints[#waypoints] = railPoints[1]
+		-- Cierra la última sección exactamente sobre el primer vértice.
+		railPoints[uniqueCount + 1] = railPoints[1]
 
 		for i = 1, #waypoints - 1 do
 			local a = railPoints[i]
