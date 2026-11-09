@@ -301,6 +301,20 @@ local function drawTrack()
 
  local borderColor = Color3.fromRGB(5, 9, 14)
  local asphaltColor = Color3.fromRGB(82, 91, 103)
+
+ -- El grosor del mapa sale del ancho REAL de la pista (30 studs) y de la escala
+ -- del mapa. Antes era fijo (26/16 px) y resultaba mas ancho que la pista real,
+ -- por eso los tramos que pasan cerca (el cruce a la derecha) se fundian en una
+ -- masa gris sin borde. El asfalto se dibuja un poco mas fino que la pista para
+ -- que siempre quede una linea negra visible entre tramos cercanos.
+ local mapSize = mapArea.AbsoluteSize
+ local mapScale = math.min(
+  math.max(1, mapSize.X - mapPadding * 2) / (maxX - minX),
+  math.max(1, mapSize.Y - mapPadding * 2) / (maxZ - minZ)
+ )
+ local roadPixels = 30 * mapScale
+ local asphaltWidth = math.max(5, roadPixels - 1)
+ local borderWidth = asphaltWidth + 4
  local mappedPoints = {}
  for i, worldPoint in ipairs(mapPoints) do
   mappedPoints[i] = mapPosition(worldPoint)
@@ -308,10 +322,10 @@ local function drawTrack()
 
  -- Dibujar todos los bordes antes del asfalto evita uniones grises sin contorno.
  for i = 1, #mappedPoints - 1 do
-  table.insert(trackSegments, makeTrackStroke("TrackBorder", mappedPoints[i], mappedPoints[i + 1], 26, borderColor, 1))
+  table.insert(trackSegments, makeTrackStroke("TrackBorder", mappedPoints[i], mappedPoints[i + 1], borderWidth, borderColor, 1))
  end
  for i = 1, #mappedPoints - 1 do
-  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", mappedPoints[i], mappedPoints[i + 1], 16, asphaltColor, 2))
+  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", mappedPoints[i], mappedPoints[i + 1], asphaltWidth, asphaltColor, 2))
  end
 
  -- Primero las uniones negras; luego las uniones del asfalto.
@@ -321,7 +335,7 @@ local function drawTrack()
   join.Name = "TrackBorderJoin"
   join.AnchorPoint = Vector2.new(0.5, 0.5)
   join.Position = UDim2.fromOffset(point.X, point.Y)
-  join.Size = UDim2.fromOffset(26, 26)
+  join.Size = UDim2.fromOffset(borderWidth, borderWidth)
   local corner = Instance.new("UICorner")
   corner.CornerRadius = UDim.new(1, 0)
   corner.Parent = join
@@ -337,7 +351,7 @@ local function drawTrack()
   join.Name = "TrackAsphaltJoin"
   join.AnchorPoint = Vector2.new(0.5, 0.5)
   join.Position = UDim2.fromOffset(point.X, point.Y)
-  join.Size = UDim2.fromOffset(16, 16)
+  join.Size = UDim2.fromOffset(asphaltWidth, asphaltWidth)
   local corner = Instance.new("UICorner")
   corner.CornerRadius = UDim.new(1, 0)
   corner.Parent = join
