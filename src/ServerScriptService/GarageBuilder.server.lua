@@ -122,10 +122,10 @@ part("RaceDesk", Vector3.new(28, 3, 8), Vector3.new(baseX, floorY + 2, baseZ + 1
 sign("RaceDeskSign", "CENTRO DE CARRERAS", Vector3.new(26, 6, 1), Vector3.new(baseX, floorY + 8, baseZ + 13.4), dark, white)
 
 -- Sala física de matchmaking: el jugador entra caminando a esta plataforma.
-local roomPad = part("RoomEntryPad_1vCPU", Vector3.new(20, 0.45, 16), Vector3.new(baseX, floorY + 0.48, baseZ + 7), Color3.fromRGB(34, 205, 225), Enum.Material.Neon)
+local roomPad = part("RoomEntryPad_1vCPU", Vector3.new(20, 0.45, 16), Vector3.new(baseX + 28, floorY + 0.48, baseZ + 14), Color3.fromRGB(34, 205, 225), Enum.Material.Neon)
 roomPad:SetAttribute("LobbyRoomType", "1vCPU")
 roomPad:SetAttribute("RoomCapacity", 1)
-local padLabel = sign("RoomEntrySign", "SALA 01  |  1 VS COMPUTADORA", Vector3.new(25, 5, 1), Vector3.new(baseX, floorY + 6, baseZ - 1.5), dark, yellow)
+local padLabel = sign("RoomEntrySign", "SALA 01  |  1 VS COMPUTADORA", Vector3.new(25, 5, 1), Vector3.new(baseX + 28, floorY + 6, baseZ + 5.5), dark, yellow)
 padLabel.CanCollide = false
 
 -- Ceiling lights and side accent blocks.
