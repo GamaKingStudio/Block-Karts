@@ -2583,19 +2583,19 @@ local function onCheckpointTouched(hitPart, triggerPart)
                     for _, ghostPart in ipairs(ghostModel:GetDescendants()) do
                         if ghostPart:IsA("BasePart") then
                             local originalTransparency = (cpuRace.hiddenTransparency or {})[ghostPart]
-                            ghostPart.Transparency = math.min(originalTransparency or ghostPart.Transparency, 0.42)
+                            ghostPart.Transparency = math.clamp(originalTransparency or ghostPart.Transparency, 0.42, 0.75)
                             ghostPart.LocalTransparencyModifier = 0
                             ghostPart.CanCollide = false
                             ghostPart.CanTouch = false
                             ghostPart.CanQuery = false
                         elseif ghostPart:IsA("Decal") or ghostPart:IsA("Texture") then
                             local originalTransparency = (cpuRace.hiddenTransparency or {})[ghostPart]
-                            ghostPart.Transparency = math.min(originalTransparency or ghostPart.Transparency, 0.42)
+                            ghostPart.Transparency = math.clamp(originalTransparency or ghostPart.Transparency, 0.42, 0.75)
                         end
                     end
                     cpuRace.hiddenTransparency = nil
                     if recordedGhost.samples[1] then
-                        ghostModel:PivotTo(recordedGhost.samples[1].cf)
+                        cpuRace.kart.chassis.CFrame = recordedGhost.samples[1].cf
                     end
 
                     if not ghostModel:FindFirstChild("FirstLapGhostHighlight") then
