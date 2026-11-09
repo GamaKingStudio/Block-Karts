@@ -917,7 +917,10 @@ end)
 
 local physicsDiagnosticNext = 0
 local lastPhysicsPosition = {}
-local function simulateOwnedKart()
+-- La dirección y el giro ganan velocidad gradualmente para evitar una respuesta rígida.
+local smoothedSteering = 0
+local smoothedYawRate = 0
+local function simulateOwnedKart(deltaTime)
 	if not currentSeat then
 		return
 	end
@@ -958,12 +961,21 @@ local function simulateOwnedKart()
 	local lateralSpeed = velocity:Dot(right)
 	local canDrive = player:GetAttribute("RaceStarted") == true
 	local throttle, steering = getDriveAxes(canDrive)
-	local speedForSteering = math.max(math.abs(forwardSpeed) - KartConfig.MinimumSteeringSpeed, 0)
-	local steeringFactor = math.clamp(speedForSteering / 12, 0, 1)
+	local dt = math.clamp(deltaTime or 1 / 60, 1 / 240, 1 / 20)
+	local steeringResponse = KartConfig.SteeringInputResponsiveness or 9
+	local steeringAlpha = 1 - math.exp(-steeringResponse * dt)
+	smoothedSteering += (steering - smoothedSteering) * steeringAlpha
+	local speedForSteering = math.max(math.abs(forwardSpeed) - (KartConfig.MinimumSteeringSpeed or 1.5), 0)
+	local steeringFactor = math.clamp(speedForSteering / 10, 0, 1)
+	local speedRatio = math.clamp(math.abs(forwardSpeed) / math.max(KartConfig.MaxForwardSpeed, 1), 0, 1)
+	local highSpeedSteering = 1 - speedRatio * (KartConfig.SteeringHighSpeedReduction or 0.22)
 	local travelDirection = forwardSpeed >= 0 and 1 or -1
-	local driftYawMultiplier = isDrifting and (KartConfig.DriftYawMultiplier or 1.6) or 1
-	local yawRate = -steering * KartConfig.SteeringRate * steeringFactor * travelDirection * driftYawMultiplier
-	chassis.AssemblyAngularVelocity = Vector3.new(0, yawRate, 0)
+	local driftYawMultiplier = isDrifting and (KartConfig.DriftYawMultiplier or 1.38) or 1
+	local targetYawRate = -smoothedSteering * KartConfig.SteeringRate * steeringFactor * highSpeedSteering * travelDirection * driftYawMultiplier
+	local yawResponse = KartConfig.SteeringYawResponsiveness or 7
+	local yawAlpha = 1 - math.exp(-yawResponse * dt)
+	smoothedYawRate += (targetYawRate - smoothedYawRate) * yawAlpha
+	chassis.AssemblyAngularVelocity = Vector3.new(0, smoothedYawRate, 0)
 
 	local now = os.clock()
 	local driftMinSpeed = KartConfig.DriftMinSpeed or 8
@@ -996,8 +1008,8 @@ local function simulateOwnedKart()
 	local drag = -forwardSpeed * KartConfig.CoastDrag
 	local lateralForce
 	if isDrifting then
-		local gripMultiplier = KartConfig.DriftGripMultiplier or 0.25
-		local lateralSpeedRatio = KartConfig.DriftLateralSpeedRatio or 0.22
+		local gripMultiplier = KartConfig.DriftGripMultiplier or 0.32
+		local lateralSpeedRatio = KartConfig.DriftLateralSpeedRatio or 0.28
 		local targetLateralSpeed = steering * math.abs(forwardSpeed) * lateralSpeedRatio
 		lateralForce = (targetLateralSpeed - lateralSpeed) * KartConfig.LateralGrip * gripMultiplier
 	else
@@ -1104,6 +1116,8 @@ local function clearDriveInput()
 	isDrifting = false
 	driftStartTime = 0
 	miniTurboEndTime = 0
+	smoothedSteering = 0
+	smoothedYawRate = 0
 	if currentSeat then
 		controlRemote:FireServer(0, 0, false)
 	end
