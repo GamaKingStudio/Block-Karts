@@ -561,7 +561,6 @@ local function createMobileControls()
 	local playerGui = player:WaitForChild("PlayerGui")
 	local oldGui = playerGui:FindFirstChild("BLOXYMobileKartControls")
 	if oldGui then oldGui:Destroy() end
-
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "BLOXYMobileKartControls"
 	gui.IgnoreGuiInset = true
@@ -571,74 +570,63 @@ local function createMobileControls()
 	gui.Parent = playerGui
 	mobileControlsGui = gui
 
-	-- Zona amplia e invisible: arrastra el pulgar a izquierda/derecha para girar.
-	local steerZone = Instance.new("TextButton")
-	steerZone.Name = "SteeringSwipeZone"
-	steerZone.AnchorPoint = Vector2.new(0, 0)
-	steerZone.Position = UDim2.new(0, 0, 0.48, 0)
-	steerZone.Size = UDim2.new(0.52, 0, 0.52, 0)
-	steerZone.BackgroundTransparency = 1
-	steerZone.BorderSizePixel = 0
-	steerZone.Text = ""
-	steerZone.AutoButtonColor = false
-	steerZone.Parent = gui
+	-- Joystick visible y real: la dirección se calcula desde su centro.
+	local joystick = Instance.new("TextButton")
+	joystick.Name = "SteeringJoystick"
+	joystick.AnchorPoint = Vector2.new(0.5, 0.5)
+	joystick.Position = UDim2.new(0.15, 0, 0.82, 0)
+	joystick.Size = UDim2.fromOffset(142, 142)
+	joystick.BackgroundColor3 = Color3.fromRGB(20, 29, 42)
+	joystick.BackgroundTransparency = 0.22
+	joystick.BorderSizePixel = 0
+	joystick.Text = ""
+	joystick.AutoButtonColor = false
+	joystick.Parent = gui
+	local jc = Instance.new("UICorner"); jc.CornerRadius = UDim.new(1, 0); jc.Parent = joystick
+	local js = Instance.new("UIStroke"); js.Color = Color3.fromRGB(235, 241, 250); js.Transparency = 0.25; js.Thickness = 3; js.Parent = joystick
+	local thumb = Instance.new("Frame")
+	thumb.Name = "JoystickThumb"
+	thumb.AnchorPoint = Vector2.new(0.5, 0.5)
+	thumb.Position = UDim2.fromScale(0.5, 0.5)
+	thumb.Size = UDim2.fromOffset(58, 58)
+	thumb.BackgroundColor3 = Color3.fromRGB(255, 197, 72)
+	thumb.BorderSizePixel = 0
+	thumb.Parent = joystick
+	local tc = Instance.new("UICorner"); tc.CornerRadius = UDim.new(1, 0); tc.Parent = thumb
+	local ts = Instance.new("UIStroke"); ts.Color = Color3.new(1,1,1); ts.Thickness = 2; ts.Parent = thumb
 
-	local steerHint = Instance.new("Frame")
-	steerHint.Name = "SteeringHint"
-	steerHint.AnchorPoint = Vector2.new(0, 1)
-	steerHint.Position = UDim2.new(0, 18, 1, -24)
-	steerHint.Size = UDim2.fromOffset(174, 44)
-	steerHint.BackgroundColor3 = Color3.fromRGB(18, 28, 42)
-	steerHint.BackgroundTransparency = 0.28
-	steerHint.BorderSizePixel = 0
-	steerHint.Parent = gui
-	local hintCorner = Instance.new("UICorner")
-	hintCorner.CornerRadius = UDim.new(0, 22)
-	hintCorner.Parent = steerHint
-	local hintStroke = Instance.new("UIStroke")
-	hintStroke.Color = Color3.fromRGB(225, 234, 245)
-	hintStroke.Transparency = 0.55
-	hintStroke.Thickness = 1
-	hintStroke.Parent = steerHint
-
-	local hintText = Instance.new("TextLabel")
-	hintText.Size = UDim2.fromScale(1, 1)
-	hintText.BackgroundTransparency = 1
-	hintText.Text = "‹      GIRAR      ›"
-	hintText.TextColor3 = Color3.fromRGB(245, 247, 250)
-	hintText.TextSize = 15
-	hintText.Font = Enum.Font.GothamBold
-	hintText.Parent = steerHint
-
-	local activeSteerInput
-	local steerStartX = 0
+	local steerInput
 	local function updateSteering(screenPosition)
-		local delta = screenPosition.X - steerStartX
-		mobilePadVector = Vector2.new(math.clamp(delta / 105, -1, 1), 0)
+		local center = joystick.AbsolutePosition + joystick.AbsoluteSize / 2
+		local vector = Vector2.new(screenPosition.X - center.X, screenPosition.Y - center.Y)
+		local radius = 43
+		if vector.Magnitude > radius then vector = vector.Unit * radius end
+		thumb.Position = UDim2.new(0.5, vector.X, 0.5, vector.Y)
+		mobilePadVector = Vector2.new(math.clamp(vector.X / radius, -1, 1), 0)
 		mobilePadActive = true
 		if sendDriveInput then sendDriveInput() end
 	end
 	local function resetSteering()
-		activeSteerInput = nil
+		steerInput = nil
 		mobilePadActive = false
 		mobilePadVector = Vector2.zero
+		thumb.Position = UDim2.fromScale(0.5, 0.5)
 		if sendDriveInput then sendDriveInput() end
 	end
-	steerZone.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch
-			or input.UserInputType == Enum.UserInputType.MouseButton1 then
-			activeSteerInput = input
-			steerStartX = input.Position.X
+	joystick.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			steerInput = input
 			updateSteering(input.Position)
 		end
+	end)
+	UserInputService.TouchMoved:Connect(function(input)
+		if steerInput and input.UserInputType == Enum.UserInputType.Touch then updateSteering(input.Position) end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
-		if activeSteerInput and input == activeSteerInput then
-			updateSteering(input.Position)
-		end
+		if steerInput and input.UserInputType == Enum.UserInputType.MouseMovement then updateSteering(input.Position) end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
-		if activeSteerInput and input == activeSteerInput then
+		if steerInput and (input == steerInput or input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
 			resetSteering()
 		end
 	end)
@@ -650,86 +638,49 @@ local function createMobileControls()
 		button.Position = position
 		button.Size = UDim2.fromOffset(size, size)
 		button.BackgroundColor3 = color
-		button.BackgroundTransparency = 0.04
+		button.BackgroundTransparency = 0.05
 		button.BorderSizePixel = 0
 		button.Text = ""
 		button.AutoButtonColor = false
 		button.Parent = gui
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = button
-		local stroke = Instance.new("UIStroke")
-		stroke.Color = Color3.fromRGB(250, 250, 250)
-		stroke.Transparency = 0.12
-		stroke.Thickness = 2
-		stroke.Parent = button
-
+		local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(1, 0); corner.Parent = button
+		local stroke = Instance.new("UIStroke"); stroke.Color = Color3.new(1,1,1); stroke.Transparency = 0.12; stroke.Thickness = 2; stroke.Parent = button
 		local icon = Instance.new("TextLabel")
-		icon.Name = "ActionIcon"
-		icon.AnchorPoint = Vector2.new(0.5, 0.5)
-		icon.Position = UDim2.new(0.5, 0, 0.38, 0)
-		icon.Size = UDim2.fromScale(0.54, 0.48)
-		icon.BackgroundTransparency = 1
-		icon.Text = glyph
-		icon.TextColor3 = Color3.new(1, 1, 1)
-		icon.TextScaled = true
-		icon.Font = Enum.Font.GothamBlack
-		icon.Parent = button
-
-		local label = Instance.new("TextLabel")
-		label.Name = "ActionLabel"
-		label.AnchorPoint = Vector2.new(0.5, 0.5)
-		label.Position = UDim2.new(0.5, 0, 0.77, 0)
-		label.Size = UDim2.fromScale(0.9, 0.2)
-		label.BackgroundTransparency = 1
-		label.Text = title
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.TextScaled = true
-		label.Font = Enum.Font.GothamBold
-		label.Parent = button
-
+		icon.AnchorPoint = Vector2.new(0.5, 0.5); icon.Position = UDim2.new(0.5,0,0.38,0)
+		icon.Size = UDim2.fromScale(0.54,0.48); icon.BackgroundTransparency = 1
+		icon.Text = glyph; icon.TextColor3 = Color3.new(1,1,1); icon.TextScaled = true
+		icon.Font = Enum.Font.GothamBlack; icon.Parent = button
+		local caption = Instance.new("TextLabel")
+		caption.AnchorPoint = Vector2.new(0.5,0.5); caption.Position = UDim2.new(0.5,0,0.77,0)
+		caption.Size = UDim2.new(0.9,0,0.2,0); caption.BackgroundTransparency = 1
+		caption.Text = title; caption.TextColor3 = Color3.new(1,1,1); caption.TextScaled = true
+		caption.Font = Enum.Font.GothamBold; caption.Parent = button
 		local activeInput
-		local function setPressed(pressed)
-			if action == "drift" then
-				mobileDriftHeld = pressed
-				driftHeld = pressed
-			else
-				mobileReverseHeld = pressed
-			end
-			button.BackgroundTransparency = pressed and 0.22 or 0.04
+		local function pressed(value)
+			if action == "drift" then mobileDriftHeld = value; driftHeld = value else mobileReverseHeld = value end
+			button.BackgroundTransparency = value and 0.24 or 0.05
 			if sendDriveInput then sendDriveInput() end
 		end
 		button.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.Touch
-				or input.UserInputType == Enum.UserInputType.MouseButton1 then
-				activeInput = input
-				setPressed(true)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				activeInput = input; pressed(true)
 			end
 		end)
 		UserInputService.InputEnded:Connect(function(input)
-			if activeInput and activeInput == input then
-				activeInput = nil
-				setPressed(false)
+			if activeInput and (input == activeInput or input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+				activeInput = nil; pressed(false)
 			end
 		end)
 	end
-
-	-- Derrape a la derecha; freno/reversa más pequeño y separado.
-	makeActionButton("DriftButton", "DRIFT", "↗", UDim2.new(0.86, 0, 0.76, 0), 94, Color3.fromRGB(205, 128, 35), "drift")
-	makeActionButton("ReverseButton", "FRENO", "▼", UDim2.new(0.69, 0, 0.88, 0), 68, Color3.fromRGB(65, 91, 118), "reverse")
-
+	-- Reversa y drift juntos bajo el pulgar derecho.
+	makeActionButton("ReverseButton", "FRENO", "▼", UDim2.new(0.76,0,0.82,0), 82, Color3.fromRGB(65,91,118), "reverse")
+	makeActionButton("DriftButton", "DRIFT", "↗", UDim2.new(0.91,0,0.82,0), 94, Color3.fromRGB(205,128,35), "drift")
 	local autoLabel = Instance.new("TextLabel")
-	autoLabel.Name = "AutoAccelerateLabel"
-	autoLabel.AnchorPoint = Vector2.new(1, 1)
-	autoLabel.Position = UDim2.new(1, -22, 1, -22)
-	autoLabel.Size = UDim2.fromOffset(92, 24)
-	autoLabel.BackgroundTransparency = 1
-	autoLabel.Text = "AUTO GAS"
-	autoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	autoLabel.TextTransparency = 0.15
-	autoLabel.TextSize = 13
-	autoLabel.Font = Enum.Font.GothamBold
-	autoLabel.Parent = gui
+	autoLabel.Name = "AutoAccelerateLabel"; autoLabel.AnchorPoint = Vector2.new(1,1)
+	autoLabel.Position = UDim2.new(1,-24,1,-18); autoLabel.Size = UDim2.fromOffset(92,24)
+	autoLabel.BackgroundTransparency = 1; autoLabel.Text = "AUTO GAS"
+	autoLabel.TextColor3 = Color3.new(1,1,1); autoLabel.TextTransparency = 0.15
+	autoLabel.TextSize = 13; autoLabel.Font = Enum.Font.GothamBold; autoLabel.Parent = gui
 end
 
 local function setMobileControlsVisible(visible)
