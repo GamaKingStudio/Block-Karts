@@ -569,80 +569,89 @@ local function createMobileControls()
 	gui.Parent = playerGui
 	mobileControlsGui = gui
 
+	-- Joystick analógico circular, con recorrido horizontal para la dirección.
 	local pad = Instance.new("TextButton")
-	pad.Name = "SteeringPad"
+	pad.Name = "SteeringJoystick"
 	pad.AnchorPoint = Vector2.new(0.5, 0.5)
-	pad.Position = UDim2.new(0.24, 0, 0.80, 0)
-	pad.Size = UDim2.fromOffset(150, 116)
-	pad.BackgroundColor3 = Color3.fromRGB(31, 42, 56)
-	pad.BackgroundTransparency = 0.16
+	pad.Position = UDim2.new(0.17, 0, 0.80, 0)
+	pad.Size = UDim2.fromOffset(132, 132)
+	pad.BackgroundColor3 = Color3.fromRGB(18, 28, 42)
+	pad.BackgroundTransparency = 0.22
 	pad.BorderSizePixel = 0
 	pad.Text = ""
 	pad.AutoButtonColor = false
 	pad.Parent = gui
 	local padCorner = Instance.new("UICorner")
-	padCorner.CornerRadius = UDim.new(0, 18)
+	padCorner.CornerRadius = UDim.new(1, 0)
 	padCorner.Parent = pad
 	local padStroke = Instance.new("UIStroke")
-	padStroke.Color = Color3.fromRGB(220, 230, 242)
-	padStroke.Transparency = 0.25
+	padStroke.Color = Color3.fromRGB(214, 226, 240)
+	padStroke.Transparency = 0.28
 	padStroke.Thickness = 2
 	padStroke.Parent = pad
 
-	local function addPadHint(name, label, position)
-		local hint = Instance.new("TextLabel")
-		hint.Name = name
-		hint.AnchorPoint = Vector2.new(0.5, 0.5)
-		hint.Position = position
-		hint.Size = UDim2.fromScale(0.38, 0.7)
-		hint.BackgroundTransparency = 1
-		hint.Text = label
-		hint.TextColor3 = Color3.fromRGB(245, 247, 250)
-		hint.TextScaled = true
-		hint.Font = Enum.Font.GothamBlack
-		hint.ZIndex = 2
-		hint.Parent = pad
-	end
-	addPadHint("LeftHint", "◀", UDim2.fromScale(0.22, 0.5))
-	addPadHint("RightHint", "▶", UDim2.fromScale(0.78, 0.5))
-	local centerMark = Instance.new("TextLabel")
-	centerMark.Name = "SteeringLabel"
-	centerMark.AnchorPoint = Vector2.new(0.5, 0.5)
-	centerMark.Position = UDim2.fromScale(0.5, 0.5)
-	centerMark.Size = UDim2.fromScale(0.36, 0.42)
-	centerMark.BackgroundTransparency = 1
-	centerMark.Text = "GIRAR"
-	centerMark.TextColor3 = Color3.fromRGB(255, 197, 72)
-	centerMark.TextScaled = true
-	centerMark.Font = Enum.Font.GothamBold
-	centerMark.ZIndex = 2
-	centerMark.Parent = pad
+	local trackRing = Instance.new("Frame")
+	trackRing.Name = "JoystickTrack"
+	trackRing.AnchorPoint = Vector2.new(0.5, 0.5)
+	trackRing.Position = UDim2.fromScale(0.5, 0.5)
+	trackRing.Size = UDim2.fromScale(0.72, 0.72)
+	trackRing.BackgroundColor3 = Color3.fromRGB(43, 58, 76)
+	trackRing.BackgroundTransparency = 0.34
+	trackRing.BorderSizePixel = 0
+	trackRing.ZIndex = 2
+	trackRing.Parent = pad
+	local trackCorner = Instance.new("UICorner")
+	trackCorner.CornerRadius = UDim.new(1, 0)
+	trackCorner.Parent = trackRing
+	local trackStroke = Instance.new("UIStroke")
+	trackStroke.Color = Color3.fromRGB(127, 151, 177)
+	trackStroke.Transparency = 0.5
+	trackStroke.Thickness = 2
+	trackStroke.Parent = trackRing
+
+	local leftHint = Instance.new("TextLabel")
+	leftHint.Name = "LeftHint"
+	leftHint.AnchorPoint = Vector2.new(0.5, 0.5)
+	leftHint.Position = UDim2.fromScale(0.20, 0.5)
+	leftHint.Size = UDim2.fromScale(0.18, 0.30)
+	leftHint.BackgroundTransparency = 1
+	leftHint.Text = "‹"
+	leftHint.TextColor3 = Color3.fromRGB(225, 233, 243)
+	leftHint.TextScaled = true
+	leftHint.Font = Enum.Font.GothamBold
+	leftHint.ZIndex = 3
+	leftHint.Parent = pad
+	local rightHint = leftHint:Clone()
+	rightHint.Name = "RightHint"
+	rightHint.Position = UDim2.fromScale(0.80, 0.5)
+	rightHint.Text = "›"
+	rightHint.Parent = pad
 
 	local knob = Instance.new("Frame")
 	knob.Name = "Thumb"
 	knob.AnchorPoint = Vector2.new(0.5, 0.5)
 	knob.Position = UDim2.fromScale(0.5, 0.5)
-	knob.Size = UDim2.fromOffset(38, 38)
-	knob.BackgroundColor3 = Color3.fromRGB(255, 197, 72)
-	knob.BackgroundTransparency = 0.08
+	knob.Size = UDim2.fromOffset(48, 48)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 194, 65)
+	knob.BackgroundTransparency = 0.02
 	knob.BorderSizePixel = 0
-	knob.ZIndex = 3
+	knob.ZIndex = 4
 	knob.Parent = pad
 	local knobCorner = Instance.new("UICorner")
 	knobCorner.CornerRadius = UDim.new(1, 0)
 	knobCorner.Parent = knob
 	local knobStroke = Instance.new("UIStroke")
-	knobStroke.Color = Color3.fromRGB(255, 255, 255)
-	knobStroke.Transparency = 0.15
+	knobStroke.Color = Color3.fromRGB(255, 247, 220)
+	knobStroke.Transparency = 0.08
 	knobStroke.Thickness = 2
 	knobStroke.Parent = knob
 
 	local activePadInput
 	local function updatePad(screenPosition)
 		local center = pad.AbsolutePosition + pad.AbsoluteSize / 2
-		local radiusX = pad.AbsoluteSize.X * 0.5 - knob.AbsoluteSize.X * 0.5
+		local radiusX = math.min(pad.AbsoluteSize.X, pad.AbsoluteSize.Y) * 0.5 - knob.AbsoluteSize.X * 0.5
 		local offsetX = math.clamp(screenPosition.X - center.X, -radiusX, radiusX)
-		mobilePadVector = Vector2.new(offsetX / radiusX, 0)
+		mobilePadVector = Vector2.new(offsetX / math.max(radiusX, 1), 0)
 		knob.Position = UDim2.new(0.5, offsetX, 0.5, 0)
 		if sendDriveInput then sendDriveInput() end
 	end
@@ -667,56 +676,51 @@ local function createMobileControls()
 		if activePadInput and input == activePadInput then resetPad() end
 	end)
 
-	local function makePedal(name, label, position, color, isDrift)
+	-- Botones circulares independientes: se pueden mantener pulsados a la vez.
+	local function makeActionButton(name, title, glyph, position, size, color, isDrift)
 		local button = Instance.new("TextButton")
 		button.Name = name
 		button.AnchorPoint = Vector2.new(0.5, 0.5)
 		button.Position = position
-		button.Size = UDim2.fromOffset(76, 112)
+		button.Size = UDim2.fromOffset(size, size)
 		button.BackgroundColor3 = color
-		button.BackgroundTransparency = 0.04
+		button.BackgroundTransparency = 0.06
 		button.BorderSizePixel = 0
 		button.Text = ""
 		button.AutoButtonColor = false
 		button.Parent = gui
 		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 13)
+		corner.CornerRadius = UDim.new(1, 0)
 		corner.Parent = button
 		local stroke = Instance.new("UIStroke")
-		stroke.Color = Color3.fromRGB(235, 240, 245)
-		stroke.Transparency = 0.18
+		stroke.Color = Color3.fromRGB(245, 248, 252)
+		stroke.Transparency = 0.14
 		stroke.Thickness = 2
 		stroke.Parent = button
-		local tread = Instance.new("Frame")
-		tread.Name = "PedalTread"
-		tread.Position = UDim2.new(0.12, 0, 0.1, 0)
-		tread.Size = UDim2.new(0.76, 0, 0.22, 0)
-		tread.BackgroundColor3 = Color3.fromRGB(20, 25, 31)
-		tread.BackgroundTransparency = 0.12
-		tread.BorderSizePixel = 0
-		tread.Parent = button
-		local treadCorner = Instance.new("UICorner")
-		treadCorner.CornerRadius = UDim.new(0, 5)
-		treadCorner.Parent = tread
-		for i = 1, 3 do
-			local ridge = Instance.new("Frame")
-			ridge.Size = UDim2.new(0.12, 0, 0.72, 0)
-			ridge.Position = UDim2.new(0.16 + (i - 1) * 0.28, 0, 0.14, 0)
-			ridge.BackgroundColor3 = Color3.fromRGB(190, 198, 207)
-			ridge.BorderSizePixel = 0
-			ridge.Parent = tread
-		end
-		local textLabel = Instance.new("TextLabel")
-		textLabel.Name = "PedalLabel"
-		textLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-		textLabel.Position = UDim2.fromScale(0.5, 0.65)
-		textLabel.Size = UDim2.fromScale(0.9, 0.42)
-		textLabel.BackgroundTransparency = 1
-		textLabel.Text = label
-		textLabel.TextColor3 = Color3.new(1, 1, 1)
-		textLabel.TextScaled = true
-		textLabel.Font = Enum.Font.GothamBlack
-		textLabel.Parent = button
+
+		local icon = Instance.new("TextLabel")
+		icon.Name = "ActionIcon"
+		icon.AnchorPoint = Vector2.new(0.5, 0.5)
+		icon.Position = UDim2.new(0.5, 0, 0.39, 0)
+		icon.Size = UDim2.fromScale(0.52, 0.48)
+		icon.BackgroundTransparency = 1
+		icon.Text = glyph
+		icon.TextColor3 = Color3.new(1, 1, 1)
+		icon.TextScaled = true
+		icon.Font = Enum.Font.GothamBlack
+		icon.Parent = button
+
+		local label = Instance.new("TextLabel")
+		label.Name = "ActionLabel"
+		label.AnchorPoint = Vector2.new(0.5, 0.5)
+		label.Position = UDim2.new(0.5, 0, 0.76, 0)
+		label.Size = UDim2.fromScale(0.86, 0.22)
+		label.BackgroundTransparency = 1
+		label.Text = title
+		label.TextColor3 = Color3.new(1, 1, 1)
+		label.TextScaled = true
+		label.Font = Enum.Font.GothamBold
+		label.Parent = button
 
 		local activeInput
 		button.InputBegan:Connect(function(input)
@@ -729,7 +733,7 @@ local function createMobileControls()
 					mobileAccelerateHeld = true
 				end
 				if sendDriveInput then sendDriveInput() end
-				button.BackgroundTransparency = 0.22
+				button.BackgroundTransparency = 0.20
 			end
 		end)
 		UserInputService.InputEnded:Connect(function(input)
@@ -742,13 +746,13 @@ local function createMobileControls()
 					mobileAccelerateHeld = false
 				end
 				if sendDriveInput then sendDriveInput() end
-				button.BackgroundTransparency = 0.04
+				button.BackgroundTransparency = 0.06
 			end
 		end)
 	end
 
-	makePedal("AcceleratePedal", "ACELERAR", UDim2.new(0.72, 0, 0.80, 0), Color3.fromRGB(40, 132, 82), false)
-	makePedal("DriftPedal", "DRIFT", UDim2.new(0.88, 0, 0.80, 0), Color3.fromRGB(185, 116, 32), true)
+	makeActionButton("AccelerateButton", "GAS", "▲", UDim2.new(0.86, 0, 0.80, 0), 104, Color3.fromRGB(35, 139, 83), false)
+	makeActionButton("DriftButton", "DRIFT", "↗", UDim2.new(0.70, 0, 0.88, 0), 72, Color3.fromRGB(191, 119, 34), true)
 end
 
 local function setMobileControlsVisible(visible)
