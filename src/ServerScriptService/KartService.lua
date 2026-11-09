@@ -2260,6 +2260,12 @@ local function createKart(player, spawnIndex)
 					end
 					if part:IsA("MeshPart") then
 						part.DoubleSided = true
+						-- El alpha de la textura importada estaba dejando ver el fondo.
+						-- Overlay conserva el color de la malla sin aplicar transparencia por alpha.
+						local surfaceAppearance = part:FindFirstChildOfClass("SurfaceAppearance")
+						if surfaceAppearance then
+							surfaceAppearance.AlphaMode = Enum.AlphaMode.Overlay
+						end
 					end
 					part.Anchored = false
 					part.Massless = true
