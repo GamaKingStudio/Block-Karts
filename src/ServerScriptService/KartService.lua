@@ -620,7 +620,7 @@ end
 local function computeDividerChains(points, railOffset, railChains)
 	local count = #points
 	local step = 3
-	local safeDistance = 19 -- borde de pista (18) + margen para el muro
+	local safeDistance = 24 -- borde de pista (22.5) + margen para el muro
 
 	local function distanceToCenterline(x, z)
 		local best = math.huge
@@ -652,7 +652,7 @@ local function computeDividerChains(points, railOffset, railChains)
 	local total = cumulative
 	local minSeparation = 120
 	local maxDistance = railOffset * 2 + 1
-	local minDistance = 37
+	local minDistance = 47 -- evita divisores en separaciones menores al ancho de la nueva pista
 
 	local chains = {}
 	local current = nil
@@ -892,7 +892,7 @@ local function buildTestCourse()
 
 	-- Beach Resort ampliado: se conserva la recta de salida y el sector norte,
 	-- y se añade un bucle exterior al sureste con curvas rápidas y una zona técnica.
-	local trackWidth = 36
+	local trackWidth = 45
 	local waypoints = {
 		Vector3.new(80, yGround + 0.02, 70),
 		Vector3.new(-65, yGround + 0.02, 70),
@@ -915,8 +915,8 @@ local function buildTestCourse()
 		Vector3.new(135, yGround + 0.02, 205),
 		Vector3.new(75, yGround + 0.02, 205),
 		Vector3.new(35, yGround + 0.02, 175),
-		Vector3.new(25, yGround + 0.02, 135),
-		Vector3.new(75, yGround + 0.02, 145),
+		Vector3.new(25, yGround + 0.02, 120),
+		Vector3.new(75, yGround + 0.02, 130),
 		Vector3.new(130, yGround + 0.02, 145),
 		Vector3.new(155, yGround + 0.02, 100),
 		Vector3.new(150, yGround + 0.02, 75),
@@ -1901,9 +1901,9 @@ local function buildTestCourse()
 		{ pos = Vector3.new(160, yGround + triggerHeight / 2, 192.5), target = Vector3.new(135, yGround + triggerHeight / 2, 205) },
 		{ pos = Vector3.new(105, yGround + triggerHeight / 2, 205),   target = Vector3.new(75, yGround + triggerHeight / 2, 205) },
 		{ pos = Vector3.new(55, yGround + triggerHeight / 2, 190),    target = Vector3.new(35, yGround + triggerHeight / 2, 175) },
-		{ pos = Vector3.new(30, yGround + triggerHeight / 2, 155),    target = Vector3.new(25, yGround + triggerHeight / 2, 135) },
-		{ pos = Vector3.new(50, yGround + triggerHeight / 2, 140),    target = Vector3.new(75, yGround + triggerHeight / 2, 145) },
-		{ pos = Vector3.new(102.5, yGround + triggerHeight / 2, 145), target = Vector3.new(130, yGround + triggerHeight / 2, 145) },
+		{ pos = Vector3.new(30, yGround + triggerHeight / 2, 147.5),  target = Vector3.new(25, yGround + triggerHeight / 2, 120) },
+		{ pos = Vector3.new(50, yGround + triggerHeight / 2, 125),    target = Vector3.new(75, yGround + triggerHeight / 2, 130) },
+		{ pos = Vector3.new(102.5, yGround + triggerHeight / 2, 137.5), target = Vector3.new(130, yGround + triggerHeight / 2, 145) },
 		{ pos = Vector3.new(142.5, yGround + triggerHeight / 2, 122.5),target = Vector3.new(155, yGround + triggerHeight / 2, 100) },
 		{ pos = Vector3.new(152.5, yGround + triggerHeight / 2, 87.5), target = Vector3.new(150, yGround + triggerHeight / 2, 75) },
 		{ pos = Vector3.new(127.5, yGround + triggerHeight / 2, 70), target = Vector3.new(105, yGround + triggerHeight / 2, 65) },
