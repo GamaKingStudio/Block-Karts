@@ -138,7 +138,7 @@ for _, side in ipairs({-1, 1}) do
         part("SideShelf_" .. side .. "_" .. shelf, Vector3.new(8, 0.6, 15), Vector3.new(x - side * 4, y, baseZ - 5), steel, Enum.Material.DiamondPlate)
     end
     for stack = 1, 3 do
-        local tire = part("TireStack_" .. side .. "_" .. stack, Vector3.new(3.4, 1.7, 3.4), Vector3.new(x - side * 4, floorY + 1.25 + stack * 1.8, baseZ + 14), rubber, Enum.Material.Rubber, nil, Enum.PartType.Cylinder)
+        local tire = part("TireStack_" .. side .. "_" .. stack, Vector3.new(3.4, 1.7, 3.4), Vector3.new(x - side * 4, floorY + 1.25 + stack * 1.8, baseZ + 14), rubber, Enum.Material.SmoothPlastic, nil, Enum.PartType.Cylinder)
         tire.Orientation = Vector3.new(0, 0, 90)
     end
 end
