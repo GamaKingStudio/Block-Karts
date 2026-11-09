@@ -1810,6 +1810,14 @@ local function makeVisualRod(model, chassis, name, startOffset, endOffset, thick
 	return makeVisualPart(model, chassis, name, Vector3.new(thickness, thickness, length), rodCFrame, color, material)
 end
 
+-- Radio aproximado de una rueda: promedio de sus dos dimensiones mas grandes (el disco).
+local function estimateWheelRadius(part)
+	local size = part.Size
+	local dims = { size.X, size.Y, size.Z }
+	table.sort(dims, function(a, b) return a > b end)
+	return math.max(0.3, (dims[1] + dims[2]) / 4)
+end
+
 local function createKart(player, spawnIndex)
 	local model = Instance.new("Model")
 	model.Name = "Kart_" .. player.UserId
@@ -2152,21 +2160,51 @@ local function createKart(player, spawnIndex)
 					local isFrontWheel = part.Name == "Rueda_Delantera_Der"
 						or part.Name == "Rueda_Delantera_Izq"
 
-					if isFrontWheel then
-						-- Conserva la posición y orientación originales del neumático,
-						-- pero permite girarlo alrededor del eje vertical del kart.
-						local motor = Instance.new("Motor6D")
-						motor.Name = "FrontWheelSteering_" .. part.Name
-						motor.Part0 = chassis
-						motor.Part1 = part
-						-- El pivote queda exactamente en el centro de la rueda.
-						-- C0 usa los ejes del chasis para que ambas ruedas giren
-						-- sobre el mismo eje vertical y en el mismo sentido.
-						local wheelPivot = CFrame.new(part.Position)
-						motor.C0 = chassis.CFrame:ToObjectSpace(wheelPivot)
-						motor.C1 = part.CFrame:ToObjectSpace(wheelPivot)
-						motor.Parent = chassis
-						table.insert(kartWheelMotors, motor)
+					if kartWheelNames[name] then
+						-- Cada rueda cuelga de un "cubo" invisible con los ejes del chasis:
+						--   chasis -> cubo : direccion (ruedas delanteras) o soldadura (traseras)
+						--   cubo   -> rueda: Motor6D "WheelSpin_*" que gira la rueda sobre su eje
+						--                   (eje X del chasis). El giro lo anima cada cliente.
+						local hubCFrame = chassis.CFrame.Rotation + part.Position
+						local hub = Instance.new("Part")
+						hub.Name = "WheelHub_" .. name
+						hub.Size = Vector3.new(0.2, 0.2, 0.2)
+						hub.Transparency = 1
+						hub.CanCollide = false
+						hub.CanTouch = false
+						hub.CanQuery = false
+						hub.CastShadow = false
+						hub.Massless = true
+						hub.Anchored = false
+						hub.CFrame = hubCFrame
+						hub.Parent = part.Parent
+
+						local spinMotor = Instance.new("Motor6D")
+						spinMotor.Name = "WheelSpin_" .. name
+						spinMotor.Part0 = hub
+						spinMotor.Part1 = part
+						spinMotor.C0 = CFrame.new()
+						spinMotor.C1 = part.CFrame:ToObjectSpace(hubCFrame)
+						spinMotor:SetAttribute("WheelRadius", estimateWheelRadius(part))
+						spinMotor.Parent = hub
+
+						if isFrontWheel then
+							-- Direccion: gira el cubo sobre el eje vertical del kart.
+							local motor = Instance.new("Motor6D")
+							motor.Name = "FrontWheelSteering_" .. part.Name
+							motor.Part0 = chassis
+							motor.Part1 = hub
+							motor.C0 = chassis.CFrame:ToObjectSpace(hubCFrame)
+							motor.C1 = CFrame.new()
+							motor.Parent = chassis
+							table.insert(kartWheelMotors, motor)
+						else
+							local hubWeld = Instance.new("WeldConstraint")
+							hubWeld.Name = "WheelHubWeld"
+							hubWeld.Part0 = chassis
+							hubWeld.Part1 = hub
+							hubWeld.Parent = chassis
+						end
 					else
 						local weld = Instance.new("WeldConstraint")
 						weld.Name = "CustomKartPartWeld"
@@ -2193,9 +2231,17 @@ local function createKart(player, spawnIndex)
 
 			-- Anclajes invisibles para conservar el humo de derrape trasero.
 			for _, wheel in ipairs({
-				{ name = "Wheel_RearL", offset = Vector3.new(-1.65, -0.15, 2.0) },
-				{ name = "Wheel_RearR", offset = Vector3.new(1.65, -0.15, 2.0) },
+				{ name = "Wheel_RearL", source = "Rueda_Trasera_Izq", offset = Vector3.new(-1.65, -0.15, 2.0) },
+				{ name = "Wheel_RearR", source = "Rueda_Trasera_Der", offset = Vector3.new(1.65, -0.15, 2.0) },
 			}) do
+				-- El humo sale del punto de contacto de la rueda trasera real
+				-- (antes salia del centro del kart, tapado por la carroceria).
+				local markerOffset = wheel.offset
+				local sourceWheel = importedKart:FindFirstChild(wheel.source, true)
+				if sourceWheel and sourceWheel:IsA("BasePart") then
+					markerOffset = chassis.CFrame:PointToObjectSpace(sourceWheel.Position)
+						- Vector3.new(0, estimateWheelRadius(sourceWheel) * 0.85, 0)
+				end
 				local marker = Instance.new("Part")
 				marker.Name = wheel.name
 				marker.Size = Vector3.new(0.2, 0.2, 0.2)
@@ -2204,7 +2250,7 @@ local function createKart(player, spawnIndex)
 				marker.CanTouch = false
 				marker.CanQuery = false
 				marker.Massless = true
-				marker.CFrame = chassis.CFrame * CFrame.new(wheel.offset)
+				marker.CFrame = chassis.CFrame * CFrame.new(markerOffset)
 				marker.Parent = model
 				local weld = Instance.new("WeldConstraint")
 				weld.Part0 = chassis
