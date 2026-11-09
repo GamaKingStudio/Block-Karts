@@ -2497,6 +2497,13 @@ local function placeCharacterInGarage(player, character)
 		return
 	end
 
+	-- Espera a que el escenario del garaje exista antes de colocar al personaje.
+	local garage = Workspace:WaitForChild("BlockKartsGarage", 60)
+	if not garage then
+		warn("[GARAGE] No se encontró BlockKartsGarage; no se pudo ubicar al jugador.")
+		return
+	end
+
 	-- El lobby es el spawn por defecto. No se crea ni se ocupa ningún kart.
 	player:SetAttribute("InGarage", true)
 	player:SetAttribute("RaceStarted", false)
