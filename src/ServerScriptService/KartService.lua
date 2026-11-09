@@ -51,6 +51,7 @@ local startRaceFromLobbyRemote = getOrCreateRemote("StartRaceFromLobby")
 local raceFinishedRemote = getOrCreateRemote("RaceFinished")
 local returnToLobbyRemote = getOrCreateRemote("ReturnToLobby")
 local anotherRaceRemote = getOrCreateRemote("AnotherRace")
+local returnedToLobbyRemote = getOrCreateRemote("ReturnedToLobby")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -71,6 +72,7 @@ local mapBuilt = false
 local raceData = {}
 local ghostRecords = {}
 local selectedCameras = {}
+local finishCruiseStates = {}
 
 -- Estadísticas persistentes para los marcadores del garaje.
 -- DataStore no está disponible en experiencias sin publicar o sin API Services.
@@ -2643,12 +2645,23 @@ local function onCheckpointTouched(hitPart, triggerPart)
                 player:SetAttribute("RaceCountdownActive", false)
                 driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 
-                -- Inmoviliza el kart y evita que siga registrando vueltas.
+                -- Piloto automático tras la meta: repite una vuelta real grabada.
                 local finishedKart = activeKarts[player]
                 if finishedKart and finishedKart.chassis and finishedKart.chassis.Parent then
                     finishedKart.chassis.AssemblyLinearVelocity = Vector3.zero
                     finishedKart.chassis.AssemblyAngularVelocity = Vector3.zero
                     if finishedKart.driveForce then finishedKart.driveForce.Enabled = false end
+                    local cruiseSamples = pData.GhostSamples
+                    if cruiseSamples and #cruiseSamples >= 2 then
+                        finishedKart.chassis.Anchored = true
+                        finishCruiseStates[player] = {
+                            kart = finishedKart,
+                            samples = table.clone(cruiseSamples),
+                            duration = math.max(0.1, cruiseSamples[#cruiseSamples].t),
+                            startedAt = os.clock(),
+                            sampleIndex = 1,
+                        }
+                    end
                 end
 
                 raceFinishedRemote:FireClient(
@@ -3042,6 +3055,7 @@ local function returnPlayerToLobby(player)
  driverInputs[player] = nil
  raceData[player] = nil
  selectedCameras[player] = nil
+ finishCruiseStates[player] = nil
 
  if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
  cpuKart = nil
@@ -3065,6 +3079,7 @@ local function returnPlayerToLobby(player)
  local humanoid = character and character:FindFirstChildOfClass("Humanoid")
  if humanoid then humanoid.Sit = false end
  if character then task.spawn(placeCharacterInGarage, player, character) end
+ returnedToLobbyRemote:FireClient(player)
  print(("[RACE] %s volvió al lobby."):format(player.Name))
 end
 
@@ -3081,6 +3096,7 @@ anotherRaceRemote.OnServerEvent:Connect(function(player)
   or not kart.seat.Parent then return end
 
  -- Reinicia la misma sala y el mismo kart; no altera el circuito ni la cámara elegida.
+ finishCruiseStates[player] = nil
  countdownToken += 1
  raceInProgress = false
  if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
@@ -3157,6 +3173,28 @@ task.spawn(function()
 end)
 
 RunService.Heartbeat:Connect(function(dt)
+ -- Piloto automático después de terminar: reproduce el recorrido de la primera vuelta.
+ for player, cruise in pairs(finishCruiseStates) do
+  local kart = cruise.kart
+  if not kart or not kart.chassis or not kart.chassis.Parent or not cruise.samples or #cruise.samples < 2 then
+   finishCruiseStates[player] = nil
+  else
+   local elapsed = (os.clock() - cruise.startedAt) % cruise.duration
+   local samples = cruise.samples
+   while cruise.sampleIndex < #samples - 1 and samples[cruise.sampleIndex + 1].t < elapsed do
+    cruise.sampleIndex += 1
+   end
+   local a = samples[cruise.sampleIndex]
+   local b = samples[math.min(cruise.sampleIndex + 1, #samples)]
+   if a and b then
+    local span = math.max(0.001, b.t - a.t)
+    local alpha = math.clamp((elapsed - a.t) / span, 0, 1)
+    kart.chassis.CFrame = a.cf:Lerp(b.cf, alpha)
+   end
+   if elapsed < 0.12 then cruise.sampleIndex = 1 end
+  end
+ end
+
  -- Graba la posición y orientación del kart del jugador durante la primera vuelta.
  for player, data in pairs(raceData) do
   local kart = activeKarts[player]
@@ -3288,6 +3326,7 @@ Players.PlayerRemoving:Connect(function(player)
 	selectedCameras[player] = nil
 	driverInputs[player] = nil
 	raceData[player] = nil
+	finishCruiseStates[player] = nil
 	if roomBusyPlayer == player then
 		roomBusyPlayer = nil
 		if cpuKart then cpuKart.model:Destroy(); cpuKart = nil end
