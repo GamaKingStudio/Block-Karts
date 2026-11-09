@@ -431,7 +431,7 @@ local function logSeatedAvatar(humanoid, seat)
 	-- Roblox may apply a local transparency modifier while the player is seated.
 	-- Restore opacity on the imported kart body for its actual driver only.
 	if character == player.Character then
-		local customBody = kart and kart:FindFirstChild("CustomKartBody")
+		local customBody = kart
 		if customBody then
 			local restoredParts = 0
 			for _, item in ipairs(customBody:GetDescendants()) do
@@ -460,7 +460,7 @@ local function logSeatedAvatar(humanoid, seat)
 			end
 			print(("[BLOXY-KART][CLIENT][KART-VISIBILITY] restored=%d imported body parts"):format(restoredParts))
 		else
-			warn("[BLOXY-KART][CLIENT][KART-VISIBILITY] CustomKartBody not found on the seated kart.")
+			warn("[BLOXY-KART][CLIENT][KART-VISIBILITY] Kart model not found on the seated kart.")
 		end
 	end
 
@@ -778,7 +778,9 @@ local wheelSpinByKart = setmetatable({}, { __mode = "k" })
 RunService:BindToRenderStep("BLOXYKartRestoreBodyVisibility", Enum.RenderPriority.Last.Value, function()
 	if not currentSeat or not currentSeat.Parent then return end
 	local kart = getKartFromSeat(currentSeat)
-	local body = kart and kart:FindFirstChild("CustomKartBody")
+	-- En móvil la cámara puede aplicar transparencia local a piezas fuera de
+	-- CustomKartBody. Restauramos el modelo completo del kart del jugador.
+	local body = kart
 	if not body then return end
 
 	local function restoreVisible(item)
