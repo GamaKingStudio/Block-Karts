@@ -12,6 +12,8 @@ local checkpointEvent = raceEvents:WaitForChild("CheckpointPassed")
 local lapEvent = raceEvents:WaitForChild("LapCompleted")
 local wrongWayEvent = raceEvents:WaitForChild("WrongWayStateChanged")
 local raceFinishedEvent = raceEvents:WaitForChild("RaceFinished")
+local returnToLobbyEvent = raceEvents:WaitForChild("ReturnToLobby")
+local anotherRaceEvent = raceEvents:WaitForChild("AnotherRace")
 
 local previous = playerGui:FindFirstChild("BLOXYRaceHUD")
 if previous then previous:Destroy() end
@@ -146,17 +148,46 @@ local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.
 local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 26", 15, Color3.fromRGB(220, 226, 235), "Light")
 
 -- Pantalla de resultados: aparece al cruzar la meta en la última vuelta.
-local finishPanel = panel("RaceFinishedPanel", UDim2.fromOffset(430, 236), UDim2.new(0.5, -215, 0.5, -118))
+local finishPanel = panel("RaceFinishedPanel", UDim2.fromOffset(560, 330), UDim2.new(0.5, -280, 0.5, -165))
 finishPanel.Visible = false
 finishPanel.ZIndex = 50
-local finishTitle = label(finishPanel, "FinishTitle", UDim2.new(1, -24, 0, 48), UDim2.fromOffset(12, 12), "¡CARRERA TERMINADA!", 29, Color3.fromRGB(255, 210, 90), "Title")
-local finishPosition = label(finishPanel, "FinishPosition", UDim2.new(1, -24, 0, 42), UDim2.fromOffset(12, 68), "1.er LUGAR", 27, Color3.fromRGB(245, 247, 250), "Bold")
-local finishBestLap = label(finishPanel, "FinishBestLap", UDim2.new(1, -24, 0, 32), UDim2.fromOffset(12, 122), "MEJOR VUELTA: --:--.--", 20, Color3.fromRGB(255, 220, 145), "Light")
-local finishTotalTime = label(finishPanel, "FinishTotalTime", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 164), "TIEMPO TOTAL: --:--.--", 18, Color3.fromRGB(220, 226, 235), "Light")
-for _, item in ipairs({ finishTitle, finishPosition, finishBestLap, finishTotalTime }) do
+finishPanel.BackgroundTransparency = 1
+finishPanel:FindFirstChildOfClass("UICorner"):Destroy()
+finishPanel:FindFirstChildOfClass("UIStroke"):Destroy()
+local finishTitle = label(finishPanel, "FinishTitle", UDim2.new(1, -24, 0, 48), UDim2.fromOffset(12, 8), "¡CARRERA TERMINADA!", 31, Color3.fromRGB(255, 210, 90), "Title")
+local finishPosition = label(finishPanel, "FinishPosition", UDim2.new(1, -24, 0, 42), UDim2.fromOffset(12, 60), "1.er LUGAR", 28, Color3.fromRGB(245, 247, 250), "Bold")
+local finishBestLap = label(finishPanel, "FinishBestLap", UDim2.new(1, -24, 0, 32), UDim2.fromOffset(12, 108), "MEJOR VUELTA: --:--.--", 20, Color3.fromRGB(255, 220, 145), "Light")
+local finishTotalTime = label(finishPanel, "FinishTotalTime", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 145), "TIEMPO TOTAL: --:--.--", 19, Color3.fromRGB(220, 226, 235), "Light")
+local finishCountdown = label(finishPanel, "FinishCountdown", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 184), "Volviendo al lobby en 5...", 17, Color3.fromRGB(255, 220, 145), "Light")
+local function finishActionButton(name, text, position, width)
+ local button = Instance.new("TextButton")
+ button.Name = name
+ button.Size = UDim2.fromOffset(width, 42)
+ button.Position = position
+ button.BackgroundTransparency = 1
+ button.BorderSizePixel = 0
+ button.Text = text
+ button.TextColor3 = Color3.fromRGB(245, 247, 250)
+ button.TextSize = 19
+ button.FontFace = typography.getFont("Title")
+ button.TextStrokeColor3 = Color3.fromRGB(12, 16, 24)
+ button.TextStrokeTransparency = 0.05
+ button.ZIndex = 52
+ button.AutoButtonColor = true
+ button.Parent = finishPanel
+ local outline = Instance.new("UIStroke")
+ outline.Color = Color3.fromRGB(255, 197, 72)
+ outline.Thickness = 1.5
+ outline.Transparency = 0.15
+ outline.Parent = button
+ return button
+end
+local returnLobbyButton = finishActionButton("ReturnToLobbyButton", "VOLVER AL LOBBY AHORA", UDim2.fromOffset(24, 232), 270)
+local anotherRaceButton = finishActionButton("AnotherRaceButton", "OTRA CARRERA", UDim2.fromOffset(310, 232), 220)
+for _, item in ipairs({ finishTitle, finishPosition, finishBestLap, finishTotalTime, finishCountdown }) do
  item.ZIndex = 51
  item.TextStrokeColor3 = Color3.fromRGB(12, 16, 24)
- item.TextStrokeTransparency = 0.08
+ item.TextStrokeTransparency = 0.06
 end
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(180, 66), UDim2.new(1, -202, 1, -88))
@@ -488,8 +519,9 @@ lapEvent.OnClientEvent:Connect(function(lap, lapTime, isBest)
  end
 end)
 
+local finishCountdownToken = 0
 local function showRaceFinished(position, bestTime, totalTime)
- -- El resultado debe seguir visible aunque el asiento se desocupe al cruzar meta.
+ -- El resultado permanece visible aunque el asiento se desocupe al cruzar meta.
  hud.Enabled = true
  lapStartedAt = nil
  wrongWayLabel.Visible = false
@@ -499,10 +531,36 @@ local function showRaceFinished(position, bestTime, totalTime)
  finishTotalTime.Text = "TIEMPO TOTAL: " .. formatTime(totalTime or 0)
  finishTitle.Text = "¡CARRERA TERMINADA!"
  finishPanel.Visible = true
+
+ finishCountdownToken += 1
+ local token = finishCountdownToken
+ task.spawn(function()
+  for seconds = 5, 1, -1 do
+   if token ~= finishCountdownToken or not finishPanel.Visible then return end
+   finishCountdown.Text = ("Volviendo al lobby en %d..."):format(seconds)
+   task.wait(1)
+  end
+  if token == finishCountdownToken and finishPanel.Visible then
+   finishCountdown.Text = "Volviendo al lobby..."
+   returnToLobbyEvent:FireServer()
+  end
+ end)
 end
 
 raceFinishedEvent.OnClientEvent:Connect(function(position, bestTime, totalTime)
  showRaceFinished(position, bestTime, totalTime)
+end)
+
+returnLobbyButton.Activated:Connect(function()
+ finishCountdownToken += 1
+ finishCountdown.Text = "Volviendo al lobby..."
+ returnToLobbyEvent:FireServer()
+end)
+
+anotherRaceButton.Activated:Connect(function()
+ finishCountdownToken += 1
+ finishPanel.Visible = false
+ anotherRaceEvent:FireServer()
 end)
 
 -- Respaldo: atributos replicados muestran el resultado aunque el RemoteEvent
@@ -553,6 +611,8 @@ local function setDriving(seat)
   currentSeat = seat
   currentChassis = model.PrimaryPart
   hud.Enabled = true
+  finishPanel.Visible = false
+  finishCountdownToken += 1
   setLap(1)
   checkpointLabel.Text = "CHECKPOINT 0 / 26"
   timerLabel.Text = "00:00.00"
