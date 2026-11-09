@@ -475,7 +475,9 @@ local function buildTestCourse()
 		makePart(course, "PitWheelStop_" .. px, Vector3.new(5.5, 0.45, 0.8), CFrame.new(px + 2.5, yGround + 0.25, 108), C_WHITE, Enum.Material.Concrete)
 	end
 
-	local trackWidth = 26
+	-- Beach Resort ampliado: se conserva la recta de salida y el sector norte,
+	-- y se añade un bucle exterior al sureste con curvas rápidas y una zona técnica.
+	local trackWidth = 30
 	local waypoints = {
 		Vector3.new(80, yGround + 0.02, 70),
 		Vector3.new(-65, yGround + 0.02, 70),
@@ -491,6 +493,18 @@ local function buildTestCourse()
 		Vector3.new(85, yGround + 0.02, -65),
 		Vector3.new(125, yGround + 0.02, -10),
 		Vector3.new(125, yGround + 0.02, 35),
+		Vector3.new(170, yGround + 0.02, 45),
+		Vector3.new(205, yGround + 0.02, 85),
+		Vector3.new(215, yGround + 0.02, 135),
+		Vector3.new(185, yGround + 0.02, 180),
+		Vector3.new(135, yGround + 0.02, 205),
+		Vector3.new(75, yGround + 0.02, 205),
+		Vector3.new(35, yGround + 0.02, 175),
+		Vector3.new(25, yGround + 0.02, 135),
+		Vector3.new(75, yGround + 0.02, 125),
+		Vector3.new(130, yGround + 0.02, 125),
+		Vector3.new(155, yGround + 0.02, 100),
+		Vector3.new(150, yGround + 0.02, 75),
 		Vector3.new(105, yGround + 0.02, 65),
 		Vector3.new(80, yGround + 0.02, 70),
 	}
@@ -879,7 +893,7 @@ local function buildTestCourse()
 		Vector3.new(-88, yGround, -112), Vector3.new(-84, yGround, -112),
 		Vector3.new(-32, yGround, 26), Vector3.new(-28, yGround, 26),
 		Vector3.new(52, yGround, -122), Vector3.new(56, yGround, -122),
-		Vector3.new(142, yGround, -12), Vector3.new(120, yGround, 80)
+		Vector3.new(142, yGround, -12), Vector3.new(270, yGround, 115)
 	}
 	for _, tPos in ipairs(tireLocations) do
 		spawnTireStack(tPos)
@@ -1397,13 +1411,14 @@ local function buildTestCourse()
 	local TRACK_CENTER = Vector3.new(5, yGround, -15)
 	local surfboardPlacements = {
 		-- Sector de playa oriental/suroriental.
-		{ offset = Vector3.new(170, 0, 180), rot = 30, lean = 12, scale = 1.00 },
-		{ offset = Vector3.new(178, 0, 165), rot = -20, lean = 18, scale = 0.96 },
-		{ offset = Vector3.new(185, 0, 150), rot = 45, lean = 8, scale = 1.04 },
-		{ offset = Vector3.new(192, 0, 178), rot = -35, lean = 15, scale = 0.92 },
-		{ offset = Vector3.new(158, 0, 195), rot = 18, lean = 10, scale = 1.02 },
+		-- Reubicadas hacia la playa exterior para despejar el nuevo bucle sureste.
+		{ offset = Vector3.new(265, 0, 180), rot = 30, lean = 12, scale = 1.00 },
+		{ offset = Vector3.new(275, 0, 155), rot = -20, lean = 18, scale = 0.96 },
+		{ offset = Vector3.new(280, 0, 130), rot = 45, lean = 8, scale = 1.04 },
+		{ offset = Vector3.new(285, 0, 185), rot = -35, lean = 15, scale = 0.92 },
+		{ offset = Vector3.new(255, 0, 205), rot = 18, lean = 10, scale = 1.02 },
 		-- Costado oriental, visibles desde las curvas del lado derecho.
-		{ offset = Vector3.new(185, 0, 75), rot = 65, lean = 14, scale = 0.98 },
+		{ offset = Vector3.new(265, 0, 90), rot = 65, lean = 14, scale = 0.98 },
 		{ offset = Vector3.new(185, 0, -5), rot = -55, lean = 9, scale = 1.06 },
 		{ offset = Vector3.new(170, 0, -95), rot = 25, lean = 16, scale = 0.94 },
 		-- Sector norte y noroeste, junto a los claros de arena.
@@ -1432,7 +1447,7 @@ local function buildTestCourse()
 	local debugTrans = KartConfig.DEBUG_CHECKPOINTS and 0.75 or 1
 	local triggerHeight = 15
 	local triggerThickness = 2
-	local triggerSpan = 48
+	local triggerSpan = 54
 
 	local finishCF = CFrame.lookAt(Vector3.new(gantryX, yGround + triggerHeight / 2, 70), Vector3.new(gantryX - 10, yGround + triggerHeight / 2, 70))
 	local finishPart = makePart(checkpointsFolder, "FinishLine", Vector3.new(triggerSpan, triggerHeight, triggerThickness), finishCF, Color3.fromRGB(255, 255, 255))
@@ -1456,7 +1471,19 @@ local function buildTestCourse()
 		{ pos = Vector3.new(65, yGround + triggerHeight / 2, -85),     target = Vector3.new(85, yGround + triggerHeight / 2, -65) },
 		{ pos = Vector3.new(105, yGround + triggerHeight / 2, -37.5),  target = Vector3.new(125, yGround + triggerHeight / 2, -10) },
 		{ pos = Vector3.new(125, yGround + triggerHeight / 2, 12.5),   target = Vector3.new(125, yGround + triggerHeight / 2, 35) },
-		{ pos = Vector3.new(115, yGround + triggerHeight / 2, 50),     target = Vector3.new(105, yGround + triggerHeight / 2, 65) },
+		{ pos = Vector3.new(147.5, yGround + triggerHeight / 2, 40),   target = Vector3.new(170, yGround + triggerHeight / 2, 45) },
+		{ pos = Vector3.new(187.5, yGround + triggerHeight / 2, 65),   target = Vector3.new(205, yGround + triggerHeight / 2, 85) },
+		{ pos = Vector3.new(210, yGround + triggerHeight / 2, 110),   target = Vector3.new(215, yGround + triggerHeight / 2, 135) },
+		{ pos = Vector3.new(200, yGround + triggerHeight / 2, 157.5), target = Vector3.new(185, yGround + triggerHeight / 2, 180) },
+		{ pos = Vector3.new(160, yGround + triggerHeight / 2, 192.5), target = Vector3.new(135, yGround + triggerHeight / 2, 205) },
+		{ pos = Vector3.new(105, yGround + triggerHeight / 2, 205),   target = Vector3.new(75, yGround + triggerHeight / 2, 205) },
+		{ pos = Vector3.new(55, yGround + triggerHeight / 2, 190),    target = Vector3.new(35, yGround + triggerHeight / 2, 175) },
+		{ pos = Vector3.new(30, yGround + triggerHeight / 2, 155),    target = Vector3.new(25, yGround + triggerHeight / 2, 135) },
+		{ pos = Vector3.new(50, yGround + triggerHeight / 2, 130),    target = Vector3.new(75, yGround + triggerHeight / 2, 125) },
+		{ pos = Vector3.new(102.5, yGround + triggerHeight / 2, 125), target = Vector3.new(130, yGround + triggerHeight / 2, 125) },
+		{ pos = Vector3.new(142.5, yGround + triggerHeight / 2, 112.5),target = Vector3.new(155, yGround + triggerHeight / 2, 100) },
+		{ pos = Vector3.new(152.5, yGround + triggerHeight / 2, 87.5), target = Vector3.new(150, yGround + triggerHeight / 2, 75) },
+		{ pos = Vector3.new(127.5, yGround + triggerHeight / 2, 70), target = Vector3.new(105, yGround + triggerHeight / 2, 65) },
 	}
 
 	for idx, def in ipairs(checkpointDefinitions) do
@@ -2001,7 +2028,7 @@ end
 -- ==========================================================
 -- 3. VALIDACIÓN DE CARRERA Y CHECKPOINTS (BACKEND)
 -- ==========================================================
-local TOTAL_INTERMEDIATE_CHECKPOINTS = 14
+local TOTAL_INTERMEDIATE_CHECKPOINTS = 26
 
 local function initPlayerRaceData(player, spawnCFrame)
 	player:SetAttribute("RaceLap", 1)
