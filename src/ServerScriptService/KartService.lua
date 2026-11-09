@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 local InsertService = game:GetService("InsertService")
+local DataStoreService = game:GetService("DataStoreService")
 
 local DIAGNOSTICS_ENABLED = false
 local DIAGNOSTIC_INTERVAL = 2
@@ -64,6 +65,7 @@ local activeKarts = {}
 local driverInputs = {}
 local mapBuilt = false
 local raceData = {}
+local ghostRecords = {}
 local selectedCameras = {}
 local raceInProgress = false
 local countdownToken = 0
@@ -119,7 +121,10 @@ local function tryStartRace()
     raceCountdownRemote:FireClient(p, 0)
    end
   end
-  if cpuRace then cpuRace.started = true end
+  if cpuRace then
+    cpuRace.started = true
+    cpuRace.startedAt = os.clock()
+end
  end)
 end
 cameraSelectionRemote.OnServerEvent:Connect(function(p, mode)
@@ -2404,6 +2409,8 @@ local function initPlayerRaceData(player, spawnCFrame)
 		LastValidCFrame = spawnCFrame,
 		LapStartTime = 0.0,
 		BestLapTime = nil,
+		GhostSamples = {},
+		LastGhostSampleAt = 0,
 		CanFinishLap = false,
 		IsWrongWay = false,
 		LastTriggerTime = 0.0,
@@ -2449,6 +2456,12 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			if isBest then
 				pData.BestLapTime = lapTime
 			end
+            -- Guarda la primera vuelta real para usarla como fantasma en la siguiente carrera.
+            if pData.CurrentLap == 1 and #pData.GhostSamples >= 2 then
+                table.insert(pData.GhostSamples, { t = lapTime, cf = hitPart.CFrame })
+                ghostRecords[player.UserId] = { samples = table.clone(pData.GhostSamples), duration = lapTime }
+                print(("[CPU-GHOST] Primera vuelta guardada: %d muestras, %.2fs"):format(#pData.GhostSamples, lapTime))
+            end
 
 			lapCompletedRemote:FireClient(player, pData.CurrentLap, lapTime, isBest)
 			pData.CurrentLap = pData.CurrentLap + 1
@@ -2775,8 +2788,28 @@ local function createCpuOpponent(player)
  end
  if finish then table.insert(route, finish.Position) end
  if #route < 28 then warn(("[CPU] Ruta incompleta: %d puntos."):format(#route)); return end
- cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1 }
- print("[CPU] Rival preparado con la ruta real de checkpoints de Playa.")
+ local savedGhost = ghostRecords[player.UserId]
+ if savedGhost and savedGhost.samples and #savedGhost.samples >= 2 then
+  for _, descendant in ipairs(kart.model:GetDescendants()) do
+   if descendant:IsA("BasePart") and descendant.Transparency < 1 then
+    descendant.Transparency = math.max(descendant.Transparency, 0.42)
+   end
+  end
+  local highlight = Instance.new("Highlight")
+  highlight.Name = "FirstLapGhostHighlight"
+  highlight.FillColor = Color3.fromRGB(50, 220, 255)
+  highlight.FillTransparency = 0.68
+  highlight.OutlineColor = Color3.fromRGB(80, 235, 255)
+  highlight.OutlineTransparency = 0.12
+  highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+  highlight.Parent = kart.model
+  cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1,
+   ghostSamples = savedGhost.samples, ghostDuration = savedGhost.duration, ghostIndex = 1 }
+  print(("[CPU-GHOST] Reproduciendo tu primera vuelta (%.2fs)."):format(savedGhost.duration))
+ else
+  cpuRace = { kart = kart, route = route, targetIndex = 1, started = false, speed = 37, laps = 1 }
+  print("[CPU] Aún no hay vuelta grabada; se usará el rival de checkpoints esta vez.")
+ end
 end
 
 local function enterCpuRoom(player)
@@ -2819,9 +2852,38 @@ task.spawn(function()
 end)
 
 RunService.Heartbeat:Connect(function(dt)
+ -- Graba la posición y orientación del kart del jugador durante la primera vuelta.
+ for player, data in pairs(raceData) do
+  local kart = activeKarts[player]
+  if kart and player:GetAttribute("RaceStarted") == true and data.CurrentLap == 1
+   and data.LapStartTime > 0 and os.clock() - data.LastGhostSampleAt >= 0.1 then
+   data.LastGhostSampleAt = os.clock()
+   if #data.GhostSamples < 1800 then
+    table.insert(data.GhostSamples, { t = os.clock() - data.LapStartTime, cf = kart.chassis.CFrame })
+   end
+  end
+ end
+
  local state = cpuRace
  if not state or not state.started or not state.kart or not state.kart.chassis.Parent then return end
  local chassis = state.kart.chassis
+ if state.ghostSamples and state.ghostDuration and state.ghostDuration > 0 then
+  local elapsed = (os.clock() - (state.startedAt or os.clock())) % state.ghostDuration
+  local samples = state.ghostSamples
+  while state.ghostIndex < #samples - 1 and samples[state.ghostIndex + 1].t < elapsed do
+   state.ghostIndex += 1
+  end
+  local a = samples[state.ghostIndex]
+  local b = samples[math.min(state.ghostIndex + 1, #samples)]
+  if a and b then
+   local span = math.max(0.001, b.t - a.t)
+   local alpha = math.clamp((elapsed - a.t) / span, 0, 1)
+   chassis.CFrame = a.cf:Lerp(b.cf, alpha)
+   chassis.AssemblyLinearVelocity = (b.cf.Position - a.cf.Position) / span
+  end
+  if elapsed < 0.12 then state.ghostIndex = 1 end
+  return
+ end
  local target = state.route[state.targetIndex]
  if not target then return end
  local destination = Vector3.new(target.X, COURSE_SURFACE_Y + 1.8, target.Z)
