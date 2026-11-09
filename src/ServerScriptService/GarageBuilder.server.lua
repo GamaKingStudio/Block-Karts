@@ -36,26 +36,40 @@ local function part(name, size, position, color, material, parent, shape)
 end
 
 local function sign(name, text, size, position, faceColor, textColor, parent, face)
-    local board = part(name, size, position, faceColor, Enum.Material.Metal, parent)
-    board.CanCollide = false
-    board.CanTouch = false
-    local gui = Instance.new("SurfaceGui")
-    gui.Name = "SignSurface"
-    gui.Face = face or Enum.NormalId.Front
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = 35
-    gui.Parent = board
+    -- Floating lettering only: an invisible anchor replaces the opaque metal sign.
+    local anchor = part(name, Vector3.new(0.2, 0.2, 0.2), position, faceColor, Enum.Material.SmoothPlastic, parent)
+    anchor.Transparency = 1
+    anchor.CanCollide = false
+    anchor.CanTouch = false
+    anchor.CanQuery = false
+    anchor.CastShadow = false
+
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "FloatingText"
+    gui.Adornee = anchor
+    gui.Size = UDim2.fromOffset(
+        math.clamp(math.floor(size.X * 15), 260, 1200),
+        math.clamp(math.floor(size.Y * 15), 70, 220)
+    )
+    gui.AlwaysOnTop = true
+    gui.LightInfluence = 0
+    gui.MaxDistance = 320
+    gui.Parent = anchor
+
     local label = Instance.new("TextLabel")
     label.Name = "Text"
     label.Size = UDim2.fromScale(1, 1)
     label.BackgroundTransparency = 1
+    label.BorderSizePixel = 0
     label.Text = text
     label.TextColor3 = textColor
     label.TextScaled = true
+    label.TextWrapped = true
     label.Font = Enum.Font.GothamBold
-    label.TextStrokeTransparency = 0.3
+    label.TextStrokeColor3 = Color3.fromRGB(12, 16, 22)
+    label.TextStrokeTransparency = 0.12
     label.Parent = gui
-    return board
+    return anchor
 end
 
 local x, y, z = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
@@ -116,7 +130,7 @@ part("ClosedSecurityShutter", Vector3.new(104, 22, 0.7), Vector3.new(x, floorY +
 for row = 1, 18 do
     part("ShutterRib_" .. row, Vector3.new(103.5, 0.22, 0.9), Vector3.new(x, floorY + 0.7 + row * 1.15, shutterZ - 0.48), steelLight, Enum.Material.Metal)
 end
-sign("MainSign", "BLOCK KARTS  |  UNDERGROUND RACE GARAGE", Vector3.new(74, 8, 0.9), Vector3.new(x, floorY + 27, shutterZ - 0.65), black, warmWhite)
+sign("MainSign", "BLOXY KARTZ\nUNDERGROUND GARAGE", Vector3.new(74, 8, 0.9), Vector3.new(x, floorY + 27, shutterZ - 0.65), black, warmWhite)
 
 -- Large floor markings and a wide central circulation lane for many players.
 part("MainDriveAisle", Vector3.new(24, 0.1, depth - 38), Vector3.new(x, floorY + 0.36, z), Color3.fromRGB(78, 81, 83), Enum.Material.Asphalt)
@@ -242,9 +256,8 @@ end
 for beamIndex, zOffset in ipairs({-88, -44, 0, 44, 88}) do
     for segmentIndex, xOffset in ipairs({-82, -27, 27, 82}) do
         local color = ((beamIndex + segmentIndex) % 3 == 0) and yellow or cyan
-        local flicker = (beamIndex == 2 and segmentIndex == 2)
-            or (beamIndex == 4 and segmentIndex == 3)
-            or (beamIndex == 5 and segmentIndex == 1)
+        local flicker = ((beamIndex * 2 + segmentIndex) % 5 == 0)
+            or (beamIndex == 3 and segmentIndex == 4)
         createBeamNeon(
             "BeamNeon_Long_" .. beamIndex .. "_" .. segmentIndex,
             Vector3.new(39, 0.38, 1.05),
@@ -259,9 +272,8 @@ end
 for beamIndex, xOffset in ipairs({-108, -54, 0, 54, 108}) do
     for segmentIndex, zOffset in ipairs({-66, 0, 66}) do
         local color = (segmentIndex == 2 and beamIndex % 2 == 0) and red or warmWhite
-        local flicker = (beamIndex == 1 and segmentIndex == 2)
-            or (beamIndex == 3 and segmentIndex == 1)
-            or (beamIndex == 5 and segmentIndex == 3)
+        local flicker = ((beamIndex + segmentIndex * 2) % 4 == 0)
+            or (beamIndex == 4 and segmentIndex == 1)
         createBeamNeon(
             "BeamNeon_Cross_" .. beamIndex .. "_" .. segmentIndex,
             Vector3.new(1.05, 0.38, 38),
