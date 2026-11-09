@@ -1060,10 +1060,23 @@ end
 
 local function bindCharacter(character)
 	local humanoid = character:WaitForChild("Humanoid")
+	local playerGui = player:WaitForChild("PlayerGui")
+	local function hideMobileJumpButton(instance)
+		if instance.Name == "JumpButton" and (instance:IsA("ImageButton") or instance:IsA("TextButton")) then
+			instance.Visible = false
+			instance.Active = false
+			instance.AutoButtonColor = false
+		end
+	end
+	for _, descendant in ipairs(playerGui:GetDescendants()) do hideMobileJumpButton(descendant) end
+	playerGui.DescendantAdded:Connect(function(descendant)
+		if descendant.Name == "JumpButton" then task.defer(hideMobileJumpButton, descendant) end
+	end)
 	local function updateDrivingState()
 		local seat = humanoid.SeatPart
 		local kart = getKartFromSeat(seat)
 		if seat and seat:IsA("VehicleSeat") and kart then
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 			if currentSeat == seat then
 				return
 			end
@@ -1090,6 +1103,7 @@ local function bindCharacter(character)
 				end
 			end)
 		else
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 			print(("[BLOXY-KART][CLIENT][SEAT] seated=false seatPart=%s"):format(
 				humanoid.SeatPart and humanoid.SeatPart:GetFullName() or "nil"
 			))
