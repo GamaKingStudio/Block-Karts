@@ -142,7 +142,7 @@ local racePanel = panel("RacePanel", UDim2.fromOffset(300, 100), UDim2.new(0.5, 
 local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 4), "VUELTA 1 / 3", 19, nil, "Title")
 local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 22, Color3.fromRGB(255, 220, 145), "Light")
 local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 15, Color3.fromRGB(220, 226, 235), "Light")
-local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 14", 15, Color3.fromRGB(220, 226, 235), "Light")
+local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 26", 15, Color3.fromRGB(220, 226, 235), "Light")
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(180, 66), UDim2.new(1, -202, 1, -88))
 local speedValue = label(speedPanel, "SpeedValue", UDim2.fromOffset(108, 62), UDim2.fromOffset(0, 0), "0", 46, nil, "Bold")
@@ -235,17 +235,26 @@ local mapCorner = Instance.new("UICorner")
 mapCorner.CornerRadius = UDim.new(0, 7)
 mapCorner.Parent = mapArea
 
+-- Debe seguir el mismo trazado y orden de waypoints de KartService.
 local mapPoints = {
- Vector2.new(80, 70), Vector2.new(-65, 70), Vector2.new(-115, 40),
- Vector2.new(-115, -50), Vector2.new(-80, -95), Vector2.new(-50, -95),
- Vector2.new(-50, -15), Vector2.new(-25, 10), Vector2.new(0, -15),
- Vector2.new(0, -85), Vector2.new(45, -105), Vector2.new(85, -65),
- Vector2.new(125, -10), Vector2.new(125, 35), Vector2.new(105, 65),
- Vector2.new(80, 70)
+ Vector2.new(80, 70), Vector2.new(-65, 70),
+ Vector2.new(-115, 40), Vector2.new(-115, -50),
+ Vector2.new(-80, -95), Vector2.new(-50, -95),
+ Vector2.new(-50, -15), Vector2.new(-25, 10),
+ Vector2.new(0, -15), Vector2.new(0, -85),
+ Vector2.new(45, -105), Vector2.new(85, -65),
+ Vector2.new(125, -10), Vector2.new(125, 35),
+ Vector2.new(170, 45), Vector2.new(205, 85),
+ Vector2.new(215, 135), Vector2.new(185, 180),
+ Vector2.new(135, 205), Vector2.new(75, 205),
+ Vector2.new(35, 175), Vector2.new(25, 135),
+ Vector2.new(75, 145), Vector2.new(130, 145),
+ Vector2.new(155, 100), Vector2.new(150, 75),
+ Vector2.new(105, 65), Vector2.new(80, 70)
 }
 
--- Proyección uniforme: mantiene la geometría real del circuito sin deformarla.
-local minX, maxX, minZ, maxZ = -145, 155, -130, 95
+-- Límites con margen para incluir el sector ampliado y sus curvas.
+local minX, maxX, minZ, maxZ = -145, 245, -130, 235
 local mapPadding = 15
 local function mapPosition(point)
  local size = mapArea.AbsoluteSize
@@ -502,7 +511,7 @@ local function setDriving(seat)
   currentChassis = model.PrimaryPart
   hud.Enabled = true
   setLap(1)
-  checkpointLabel.Text = "CHECKPOINT 0 / 14"
+  checkpointLabel.Text = "CHECKPOINT 0 / 26"
   timerLabel.Text = "00:00.00"
   lapStartedAt = nil
   bestLapTime = nil
