@@ -397,8 +397,7 @@ local function buildOceanAndHorizon(course)
 			"DistantIslandRock_" .. index,
 			Vector3.new(w, h * 0.54, d),
 			baseCF,
-			rockColor,
-			Enum.Material.Slate
+			rockColor,			Enum.Material.Slate
 		)
 		makeDistantPart(
 			"DistantIslandSlopeA_" .. index,
@@ -797,8 +796,7 @@ local function buildTestCourse()
 		for _, px in ipairs({ -5.2, 5.2 }) do
 			for _, pz in ipairs({ -4.2, 4.2 }) do
 				makePart(course, "KioskPost", Vector3.new(0.8, 7.5, 0.8), cf * CFrame.new(px, 3.95, pz), C_DARKWOOD, Enum.Material.Wood)
-			end
-		end
+			end		end
 		makePart(course, "KioskCounter", Vector3.new(10.5, 3.4, 2.2), cf * CFrame.new(0, 1.7, 3.2), C_WOOD, Enum.Material.WoodPlanks)
 		makePart(course, "KioskCounterTop", Vector3.new(11.2, 0.3, 2.8), cf * CFrame.new(0, 3.5, 3.2), C_DARKWOOD, Enum.Material.Wood)
 		local roofCF = cf * CFrame.new(0, 8.0, 0) * CFrame.Angles(math.rad(8), 0, 0)
@@ -995,7 +993,7 @@ local function buildTestCourse()
 			if bisector.Magnitude < 0.001 then bisector = normalOut else bisector = bisector.Unit end
 			local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.35)
 			-- Limita el inglete para evitar puntas largas que se cruzan en curvas cerradas.
-			local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.35)
+			local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.1)
 			local point = waypoints[i] + bisector * miterDistance
 			curbCorners[i] = Vector3.new(point.X, yGround + 0.13, point.Z)
 		end
@@ -1198,7 +1196,6 @@ local function buildTestCourse()
 		if not sourceModel:IsA("Model") then
 			sourceModel = loadedFinishAsset:FindFirstChildWhichIsA("Model", true)
 		end
-
 		if sourceModel then
 			local finishStructure = sourceModel:Clone()
 			finishStructure.Name = "ImportedFinishStructure"
@@ -1598,7 +1595,6 @@ local function buildTestCourse()
 			spawnProceduralPalm(p.pos, p.tilt, p.yaw, p.scale)
 		end
 	end
-
 	-- Reposeras importadas desde el asset del usuario. Se carga una plantilla
 	-- y se clona para cada puesto de playa, conservando colores y materiales.
 	local LOUNGER_ASSET_ID = 110854388215298
@@ -1997,8 +1993,7 @@ local function createKart(player, spawnIndex)
 	local startX = 45 + (spawnIndex - 1) * 12
 	local startZ = 70
 	local spawnCFrame = CFrame.lookAt(
-		Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
-		Vector3.new(startX - 10, COURSE_SURFACE_Y + 1.8, startZ)
+		Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),		Vector3.new(startX - 10, COURSE_SURFACE_Y + 1.8, startZ)
 	)
 
 	local chassis = makePart(model, "Chassis", Vector3.new(4.8, 0.4, 6.4), spawnCFrame, Color3.fromRGB(25, 27, 30), Enum.Material.Metal)
@@ -2397,8 +2392,7 @@ local function createKart(player, spawnIndex)
 			chassis.Transparency = 1
 			chassis.CastShadow = false
 			for _, oldPart in ipairs(model:GetChildren()) do
-				if oldPart:IsA("BasePart") and oldPart ~= chassis and oldPart ~= seat then
-					oldPart.Transparency = 1
+				if oldPart:IsA("BasePart") and oldPart ~= chassis and oldPart ~= seat then					oldPart.Transparency = 1
 					oldPart.CanCollide = false
 					oldPart.CanTouch = false
 					oldPart.CanQuery = false
@@ -2549,9 +2543,15 @@ local function initPlayerRaceData(player, spawnCFrame)
 end
 
 local function onCheckpointTouched(hitPart, triggerPart)
-	if hitPart.Name ~= "Chassis" then return end
-	local kartModel = hitPart.Parent
-	if not kartModel or not kartModel:IsA("Model") then return end
+	if not hitPart or not hitPart:IsA("BasePart") then return end
+	-- Acepta el chasis, el asiento o cualquier otra pieza tocable del kart.
+	-- El kart importado puede tener modelos anidados entre la pieza y el modelo dueño.
+	local kartModel = hitPart:FindFirstAncestorOfClass("Model")
+	while kartModel and typeof(kartModel:GetAttribute("OwnerUserId")) ~= "number" do
+		local parent = kartModel.Parent
+		kartModel = parent and parent:FindFirstAncestorOfClass("Model") or nil
+	end
+	if not kartModel then return end
 
 	local ownerUserId = kartModel:GetAttribute("OwnerUserId")
 	if typeof(ownerUserId) ~= "number" then return end
@@ -2724,24 +2724,35 @@ local function onCheckpointTouched(hitPart, triggerPart)
 		pData.NextCheckpoint = pData.NextCheckpoint + 1
 		player:SetAttribute("RaceCheckpoint", cpIndex)
 		checkpointPassedRemote:FireClient(player, cpIndex, TOTAL_INTERMEDIATE_CHECKPOINTS)
+		print(("[RACE-CHECKPOINT] %s: %d/%d, vuelta %d"):format(
+			player.Name, cpIndex, TOTAL_INTERMEDIATE_CHECKPOINTS, pData.CurrentLap
+		))
 
 		if pData.NextCheckpoint > TOTAL_INTERMEDIATE_CHECKPOINTS then
 			pData.CanFinishLap = true
+			print(("[RACE-CHECKPOINT] %s completó la secuencia; puede cruzar meta."):format(player.Name))
 		end
 	end
 end
 
 local function hookCheckpoints()
 	local folder = Workspace:WaitForChild("CourseCheckpoints", 10)
-	if not folder then return end
+	if not folder then
+		warn("[RACE-CHECKPOINT] No se encontró CourseCheckpoints para conectar los eventos.")
+		return
+	end
 
+	local hooked = 0
 	for _, trigger in ipairs(folder:GetChildren()) do
 		if trigger:IsA("BasePart") then
+			trigger.CanTouch = true
 			trigger.Touched:Connect(function(hit)
 				onCheckpointTouched(hit, trigger)
 			end)
+			hooked += 1
 		end
 	end
+	print(("[RACE-CHECKPOINT] Eventos Touched conectados: %d"):format(hooked))
 end
 
 requestRespawnRemote.OnServerEvent:Connect(function(player)
@@ -2797,7 +2808,6 @@ local function placeCharacterInGarage(player, character)
 		warn("[GARAGE] No se encontró BlockKartsGarage; no se pudo ubicar al jugador.")
 		return
 	end
-
 	-- El lobby es el spawn por defecto. No se crea ni se ocupa ningún kart.
 	player:SetAttribute("InGarage", true)
 	player:SetAttribute("RaceStarted", false)
@@ -3198,7 +3208,6 @@ task.spawn(function()
  end)
  print("[GARAGE] Sala física 1 VS COMPUTADORA conectada.")
 end)
-
 RunService.Heartbeat:Connect(function(dt)
  -- Piloto automático después de terminar: reproduce el recorrido de la primera vuelta.
  for player, cruise in pairs(finishCruiseStates) do
