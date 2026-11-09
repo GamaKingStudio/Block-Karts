@@ -711,6 +711,24 @@ end
 local smokeByKart = setmetatable({}, { __mode = "k" })
 local wheelSpinByKart = setmetatable({}, { __mode = "k" })
 
+-- Reaplica la opacidad del kart del jugador mientras conduce. Roblox puede
+-- cambiar LocalTransparencyModifier al resolver la oclusión de cámara.
+RunService.RenderStepped:Connect(function()
+	if not currentSeat or not currentSeat.Parent then return end
+	local kart = getKartFromSeat(currentSeat)
+	local body = kart and kart:FindFirstChild("CustomKartBody")
+	if not body then return end
+	for _, item in ipairs(body:GetDescendants()) do
+		if item:IsA("BasePart") then
+			if item.Transparency ~= 0 then item.Transparency = 0 end
+			if item.LocalTransparencyModifier ~= 0 then item.LocalTransparencyModifier = 0 end
+			if item:IsA("MeshPart") and not item.DoubleSided then item.DoubleSided = true end
+		elseif item:IsA("Decal") or item:IsA("Texture") then
+			if item.Transparency ~= 0 then item.Transparency = 0 end
+		end
+	end
+end)
+
 local function createSmokeEmitters(kart)
 	local emitters = {}
 	for _, markerName in ipairs({ "Wheel_RearL", "Wheel_RearR" }) do
