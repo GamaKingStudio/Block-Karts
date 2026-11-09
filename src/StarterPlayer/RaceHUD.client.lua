@@ -175,11 +175,6 @@ local function finishActionButton(name, text, position, width)
  button.ZIndex = 52
  button.AutoButtonColor = true
  button.Parent = finishPanel
- local outline = Instance.new("UIStroke")
- outline.Color = Color3.fromRGB(255, 197, 72)
- outline.Thickness = 1.5
- outline.Transparency = 0.15
- outline.Parent = button
  return button
 end
 local returnLobbyButton = finishActionButton("ReturnToLobbyButton", "VOLVER AL LOBBY AHORA", UDim2.fromOffset(24, 232), 270)
