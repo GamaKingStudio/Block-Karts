@@ -77,6 +77,8 @@ local function sign(name, text, size, position, faceColor, textColor, parent, fa
     return board
 end
 
+local black = Color3.fromRGB(16, 19, 22)
+
 local function leaderboardBoard(name, title, size, position, accent, parent)
     -- A real physical scoreboard panel mounted to the garage wall.
     local board = part(name, size, position, black, Enum.Material.DiamondPlate, parent)
@@ -160,7 +162,6 @@ local concreteDark = Color3.fromRGB(35, 38, 41)
 local concreteMid = Color3.fromRGB(52, 56, 60)
 local steel = Color3.fromRGB(83, 90, 96)
 local steelLight = Color3.fromRGB(121, 127, 132)
-local black = Color3.fromRGB(16, 19, 22)
 local yellow = Color3.fromRGB(235, 174, 48)
 local warmWhite = Color3.fromRGB(240, 232, 211)
 local cyan = Color3.fromRGB(35, 190, 205)
