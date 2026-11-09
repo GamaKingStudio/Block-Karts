@@ -1,5 +1,6 @@
 -- BLOCK KARTS | UNDERGROUND MEGA GARAGE
 -- Lobby-only geometry. This script never edits the Playa track or its checkpoints.
+print("[GARAGE][BOOT] GarageBuilder.server.lua is running.")
 local Workspace = game:GetService("Workspace")
 
 local COURSE_NAME = "KartTestCourse"
@@ -198,6 +199,16 @@ local function createBeamNeon(name, size, position, color, flicker)
     glow.Shadows = false
     glow.Parent = tube
 
+    local downLight = Instance.new("SurfaceLight")
+    downLight.Name = "BeamNeonDownLight"
+    downLight.Face = Enum.NormalId.Bottom
+    downLight.Color = color
+    downLight.Brightness = flicker and 1.8 or 2.6
+    downLight.Range = flicker and 24 or 32
+    downLight.Angle = 150
+    downLight.Shadows = false
+    downLight.Parent = tube
+
     if flicker then
         task.spawn(function()
             while tube.Parent and model.Parent do
@@ -208,16 +219,20 @@ local function createBeamNeon(name, size, position, color, flicker)
                     if not tube.Parent then break end
                     tube.Transparency = 0.82
                     glow.Brightness = 0.08
+                    downLight.Brightness = 0.05
                     task.wait(math.random(5, 13) / 100)
                     tube.Transparency = 0.08
                     glow.Brightness = 1.5
+                    downLight.Brightness = 2.4
                     task.wait(math.random(7, 18) / 100)
                 end
                 tube.Transparency = 0.48
                 glow.Brightness = 0.45
+                downLight.Brightness = 0.6
                 task.wait(math.random(12, 30) / 100)
                 tube.Transparency = 0
                 glow.Brightness = 1.25
+                downLight.Brightness = 1.8
             end
         end)
     end
@@ -233,8 +248,8 @@ for beamIndex, zOffset in ipairs({-88, -44, 0, 44, 88}) do
             or (beamIndex == 5 and segmentIndex == 1)
         createBeamNeon(
             "BeamNeon_Long_" .. beamIndex .. "_" .. segmentIndex,
-            Vector3.new(39, 0.22, 0.72),
-            Vector3.new(x + xOffset, ceilingY - 2.12, z + zOffset),
+            Vector3.new(39, 0.38, 1.05),
+            Vector3.new(x + xOffset, ceilingY - 2.85, z + zOffset),
             color,
             flicker
         )
@@ -250,8 +265,8 @@ for beamIndex, xOffset in ipairs({-108, -54, 0, 54, 108}) do
             or (beamIndex == 5 and segmentIndex == 3)
         createBeamNeon(
             "BeamNeon_Cross_" .. beamIndex .. "_" .. segmentIndex,
-            Vector3.new(0.72, 0.22, 38),
-            Vector3.new(x + xOffset, ceilingY - 2.16, z + zOffset),
+            Vector3.new(1.05, 0.38, 38),
+            Vector3.new(x + xOffset, ceilingY - 2.9, z + zOffset),
             color,
             flicker
         )
