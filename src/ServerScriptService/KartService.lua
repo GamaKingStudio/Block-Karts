@@ -49,6 +49,8 @@ local cameraSelectionRemote = getOrCreateRemote("SelectRaceCamera")
 local selectionStateRemote = getOrCreateRemote("RaceSelectionState")
 local startRaceFromLobbyRemote = getOrCreateRemote("StartRaceFromLobby")
 local raceFinishedRemote = getOrCreateRemote("RaceFinished")
+local returnToLobbyRemote = getOrCreateRemote("ReturnToLobby")
+local anotherRaceRemote = getOrCreateRemote("AnotherRace")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -3028,6 +3030,92 @@ local function createCpuOpponent(player)
  }
  print("[CPU-GHOST] Rival oculto: esperando que el jugador complete la primera vuelta.")
 end
+
+local function returnPlayerToLobby(player)
+ if roomBusyPlayer ~= player or player:GetAttribute("InRaceRoom") ~= true then return end
+
+ countdownToken += 1
+ raceInProgress = false
+ local kart = activeKarts[player]
+ if kart and kart.model then kart.model:Destroy() end
+ activeKarts[player] = nil
+ driverInputs[player] = nil
+ raceData[player] = nil
+ selectedCameras[player] = nil
+
+ if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
+ cpuKart = nil
+ cpuRace = nil
+ roomBusyPlayer = nil
+
+ player:SetAttribute("InRaceRoom", false)
+ player:SetAttribute("InGarage", true)
+ player:SetAttribute("RoomStatus", nil)
+ player:SetAttribute("RaceStarted", false)
+ player:SetAttribute("RaceCountdownActive", false)
+ player:SetAttribute("RaceCamera", nil)
+ player:SetAttribute("RaceResult", nil)
+ player:SetAttribute("RaceFinalPosition", nil)
+ player:SetAttribute("RaceBestLapTime", nil)
+ player:SetAttribute("RaceTotalTime", nil)
+ player:SetAttribute("RaceLap", 1)
+ player:SetAttribute("RaceCheckpoint", 0)
+
+ local character = player.Character
+ local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+ if humanoid then humanoid.Sit = false end
+ if character then task.spawn(placeCharacterInGarage, player, character) end
+ print(("[RACE] %s volvió al lobby."):format(player.Name))
+end
+
+returnToLobbyRemote.OnServerEvent:Connect(function(player)
+ if not raceData[player] or not raceData[player].RaceCompleted then return end
+ returnPlayerToLobby(player)
+end)
+
+anotherRaceRemote.OnServerEvent:Connect(function(player)
+ local pData = raceData[player]
+ local kart = activeKarts[player]
+ if roomBusyPlayer ~= player or player:GetAttribute("InRaceRoom") ~= true
+  or not pData or not pData.RaceCompleted or not kart or not kart.model.Parent
+  or not kart.seat.Parent then return end
+
+ -- Reinicia la misma sala y el mismo kart; no altera el circuito ni la cámara elegida.
+ countdownToken += 1
+ raceInProgress = false
+ if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
+ cpuKart = nil
+ cpuRace = nil
+ createCpuOpponent(player)
+ if not cpuKart or not cpuRace then
+  warn("[RACE] No se pudo preparar el rival para la siguiente carrera.")
+  return
+ end
+
+ kart.chassis.CFrame = kart.spawnCFrame
+ kart.chassis.AssemblyLinearVelocity = Vector3.zero
+ kart.chassis.AssemblyAngularVelocity = Vector3.zero
+ kart.chassis.Anchored = false
+ if kart.driveForce then kart.driveForce.Enabled = true end
+ driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+ initPlayerRaceData(player, kart.spawnCFrame)
+ player:SetAttribute("RaceResult", nil)
+ player:SetAttribute("RaceFinalPosition", nil)
+ player:SetAttribute("RaceBestLapTime", nil)
+ player:SetAttribute("RaceTotalTime", nil)
+ player:SetAttribute("RaceStarted", false)
+ player:SetAttribute("RaceCountdownActive", false)
+ player:SetAttribute("RoomStatus", "PREPARANDO OTRA CARRERA")
+ selectedCameras[player] = player:GetAttribute("RaceCamera") or selectedCameras[player]
+ if kart.seat.Occupant and kart.seat.Occupant.Parent == player.Character and selectedCameras[player] then
+  player:SetAttribute("RoomStatus", "LISTO")
+  task.defer(tryStartRace)
+ else
+  player:SetAttribute("RoomStatus", "ELIGE CÁMARA")
+  publishSelectionState()
+ end
+ print(("[RACE] %s solicitó otra carrera."):format(player.Name))
+end)
 
 local function enterCpuRoom(player)
  if roomBusyPlayer or raceInProgress then return end
