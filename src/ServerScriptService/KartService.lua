@@ -70,13 +70,23 @@ local ghostRecords = {}
 local selectedCameras = {}
 
 -- Estadísticas persistentes para los marcadores del garaje.
-local bestLapStore = DataStoreService:GetOrderedDataStore("BloxyKartz_BestLapMs_v1")
-local winsStore = DataStoreService:GetOrderedDataStore("BloxyKartz_RaceWins_v1")
+-- DataStore no está disponible en experiencias sin publicar o sin API Services.
+-- Su fallo no debe impedir cargar el circuito ni iniciar una carrera en Studio.
+local bestLapStore, winsStore
+local storesOk, storesError = pcall(function()
+ bestLapStore = DataStoreService:GetOrderedDataStore("BloxyKartz_BestLapMs_v1")
+ winsStore = DataStoreService:GetOrderedDataStore("BloxyKartz_RaceWins_v1")
+end)
+if not storesOk then
+ bestLapStore, winsStore = nil, nil
+ warn("[GARAGE-LEADERBOARD] Estadísticas persistentes desactivadas en esta sesión: " .. tostring(storesError))
+end
 local function formatLapTime(milliseconds)
  local total = math.max(0, tonumber(milliseconds) or 0) / 1000
  return string.format("%02d:%06.3f", math.floor(total / 60), total % 60)
 end
 local function refreshLeaderboard(boardName, store, ascending, valueFormatter)
+ if not store then return end
  task.spawn(function()
   local garage = Workspace:FindFirstChild("BlockKartsGarage")
   local board = garage and garage:FindFirstChild(boardName)
