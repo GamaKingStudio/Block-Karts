@@ -89,6 +89,10 @@ shell.Parent = model
 part("BackWall", Vector3.new(112, 24, 3), Vector3.new(baseX, floorY + 12, baseZ - 28), dark, Enum.Material.Metal, shell)
 part("LeftWall", Vector3.new(3, 24, 56), Vector3.new(baseX - 54.5, floorY + 12, baseZ), steel, Enum.Material.Metal, shell)
 part("RightWall", Vector3.new(3, 24, 56), Vector3.new(baseX + 54.5, floorY + 12, baseZ), steel, Enum.Material.Metal, shell)
+-- Front facade closes the garage while keeping one clear central entrance.
+part("FrontWallLeft", Vector3.new(43, 24, 3), Vector3.new(baseX - 34.5, floorY + 12, baseZ + 28), dark, Enum.Material.Metal, shell)
+part("FrontWallRight", Vector3.new(43, 24, 3), Vector3.new(baseX + 34.5, floorY + 12, baseZ + 28), dark, Enum.Material.Metal, shell)
+part("FrontEntranceHeader", Vector3.new(26, 5, 3), Vector3.new(baseX, floorY + 21.5, baseZ + 28), steel, Enum.Material.Metal, shell)
 part("Roof", Vector3.new(116, 3, 62), Vector3.new(baseX, floorY + 25.5, baseZ - 1), dark, Enum.Material.Metal, shell)
 
 for _, x in ipairs({-53, -18, 18, 53}) do
@@ -116,6 +120,13 @@ sign("TimesBoard", "MEJORES TIEMPOS", Vector3.new(25, 12, 1), Vector3.new(baseX 
 -- Race entrance / future room and track selection point.
 part("RaceDesk", Vector3.new(28, 3, 8), Vector3.new(baseX, floorY + 2, baseZ + 18), dark, Enum.Material.Metal)
 sign("RaceDeskSign", "CENTRO DE CARRERAS", Vector3.new(26, 6, 1), Vector3.new(baseX, floorY + 8, baseZ + 13.4), dark, white)
+
+-- Sala física de matchmaking: el jugador entra caminando a esta plataforma.
+local roomPad = part("RoomEntryPad_1vCPU", Vector3.new(20, 0.45, 16), Vector3.new(baseX, floorY + 0.48, baseZ + 7), Color3.fromRGB(34, 205, 225), Enum.Material.Neon)
+roomPad:SetAttribute("LobbyRoomType", "1vCPU")
+roomPad:SetAttribute("RoomCapacity", 1)
+local padLabel = sign("RoomEntrySign", "SALA 01  |  1 VS COMPUTADORA", Vector3.new(25, 5, 1), Vector3.new(baseX, floorY + 6, baseZ - 1.5), dark, yellow)
+padLabel.CanCollide = false
 
 -- Ceiling lights and side accent blocks.
 for _, xOffset in ipairs({-40, 0, 40}) do
