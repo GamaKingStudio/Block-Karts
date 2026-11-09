@@ -620,13 +620,16 @@ local function createMobileControls()
 		end
 	end)
 	UserInputService.TouchMoved:Connect(function(input)
-		if steerInput and input.UserInputType == Enum.UserInputType.Touch then updateSteering(input.Position) end
+		if steerInput and input.UserInputType == Enum.UserInputType.Touch
+			and (input == steerInput or input.TouchId == steerInput.TouchId) then updateSteering(input.Position) end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
 		if steerInput and input.UserInputType == Enum.UserInputType.MouseMovement then updateSteering(input.Position) end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
-		if steerInput and (input == steerInput or input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+		if steerInput and (input == steerInput
+			or (input.UserInputType == Enum.UserInputType.Touch and steerInput.UserInputType == Enum.UserInputType.Touch and input.TouchId == steerInput.TouchId)
+			or (input.UserInputType == Enum.UserInputType.MouseButton1 and steerInput.UserInputType == Enum.UserInputType.MouseButton1)) then
 			resetSteering()
 		end
 	end)
@@ -725,8 +728,8 @@ RunService:BindToRenderStep("BLOXYKartRestoreBodyVisibility", Enum.RenderPriorit
 			if item:IsA("MeshPart") then
 				if not item.DoubleSided then item.DoubleSided = true end
 				local surfaceAppearance = item:FindFirstChildOfClass("SurfaceAppearance")
-				if surfaceAppearance and surfaceAppearance.AlphaMode ~= Enum.AlphaMode.Overlay then
-					surfaceAppearance.AlphaMode = Enum.AlphaMode.Overlay
+				if surfaceAppearance and surfaceAppearance.AlphaMode ~= Enum.AlphaMode.Opaque then
+					surfaceAppearance.AlphaMode = Enum.AlphaMode.Opaque
 				end
 			end
 		elseif item:IsA("Decal") or item:IsA("Texture") then
