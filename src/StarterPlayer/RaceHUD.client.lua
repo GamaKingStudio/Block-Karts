@@ -495,7 +495,7 @@ raceFinishedEvent.OnClientEvent:Connect(function(position, bestTime, totalTime, 
  finishPosition.TextColor3 = position == 1 and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(225, 235, 245)
  finishBestLap.Text = "MEJOR VUELTA: " .. (bestTime and bestTime > 0 and formatTime(bestTime) or "--:--.--")
  finishTotalTime.Text = "TIEMPO TOTAL: " .. formatTime(totalTime or 0)
- finishTitle.Text = position == 1 and "¡CARRERA TERMINADA!" or "¡META ALCANZADA!"
+ finishTitle.Text = "¡CARRERA TERMINADA!"
  finishPanel.Visible = true
 end)
 
