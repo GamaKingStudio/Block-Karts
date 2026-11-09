@@ -311,6 +311,160 @@ end
 -- ==========================================================
 -- 1. PISTA, ENTORNO Y CHECKPOINTS BEACH RESORT
 -- ==========================================================
+-- Genera la ruta de la baranda como un offset continuo del eje de la pista.
+-- Curvas exteriores: arco redondeado. Curvas interiores y tramos que pasan cerca
+-- de otra parte del circuito: se recorta todo lo que quede a menos de
+-- (offset - 0.25) del eje, asi la baranda nunca entra en el asfalto.
+-- Devuelve una lista de cadenas; cada cadena es una lista de puntos {x=, z=}.
+-- Offset path (guardrail) generator: pure 2D math, {x=,z=} tables.
+local function computeGuardrailChains(points, offset, side)
+	local count = #points
+	local clearance = offset - 0.25
+	local arcStep = math.rad(12)
+
+	local function unit(ax, az, bx, bz)
+		local dx, dz = bx - ax, bz - az
+		local m = math.sqrt(dx * dx + dz * dz)
+		if m < 0.0001 then return 0, -1 end
+		return dx / m, dz / m
+	end
+
+	-- 1) Offset "crudo": un borde por tramo + arco en las curvas exteriores.
+	local raw = {}
+	for i = 1, count do
+		local a = points[i]
+		local b = points[i % count + 1]
+		local c = points[(i + 1) % count + 1]
+		local d1x, d1z = unit(a.x, a.z, b.x, b.z)
+		local d2x, d2z = unit(b.x, b.z, c.x, c.z)
+		local n1x, n1z = -d1z * side, d1x * side
+		local n2x, n2z = -d2z * side, d2x * side
+		raw[#raw + 1] = { x = a.x + n1x * offset, z = a.z + n1z * offset }
+		raw[#raw + 1] = { x = b.x + n1x * offset, z = b.z + n1z * offset }
+		-- Giro hacia este lado (curva interior): no hace falta arco.
+		local turnsToward = (n1x * d2x + n1z * d2z) > 0
+		if not turnsToward then
+			local a1 = math.atan2(n1z, n1x)
+			local a2 = math.atan2(n2z, n2x)
+			local delta = a2 - a1
+			while delta > math.pi do delta -= 2 * math.pi end
+			while delta < -math.pi do delta += 2 * math.pi end
+			local steps = math.floor(math.abs(delta) / arcStep)
+			for k = 1, steps do
+				local ang = a1 + delta * (k / (steps + 1))
+				raw[#raw + 1] = { x = b.x + math.cos(ang) * offset, z = b.z + math.sin(ang) * offset }
+			end
+		end
+	end
+
+	-- 2) Recorta cada borde crudo: se descarta todo lo que queda a menos de
+	--    `clearance` del eje de la pista (cubre bucles de curvas interiores y
+	--    tramos que pasan cerca de otra parte del circuito).
+	local function blockedInterval(px, pz, dx, dz, s)
+		local ax, az = s.a.x, s.a.z
+		local bx, bz = s.b.x, s.b.z
+		local lo, hi = math.huge, -math.huge
+		local function add(l, h)
+			if l < lo then lo = l end
+			if h > hi then hi = h end
+		end
+		local function circle(cx, cz)
+			local fx, fz = px - cx, pz - cz
+			local qa = dx * dx + dz * dz
+			local qb = 2 * (fx * dx + fz * dz)
+			local qc = fx * fx + fz * fz - clearance * clearance
+			local disc = qb * qb - 4 * qa * qc
+			if qa > 1e-9 and disc >= 0 then
+				local sq = math.sqrt(disc)
+				add((-qb - sq) / (2 * qa), (-qb + sq) / (2 * qa))
+			end
+		end
+		circle(ax, az)
+		circle(bx, bz)
+		-- Franja rectangular del tramo.
+		local ux, uz = s.ux, s.uz
+		local vx, vz = -uz, ux
+		local s0 = (px - ax) * ux + (pz - az) * uz
+		local s1 = dx * ux + dz * uz
+		local w0 = (px - ax) * vx + (pz - az) * vz
+		local w1 = dx * vx + dz * vz
+		local tl, th = -math.huge, math.huge
+		local function slab(v0, v1, minV, maxV)
+			if math.abs(v1) < 1e-9 then
+				if v0 < minV or v0 > maxV then tl, th = 1, 0 end
+			else
+				local t1, t2 = (minV - v0) / v1, (maxV - v0) / v1
+				if t1 > t2 then t1, t2 = t2, t1 end
+				if t1 > tl then tl = t1 end
+				if t2 < th then th = t2 end
+			end
+		end
+		slab(s0, s1, 0, s.len)
+		slab(w0, w1, -clearance, clearance)
+		if tl < th then add(tl, th) end
+		if lo < hi then return lo, hi end
+		return nil
+	end
+
+	local segs = {}
+	for i = 1, count do
+		local a, b = points[i], points[i % count + 1]
+		local ux, uz = unit(a.x, a.z, b.x, b.z)
+		segs[i] = { a = a, b = b, ux = ux, uz = uz, len = math.sqrt((b.x - a.x) ^ 2 + (b.z - a.z) ^ 2) }
+	end
+
+	local pieces = {}
+	for k = 1, #raw do
+		local p, q = raw[k], raw[k % #raw + 1]
+		local dx, dz = q.x - p.x, q.z - p.z
+		local length = math.sqrt(dx * dx + dz * dz)
+		if length > 0.0001 then
+			local blocked = {}
+			for _, s in ipairs(segs) do
+				local lo, hi = blockedInterval(p.x, p.z, dx, dz, s)
+				if lo and hi > 0 and lo < 1 then
+					blocked[#blocked + 1] = { math.max(lo, 0), math.min(hi, 1) }
+				end
+			end
+			table.sort(blocked, function(u, v) return u[1] < v[1] end)
+			local cursor = 0
+			local function emit(t0, t1)
+				if (t1 - t0) * length > 0.25 then
+					pieces[#pieces + 1] = {
+						{ x = p.x + dx * t0, z = p.z + dz * t0 },
+						{ x = p.x + dx * t1, z = p.z + dz * t1 },
+					}
+				end
+			end
+			for _, iv in ipairs(blocked) do
+				if iv[1] > cursor then emit(cursor, iv[1]) end
+				if iv[2] > cursor then cursor = iv[2] end
+			end
+			if cursor < 1 then emit(cursor, 1) end
+		end
+	end
+
+	-- 3) Une los trozos consecutivos en cadenas continuas.
+	local function near(u, v, tol)
+		return (u.x - v.x) ^ 2 + (u.z - v.z) ^ 2 <= tol * tol
+	end
+	local chains = {}
+	for _, piece in ipairs(pieces) do
+		local last = chains[#chains]
+		if last and near(last[#last], piece[1], 1.0) then
+			last[#last + 1] = piece[2]
+		else
+			chains[#chains + 1] = { piece[1], piece[2] }
+		end
+	end
+	if #chains > 1 and near(chains[#chains][#chains[#chains]], chains[1][1], 1.0) then
+		local tail = table.remove(chains)
+		for k = 2, #chains[1] do tail[#tail + 1] = chains[1][k] end
+		chains[1] = tail
+	end
+	return chains
+end
+
 local function buildTestCourse()
 	if mapBuilt then return end
 	mapBuilt = true
@@ -669,93 +823,86 @@ local function buildTestCourse()
 		end
 	end
 
-		local function horizontalDirection(a, b)
-		local v = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
-		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
-	end
-
-	local function sideNormal(direction)
-		return Vector3.new(-direction.Z, 0, direction.X)
+	-- Barandas: visibles (postes + vigas) y barrera invisible de colision salen
+	-- de la MISMA ruta corregida, que siempre queda fuera del asfalto.
+	local railCenterline = {}
+	for i = 1, uniqueCount do
+		railCenterline[i] = { x = waypoints[i].X, z = waypoints[i].Z }
 	end
 
 	for sideIndex, side in ipairs({ -1, 1 }) do
-		local railPoints = {}
-		-- El último waypoint repite el primero. Trabajamos solo con los
-		-- vértices únicos y usamos el anterior real del circuito (no el duplicado).
-		for i = 1, uniqueCount do
-			local previousIndex = (i - 2) % uniqueCount + 1
-			local nextIndex = i % uniqueCount + 1
-			local incoming = horizontalDirection(waypoints[previousIndex], waypoints[i])
-			local outgoing = horizontalDirection(waypoints[i], waypoints[nextIndex])
-			local normalIn = sideNormal(incoming) * side
-			local normalOut = sideNormal(outgoing) * side
-			local bisector = normalIn + normalOut
-			if bisector.Magnitude < 0.001 then
-				bisector = normalOut
-			else
-				bisector = bisector.Unit
+		local chains = computeGuardrailChains(railCenterline, guardrailOffset, side)
+		for chainIndex, chain in ipairs(chains) do
+			local cumulative = { 0 }
+			for k = 2, #chain do
+				local dx = chain[k].x - chain[k - 1].x
+				local dz = chain[k].z - chain[k - 1].z
+				cumulative[k] = cumulative[k - 1] + math.sqrt(dx * dx + dz * dz)
 			end
-			local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.5)
-			-- Limita los picos en curvas cerradas para que la baranda no
-			-- atraviese la pista ni se proyecte hacia el interior del giro.
-			local miterDistance = math.min(guardrailOffset / denominator, guardrailOffset * 1.35)
-			railPoints[i] = waypoints[i] + bisector * miterDistance
-		end
-		-- Cierra la última sección exactamente sobre el primer vértice.
-		railPoints[uniqueCount + 1] = railPoints[1]
+			local total = cumulative[#chain]
 
-		for i = 1, #waypoints - 1 do
-			local a = railPoints[i]
-			local b = railPoints[i + 1]
-			local segment = b - a
-			local length = segment.Magnitude
-			if length > 0.5 then
-				local direction = segment.Unit
-				local mid = (a + b) / 2
-				local railCF = CFrame.lookAt(mid, b)
-				local postCount = math.max(1, math.ceil(length / guardrailPostSpacing))
+			if total > 0.5 then
+				-- Postes repartidos por distancia sobre la cadena.
+				local postCount = math.max(1, math.ceil(total / guardrailPostSpacing))
+				local segIndex = 1
 				for postIndex = 0, postCount do
-					local t = postIndex / postCount
-					local postPosition = a:Lerp(b, t)
+					local distance = total * postIndex / postCount
+					while segIndex < #chain - 1 and cumulative[segIndex + 1] < distance do
+						segIndex += 1
+					end
+					local p1, p2 = chain[segIndex], chain[segIndex + 1]
+					local segLength = cumulative[segIndex + 1] - cumulative[segIndex]
+					local alpha = segLength > 0.001 and math.clamp((distance - cumulative[segIndex]) / segLength, 0, 1) or 0
+					local px = p1.x + (p2.x - p1.x) * alpha
+					local pz = p1.z + (p2.z - p1.z) * alpha
+					local postDirection = Vector3.new(p2.x - p1.x, 0, p2.z - p1.z)
+					postDirection = postDirection.Magnitude > 0.001 and postDirection.Unit or Vector3.new(0, 0, -1)
 					local post = makePart(
 						course,
-						("GuardrailPost_%d_%d_%d"):format(i, sideIndex, postIndex),
+						("GuardrailPost_%d_%d_%d"):format(sideIndex, chainIndex, postIndex),
 						Vector3.new(guardrailPostWidth, guardrailPostHeight, guardrailPostWidth),
-						CFrame.new(postPosition.X, yGround + guardrailPostHeight / 2, postPosition.Z) * CFrame.lookAt(Vector3.zero, direction),
+						CFrame.new(px, yGround + guardrailPostHeight / 2, pz) * CFrame.lookAt(Vector3.zero, postDirection),
 						C_GUARDRAIL_DARK,
 						Enum.Material.Metal
 					)
 					post.CanTouch = false
 				end
 
-				-- Os perfis terminam exatamente no ponto miter da curva seguinte.
-				for railIndex, railY in ipairs({ 1.05, 1.58 }) do
-					local rail = makePart(
-						course,
-						("GuardrailBeam_%d_%d_%d"):format(i, sideIndex, railIndex),
-						Vector3.new(guardrailBeamThickness, guardrailBeamHeight, length + 0.015),
-						CFrame.new(mid.X, yGround + railY, mid.Z) * CFrame.lookAt(Vector3.zero, direction),
-						C_GUARDRAIL,
-						Enum.Material.Metal
-					)
-					rail.CanTouch = false
+				-- Vigas visibles y barrera invisible, tramo por tramo, sobre la misma ruta.
+				for k = 1, #chain - 1 do
+					local a = Vector3.new(chain[k].x, 0, chain[k].z)
+					local b = Vector3.new(chain[k + 1].x, 0, chain[k + 1].z)
+					local segment = b - a
+					local length = segment.Magnitude
+					if length > 0.3 then
+						local direction = segment.Unit
+						local mid = (a + b) / 2
+						for railIndex, railY in ipairs({ 1.05, 1.58 }) do
+							local rail = makePart(
+								course,
+								("GuardrailBeam_%d_%d_%d_%d"):format(sideIndex, chainIndex, k, railIndex),
+								Vector3.new(guardrailBeamThickness, guardrailBeamHeight, length + 0.015),
+								CFrame.new(mid.X, yGround + railY, mid.Z) * CFrame.lookAt(Vector3.zero, direction),
+								C_GUARDRAIL,
+								Enum.Material.Metal
+							)
+							rail.CanTouch = false
+						end
+
+						local collisionBarrier = makePart(
+							course,
+							("GuardrailCollision_%d_%d_%d"):format(sideIndex, chainIndex, k),
+							Vector3.new(0.9, 3.2, length + 0.35),
+							CFrame.new(mid.X, yGround + 1.65, mid.Z) * CFrame.lookAt(Vector3.zero, direction),
+							C_GUARDRAIL,
+							Enum.Material.SmoothPlastic
+						)
+						collisionBarrier.Transparency = 1
+						collisionBarrier.CanCollide = true
+						collisionBarrier.CanTouch = false
+						collisionBarrier.CanQuery = false
+					end
 				end
-
-				-- Barrera invisible continua detrás de la baranda visual.
-				-- Evita que el chasis atraviese los huecos entre postes o los perfiles delgados.
-				local collisionBarrier = makePart(
-					course,
-					("GuardrailCollision_%d_%d"):format(i, sideIndex),
-					Vector3.new(0.9, 3.2, length + 0.35),
-					CFrame.new(mid.X, yGround + 1.65, mid.Z) * CFrame.lookAt(Vector3.zero, direction),
-					C_GUARDRAIL,
-					Enum.Material.SmoothPlastic
-				)
-				collisionBarrier.Transparency = 1
-				collisionBarrier.CanCollide = true
-				collisionBarrier.CanTouch = false
-				collisionBarrier.CanQuery = false
-
 			end
 		end
 	end
