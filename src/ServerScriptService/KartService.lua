@@ -2581,12 +2581,78 @@ startRaceFromLobbyRemote.OnServerEvent:Connect(function(player)
 	spawnPlayerKart(player)
 end)
 
+local function addCpuPilot(kart)
+ if not kart or not kart.chassis or not kart.chassis.Parent then return end
+ local rng = Random.new()
+ local suitColors = {
+  Color3.fromRGB(25, 105, 190),
+  Color3.fromRGB(190, 45, 45),
+  Color3.fromRGB(35, 145, 95),
+  Color3.fromRGB(135, 75, 185),
+  Color3.fromRGB(225, 135, 35),
+ }
+ local helmetColors = {
+  Color3.fromRGB(245, 195, 35),
+  Color3.fromRGB(35, 195, 210),
+  Color3.fromRGB(235, 65, 65),
+  Color3.fromRGB(235, 235, 240),
+  Color3.fromRGB(45, 48, 55),
+ }
+ local skinColors = {
+  Color3.fromRGB(242, 195, 155),
+  Color3.fromRGB(190, 125, 85),
+  Color3.fromRGB(120, 78, 55),
+  Color3.fromRGB(225, 170, 125),
+ }
+ local suit = suitColors[rng:NextInteger(1, #suitColors)]
+ local helmet = helmetColors[rng:NextInteger(1, #helmetColors)]
+ local skin = skinColors[rng:NextInteger(1, #skinColors)]
+ local chassis = kart.chassis
+
+ local function pilotPart(name, size, offset, color, material, shape)
+  local p = Instance.new("Part")
+  p.Name = "CPU_Pilot_" .. name
+  p.Size = size
+  p.CFrame = chassis.CFrame * CFrame.new(offset)
+  p.Color = color
+  p.Material = material or Enum.Material.SmoothPlastic
+  p.Anchored = false
+  p.Massless = true
+  p.CanCollide = false
+  p.CanTouch = false
+  p.CanQuery = false
+  p.TopSurface = Enum.SurfaceType.Smooth
+  p.BottomSurface = Enum.SurfaceType.Smooth
+  if shape then p.Shape = shape end
+  p.Parent = kart.model
+  local weld = Instance.new("WeldConstraint")
+  weld.Part0 = chassis
+  weld.Part1 = p
+  weld.Parent = p
+  return p
+ end
+
+ -- Static blocky racer welded to the CPU chassis, seated above the hidden VehicleSeat.
+ pilotPart("Torso", Vector3.new(1.15, 1.05, 0.55), Vector3.new(0, 2.05, 0.25), suit)
+ pilotPart("Head", Vector3.new(0.72, 0.72, 0.72), Vector3.new(0, 2.95, 0.12), skin)
+ pilotPart("Helmet", Vector3.new(0.92, 0.48, 0.9), Vector3.new(0, 3.36, 0.12), helmet, Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+ pilotPart("Visor", Vector3.new(0.58, 0.2, 0.08), Vector3.new(0, 3.0, -0.27), Color3.fromRGB(22, 31, 42), Enum.Material.Glass)
+ pilotPart("ArmL", Vector3.new(0.34, 0.95, 0.38), Vector3.new(-0.78, 2.0, -0.05), suit)
+ pilotPart("ArmR", Vector3.new(0.34, 0.95, 0.38), Vector3.new(0.78, 2.0, -0.05), suit)
+ pilotPart("GloveL", Vector3.new(0.34, 0.3, 0.34), Vector3.new(-0.78, 1.55, -0.38), Color3.fromRGB(28, 30, 34))
+ pilotPart("GloveR", Vector3.new(0.34, 0.3, 0.34), Vector3.new(0.78, 1.55, -0.38), Color3.fromRGB(28, 30, 34))
+ pilotPart("LegL", Vector3.new(0.42, 0.7, 0.45), Vector3.new(-0.32, 1.35, 0.48), Color3.fromRGB(30, 34, 42))
+ pilotPart("LegR", Vector3.new(0.42, 0.7, 0.45), Vector3.new(0.32, 1.35, 0.48), Color3.fromRGB(30, 34, 42))
+ kart.model:SetAttribute("HasCpuPilot", true)
+end
+
 local function createCpuOpponent()
  if cpuKart then cpuKart.model:Destroy(); cpuKart = nil end
  local kart = createKart({ UserId = -999001 }, 2)
  kart.model.Name = "Kart_CPU_01"
  kart.model:SetAttribute("IsCPUOpponent", true)
  kart.model:SetAttribute("OwnerUserId", -999001)
+ addCpuPilot(kart)
  kart.chassis.Anchored = true
  kart.driveForce.Enabled = false
  cpuKart = kart
