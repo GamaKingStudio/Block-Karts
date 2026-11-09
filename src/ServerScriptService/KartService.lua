@@ -183,7 +183,17 @@ local function tryStartRace()
    local k = activeKarts[p]
    if k and k.seat.Parent and k.seat.Occupant and k.seat.Occupant.Parent == p.Character then
     local d = raceData[p]
-    if d then d.LapStartTime = os.clock(); d.RaceStartTime = d.LapStartTime; d.RaceCompleted = false; d.GhostSamples = {}; d.LastGhostSampleAt = 0; d.CanFinishLap = false end
+    if d then
+     d.LapStartTime = os.clock()
+     d.RaceStartTime = d.LapStartTime
+     d.RaceCompleted = false
+     d.GhostSamples = {}
+     d.LastGhostSampleAt = 0
+     d.CanFinishLap = false
+     if k and k.chassis then
+      table.insert(d.GhostSamples, { t = 0, cf = k.chassis.CFrame })
+     end
+    end
     p:SetAttribute("RaceStarted", true)
     raceCountdownRemote:FireClient(p, 0)
    end
@@ -2526,11 +2536,44 @@ local function onCheckpointTouched(hitPart, triggerPart)
 				pData.BestLapTime = lapTime
                 saveBestLap(player, lapTime)
 			end
-            -- Guarda la primera vuelta real para usarla como fantasma en la siguiente carrera.
-            if pData.CurrentLap == 1 and #pData.GhostSamples >= 2 then
+            -- Guarda la primera vuelta y activa el fantasma inmediatamente para la vuelta 2.
+            if pData.CurrentLap == 1 then
                 table.insert(pData.GhostSamples, { t = lapTime, cf = hitPart.CFrame })
-                ghostRecords[player.UserId] = { samples = table.clone(pData.GhostSamples), duration = lapTime }
-                print(("[CPU-GHOST] Primera vuelta guardada: %d muestras, %.2fs"):format(#pData.GhostSamples, lapTime))
+                if #pData.GhostSamples >= 2 then
+                    local recordedGhost = {
+                        samples = table.clone(pData.GhostSamples),
+                        duration = lapTime,
+                    }
+                    ghostRecords[player.UserId] = recordedGhost
+
+                    if cpuRace and cpuRace.kart and cpuRace.kart.model and cpuRace.kart.model.Parent then
+                        cpuRace.ghostSamples = recordedGhost.samples
+                        cpuRace.ghostDuration = recordedGhost.duration
+                        cpuRace.estimatedLapDuration = recordedGhost.duration
+                        cpuRace.ghostIndex = 1
+                        cpuRace.startedAt = now
+                        for _, ghostPart in ipairs(cpuRace.kart.model:GetDescendants()) do
+                            if ghostPart:IsA("BasePart") and ghostPart.Transparency < 1 then
+                                ghostPart.Transparency = math.max(ghostPart.Transparency, 0.42)
+                            end
+                        end
+                        if not cpuRace.kart.model:FindFirstChild("FirstLapGhostHighlight") then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "FirstLapGhostHighlight"
+                            highlight.FillColor = Color3.fromRGB(50, 220, 255)
+                            highlight.FillTransparency = 0.68
+                            highlight.OutlineColor = Color3.fromRGB(80, 235, 255)
+                            highlight.OutlineTransparency = 0.12
+                            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            highlight.Parent = cpuRace.kart.model
+                        end
+                        print(("[CPU-GHOST] Fantasma activado para la vuelta 2: %d muestras, %.2fs"):format(#recordedGhost.samples, lapTime))
+                    else
+                        print(("[CPU-GHOST] Primera vuelta guardada: %d muestras, %.2fs. Se usará en la próxima carrera."):format(#recordedGhost.samples, lapTime))
+                    end
+                else
+                    warn(("[CPU-GHOST] No se pudo grabar la vuelta: solo %d muestras."):format(#pData.GhostSamples))
+                end
             end
 
 			lapCompletedRemote:FireClient(player, pData.CurrentLap, lapTime, isBest)
