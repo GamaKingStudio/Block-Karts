@@ -1925,7 +1925,11 @@ local function buildTestCourse()
 
 	for idx, def in ipairs(checkpointDefinitions) do
 		local cpCF = CFrame.lookAt(def.pos, def.target)
-		local cpPart = makePart(checkpointsFolder, "Checkpoint_" .. idx, Vector3.new(triggerSpan, triggerHeight, triggerThickness), cpCF, Color3.fromRGB(0, 170, 255))
+		-- El checkpoint 22 está en un tramo corto y de giro cerrado.
+		-- Se amplía su profundidad para que el kart no pueda atravesar el
+		-- plano sin activar Touched por una diferencia mínima de trayectoria.
+		local checkpointDepth = (idx == 22) and 10 or triggerThickness
+		local cpPart = makePart(checkpointsFolder, "Checkpoint_" .. idx, Vector3.new(triggerSpan, triggerHeight, checkpointDepth), cpCF, Color3.fromRGB(0, 170, 255))
 		cpPart.Transparency = debugTrans
 		cpPart.CanCollide = false
 		cpPart.CanTouch = true
