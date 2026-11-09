@@ -173,24 +173,12 @@ local renderConnection
 -- ==========================================================
 -- LEADERBOARD + MINIMAPA
 -- ==========================================================
-local leaderboard = panel("Leaderboard", UDim2.fromOffset(218, 250), UDim2.new(0, 18, 0, 58))
-local leaderboardTitle = label(leaderboard, "LeaderboardTitle", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 6), "CLASIFICACIÓN", 18, Color3.fromRGB(255, 220, 145), "Title")
-local leaderboardRows = {}
-local leaderboardRanks = {}
-for i = 1, 8 do
- local y = 35 + (i - 1) * 25
- local rank = label(leaderboard, "DriverRank" .. i, UDim2.fromOffset(22, 23), UDim2.fromOffset(9, y), "", 15, Color3.fromRGB(255, 220, 145), "Bold")
- rank.TextXAlignment = Enum.TextXAlignment.Left
- leaderboardRanks[i] = rank
- local row = label(leaderboard, "Driver" .. i, UDim2.new(1, -48, 0, 23), UDim2.fromOffset(31, y), "", 15, nil, "Light")
- row.TextXAlignment = Enum.TextXAlignment.Left
- leaderboardRows[i] = row
-end
-
-local mapPanel = panel("MiniMap", UDim2.fromOffset(218, 190), UDim2.new(0, 18, 0, 284))
+-- MINIMAPA + POSICIÓN DE CARRERA
+local mapPanel = panel("MiniMap", UDim2.fromOffset(218, 190), UDim2.new(0, 18, 0, 58))
 local mapTitle = label(mapPanel, "MiniMapTitle", UDim2.new(1, -16, 0, 22), UDim2.fromOffset(8, 0), "MAPA DE PISTA", 17, Color3.fromRGB(255, 220, 145), "Title")
+local positionLabel = label(hud, "RacePosition", UDim2.fromOffset(142, 48), UDim2.new(1, -164, 0, 44), "1/6", 34, Color3.fromRGB(255, 220, 145), "Bold")
+positionLabel.TextXAlignment = Enum.TextXAlignment.Right
 
--- HUD minimalista: solo texto, sin tarjetas ni fondos opacos.
 local function makeTextOnly(frame)
  frame.BackgroundTransparency = 1
  local corner = frame:FindFirstChildOfClass("UICorner")
@@ -198,30 +186,16 @@ local function makeTextOnly(frame)
  local stroke = frame:FindFirstChildOfClass("UIStroke")
  if stroke then stroke:Destroy() end
 end
-
 local function addTextOutline(textObject, color)
  textObject.TextStrokeColor3 = color or Color3.fromRGB(12, 16, 24)
  textObject.TextStrokeTransparency = 0.06
 end
-
 makeTextOnly(racePanel)
-makeTextOnly(leaderboard)
 makeTextOnly(mapPanel)
 makeTextOnly(speedPanel)
-addTextOutline(speedValue)
-addTextOutline(speedUnit)
-for _, textObject in ipairs({
- lapLabel, timerLabel, bestLabel, checkpointLabel,
- leaderboardTitle, mapTitle,
-}) do
- addTextOutline(textObject)
-end
-for _, row in ipairs(leaderboardRows) do
- addTextOutline(row)
-end
-for _, rank in ipairs(leaderboardRanks) do
- addTextOutline(rank)
-end
+addTextOutline(speedValue); addTextOutline(speedUnit)
+for _, textObject in ipairs({lapLabel, timerLabel, bestLabel, checkpointLabel, mapTitle, positionLabel}) do addTextOutline(textObject) end
+
 local mapArea = Instance.new("Frame")
 mapArea.Name = "MapArea"
 mapArea.Size = UDim2.new(1, -20, 1, -30)
@@ -231,217 +205,34 @@ mapArea.BackgroundTransparency = 1
 mapArea.BorderSizePixel = 0
 mapArea.ClipsDescendants = true
 mapArea.Parent = mapPanel
-local mapCorner = Instance.new("UICorner")
-mapCorner.CornerRadius = UDim.new(0, 7)
-mapCorner.Parent = mapArea
+local mapCorner = Instance.new("UICorner"); mapCorner.CornerRadius = UDim.new(0, 7); mapCorner.Parent = mapArea
 
 -- Debe seguir el mismo trazado y orden de waypoints de KartService.
 local mapPoints = {
- Vector2.new(80, 70), Vector2.new(-65, 70),
- Vector2.new(-115, 40), Vector2.new(-115, -50),
- Vector2.new(-80, -95), Vector2.new(-50, -95),
- Vector2.new(-50, -15), Vector2.new(-25, 10),
- Vector2.new(0, -15), Vector2.new(0, -85),
- Vector2.new(45, -105), Vector2.new(85, -65),
- Vector2.new(125, -10), Vector2.new(125, 35),
- Vector2.new(170, 45), Vector2.new(205, 85),
- Vector2.new(215, 135), Vector2.new(185, 180),
- Vector2.new(135, 205), Vector2.new(75, 205),
- Vector2.new(35, 175), Vector2.new(25, 135),
- Vector2.new(75, 145), Vector2.new(130, 145),
- Vector2.new(155, 100), Vector2.new(150, 75),
- Vector2.new(105, 65), Vector2.new(80, 70)
-}
-
--- Límites con margen para incluir el sector ampliado y sus curvas.
-local minX, maxX, minZ, maxZ = -145, 245, -130, 235
-local mapPadding = 15
-local function mapPosition(point)
- local size = mapArea.AbsoluteSize
- local usableW = math.max(1, size.X - mapPadding * 2)
- local usableH = math.max(1, size.Y - mapPadding * 2)
- local scale = math.min(usableW / (maxX - minX), usableH / (maxZ - minZ))
- local drawnW = (maxX - minX) * scale
- local drawnH = (maxZ - minZ) * scale
- local offsetX = (size.X - drawnW) * 0.5
- local offsetY = (size.Y - drawnH) * 0.5
- return Vector2.new(
-  offsetX + (point.X - minX) * scale,
-  offsetY + (maxZ - point.Y) * scale
- )
+local function refreshRacePosition()
+	local entries = Players:GetPlayers()
+	table.sort(entries, function(a, b)
+		local al, bl = a:GetAttribute("RaceLap") or 1, b:GetAttribute("RaceLap") or 1
+		if al ~= bl then return al > bl end
+		local ac, bc = a:GetAttribute("RaceCheckpoint") or 0, b:GetAttribute("RaceCheckpoint") or 0
+		if ac ~= bc then return ac > bc end
+		return a.UserId < b.UserId
+	end)
+	local place = 1
+	for index, racer in ipairs(entries) do
+		if racer == player then place = index; break end
+	end
+	positionLabel.Text = string.format("%d/%d", place, math.max(6, #entries))
 end
-
-local function makeTrackStroke(name, p1, p2, thickness, color, zIndex)
- local delta = p2 - p1
- local midpoint = (p1 + p2) * 0.5
- local line = Instance.new("Frame")
- line.Name = name
- line.AnchorPoint = Vector2.new(0.5, 0.5)
- line.Position = UDim2.fromOffset(midpoint.X, midpoint.Y)
- -- Extremos rectos: las uniones cuadradas evitan los "círculos" visibles.
- line.Size = UDim2.fromOffset(delta.Magnitude + thickness * 0.35, thickness)
- line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
- line.BackgroundColor3 = color
- line.BackgroundTransparency = 0
- line.BorderSizePixel = 0
- line.ZIndex = zIndex
- local lineCorner = Instance.new("UICorner")
- lineCorner.CornerRadius = UDim.new(1, 0)
- lineCorner.Parent = line
- line.Parent = mapArea
- return line
+local function bindRacePositionPlayer(racer)
+	racer:GetAttributeChangedSignal("RaceLap"):Connect(refreshRacePosition)
+	racer:GetAttributeChangedSignal("RaceCheckpoint"):Connect(refreshRacePosition)
+	refreshRacePosition()
 end
-
-local trackSegments = {}
-local function drawTrack()
- for _, segment in ipairs(trackSegments) do
-  if segment.Parent then segment:Destroy() end
- end
- table.clear(trackSegments)
-
- local borderColor = Color3.fromRGB(5, 9, 14)
- local asphaltColor = Color3.fromRGB(82, 91, 103)
-
- -- El grosor del mapa sale del ancho REAL de la pista (30 studs) y de la escala
- -- del mapa. Antes era fijo (26/16 px) y resultaba mas ancho que la pista real,
- -- por eso los tramos que pasan cerca (el cruce a la derecha) se fundian en una
- -- masa gris sin borde. El asfalto se dibuja un poco mas fino que la pista para
- -- que siempre quede una linea negra visible entre tramos cercanos.
- local mapSize = mapArea.AbsoluteSize
- local mapScale = math.min(
-  math.max(1, mapSize.X - mapPadding * 2) / (maxX - minX),
-  math.max(1, mapSize.Y - mapPadding * 2) / (maxZ - minZ)
- )
- local roadPixels = 30 * mapScale
- local asphaltWidth = math.max(5, roadPixels - 1)
- local borderWidth = asphaltWidth + 4
- local mappedPoints = {}
- for i, worldPoint in ipairs(mapPoints) do
-  mappedPoints[i] = mapPosition(worldPoint)
- end
-
- -- Dibujar todos los bordes antes del asfalto evita uniones grises sin contorno.
- for i = 1, #mappedPoints - 1 do
-  table.insert(trackSegments, makeTrackStroke("TrackBorder", mappedPoints[i], mappedPoints[i + 1], borderWidth, borderColor, 1))
- end
- for i = 1, #mappedPoints - 1 do
-  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", mappedPoints[i], mappedPoints[i + 1], asphaltWidth, asphaltColor, 2))
- end
-
- -- Primero las uniones negras; luego las uniones del asfalto.
- for i = 1, #mappedPoints - 1 do
-  local point = mappedPoints[i]
-  local join = Instance.new("Frame")
-  join.Name = "TrackBorderJoin"
-  join.AnchorPoint = Vector2.new(0.5, 0.5)
-  join.Position = UDim2.fromOffset(point.X, point.Y)
-  join.Size = UDim2.fromOffset(borderWidth, borderWidth)
-  local corner = Instance.new("UICorner")
-  corner.CornerRadius = UDim.new(1, 0)
-  corner.Parent = join
-  join.BackgroundColor3 = borderColor
-  join.BorderSizePixel = 0
-  join.ZIndex = 1
-  join.Parent = mapArea
-  table.insert(trackSegments, join)
- end
- for i = 1, #mappedPoints - 1 do
-  local point = mappedPoints[i]
-  local join = Instance.new("Frame")
-  join.Name = "TrackAsphaltJoin"
-  join.AnchorPoint = Vector2.new(0.5, 0.5)
-  join.Position = UDim2.fromOffset(point.X, point.Y)
-  join.Size = UDim2.fromOffset(asphaltWidth, asphaltWidth)
-  local corner = Instance.new("UICorner")
-  corner.CornerRadius = UDim.new(1, 0)
-  corner.Parent = join
-  join.BackgroundColor3 = asphaltColor
-  join.BorderSizePixel = 0
-  join.ZIndex = 2
-  join.Parent = mapArea
-  table.insert(trackSegments, join)
- end
-
- -- Meta: la pista cruza la recta principal en X=0, Z=70.
- local finishCenter = mapPosition(Vector2.new(0, 70))
- local finishLine = Instance.new("Frame")
- finishLine.Name = "MiniMapFinishLine"
- finishLine.AnchorPoint = Vector2.new(0.5, 0.5)
- finishLine.Position = UDim2.fromOffset(finishCenter.X, finishCenter.Y)
- finishLine.Size = UDim2.fromOffset(3, 20)
- finishLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
- finishLine.BackgroundTransparency = 0
- finishLine.BorderSizePixel = 0
- finishLine.ZIndex = 5
- finishLine.Parent = mapArea
- table.insert(trackSegments, finishLine)
-end
-
-drawTrack()
-mapArea:GetPropertyChangedSignal("AbsoluteSize"):Connect(drawTrack)
-
-local playerMarker = Instance.new("ImageLabel")
-playerMarker.Name = "PlayerMarker"
-playerMarker.Size = UDim2.fromOffset(27, 27)
-playerMarker.AnchorPoint = Vector2.new(0.5, 0.5)
-playerMarker.BackgroundColor3 = Color3.fromRGB(255, 197, 72)
-playerMarker.BorderSizePixel = 0
-playerMarker.Image = ""
-playerMarker.ImageTransparency = 0
-playerMarker.BackgroundTransparency = 0
-playerMarker.ZIndex = 10
-playerMarker.Parent = mapArea
-local markerCorner = Instance.new("UICorner")
-markerCorner.CornerRadius = UDim.new(1, 0)
-markerCorner.Parent = playerMarker
-local markerStroke = Instance.new("UIStroke")
-markerStroke.Color = Color3.fromRGB(255, 255, 255)
-markerStroke.Thickness = 2
-markerStroke.Parent = playerMarker
-local markerArrow = label(mapArea, "PlayerDirection", UDim2.fromOffset(22, 22), UDim2.fromOffset(0, 0), "▲", 15, Color3.fromRGB(255, 220, 90), "Bold")
-markerArrow.AnchorPoint = Vector2.new(0.5, 0.5)
-markerArrow.ZIndex = 11
-playerMarker.ZIndex = 10
-
-local thumbnailReady = false
-task.spawn(function()
- local ok, imageUrl = pcall(function()
-  return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
- end)
- if ok then playerMarker.Image = imageUrl; playerMarker.ImageTransparency = 0; thumbnailReady = true end
-end)
-
-local function refreshLeaderboard()
- local entries = Players:GetPlayers()
- table.sort(entries, function(a, b)
-  local al, bl = a:GetAttribute("RaceLap") or 1, b:GetAttribute("RaceLap") or 1
-  if al ~= bl then return al > bl end
-  return (a:GetAttribute("RaceCheckpoint") or 0) > (b:GetAttribute("RaceCheckpoint") or 0)
- end)
- for i, row in ipairs(leaderboardRows) do
-  local racer = entries[i]
-  if racer then
-   local lap = racer:GetAttribute("RaceLap") or 1
-   local cp = racer:GetAttribute("RaceCheckpoint") or 0
-   leaderboardRanks[i].Text = tostring(i) .. "."
-   leaderboardRanks[i].TextColor3 = Color3.fromRGB(255, 220, 145)
-   row.Text = string.format("%s   V%d · CP%d", racer.DisplayName, lap, cp)
-   row.TextColor3 = racer == player and Color3.fromRGB(255, 220, 145) or Color3.fromRGB(235, 240, 245)
-  else
-   leaderboardRanks[i].Text = ""
-   row.Text = ""
-  end
- end
-end
-local function bindLeaderboardPlayer(racer)
- racer:GetAttributeChangedSignal("RaceLap"):Connect(refreshLeaderboard)
- racer:GetAttributeChangedSignal("RaceCheckpoint"):Connect(refreshLeaderboard)
- refreshLeaderboard()
-end
-Players.PlayerAdded:Connect(bindLeaderboardPlayer)
-Players.PlayerRemoving:Connect(refreshLeaderboard)
-for _, racer in ipairs(Players:GetPlayers()) do bindLeaderboardPlayer(racer) end
-refreshLeaderboard()
+Players.PlayerAdded:Connect(bindRacePositionPlayer)
+Players.PlayerRemoving:Connect(refreshRacePosition)
+for _, racer in ipairs(Players:GetPlayers()) do bindRacePositionPlayer(racer) end
+refreshRacePosition()
 
 local function updateMiniMap()
  if not currentChassis or not currentChassis.Parent then return end
