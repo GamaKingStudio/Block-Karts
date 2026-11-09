@@ -36,29 +36,36 @@ local function part(name, size, position, color, material, parent, shape)
 end
 
 local function sign(name, text, size, position, faceColor, textColor, parent, face)
-    -- Floating lettering only: an invisible anchor replaces the opaque metal sign.
-    local anchor = part(name, Vector3.new(0.2, 0.2, 0.2), position, faceColor, Enum.Material.SmoothPlastic, parent)
-    anchor.Transparency = 1
-    anchor.CanCollide = false
-    anchor.CanTouch = false
-    anchor.CanQuery = false
-    anchor.CastShadow = false
+    -- Physical wall-mounted sign: solid metal backing with lettering on its face.
+    local board = part(name, size, position, faceColor, Enum.Material.DiamondPlate, parent)
+    board.CanCollide = true
+    board.CastShadow = true
 
-    local gui = Instance.new("BillboardGui")
-    gui.Name = "FloatingText"
-    gui.Adornee = anchor
-    gui.Size = UDim2.fromOffset(
-        math.clamp(math.floor(size.X * 15), 260, 1200),
-        math.clamp(math.floor(size.Y * 15), 70, 220)
-    )
-    gui.AlwaysOnTop = true
-    gui.LightInfluence = 0
-    gui.MaxDistance = 320
-    gui.Parent = anchor
+    local faceGui = Instance.new("SurfaceGui")
+    faceGui.Name = "SignFace"
+    faceGui.Face = face or Enum.NormalId.Front
+    faceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    faceGui.PixelsPerStud = 35
+    faceGui.LightInfluence = 0.15
+    faceGui.AlwaysOnTop = false
+    faceGui.Parent = board
+
+    local panel = Instance.new("Frame")
+    panel.Name = "Panel"
+    panel.Size = UDim2.fromScale(1, 1)
+    panel.BackgroundColor3 = Color3.fromRGB(13, 18, 23)
+    panel.BorderSizePixel = 0
+    panel.Parent = faceGui
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = textColor
+    stroke.Thickness = 3
+    stroke.Parent = panel
 
     local label = Instance.new("TextLabel")
     label.Name = "Text"
-    label.Size = UDim2.fromScale(1, 1)
+    label.Size = UDim2.fromScale(0.94, 0.82)
+    label.Position = UDim2.fromScale(0.03, 0.09)
     label.BackgroundTransparency = 1
     label.BorderSizePixel = 0
     label.Text = text
@@ -66,10 +73,78 @@ local function sign(name, text, size, position, faceColor, textColor, parent, fa
     label.TextScaled = true
     label.TextWrapped = true
     label.Font = Enum.Font.GothamBold
-    label.TextStrokeColor3 = Color3.fromRGB(12, 16, 22)
-    label.TextStrokeTransparency = 0.12
-    label.Parent = gui
-    return anchor
+    label.Parent = panel
+    return board
+end
+
+local function leaderboardBoard(name, title, size, position, accent, parent)
+    -- A real physical scoreboard panel mounted to the garage wall.
+    local board = part(name, size, position, black, Enum.Material.DiamondPlate, parent)
+    board.CanCollide = true
+    board.CastShadow = true
+
+    local gui = Instance.new("SurfaceGui")
+    gui.Name = "LeaderboardDisplay"
+    gui.Face = Enum.NormalId.Front
+    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    gui.PixelsPerStud = 32
+    gui.LightInfluence = 0.12
+    gui.AlwaysOnTop = false
+    gui.Parent = board
+
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.fromScale(1, 1)
+    panel.BackgroundColor3 = Color3.fromRGB(12, 17, 22)
+    panel.BorderSizePixel = 0
+    panel.Parent = gui
+
+    local border = Instance.new("UIStroke")
+    border.Color = accent
+    border.Thickness = 4
+    border.Parent = panel
+
+    local heading = Instance.new("TextLabel")
+    heading.Name = "Heading"
+    heading.Size = UDim2.fromScale(0.96, 0.22)
+    heading.Position = UDim2.fromScale(0.02, 0.025)
+    heading.BackgroundColor3 = Color3.fromRGB(29, 37, 44)
+    heading.BorderSizePixel = 0
+    heading.Text = title
+    heading.TextColor3 = accent
+    heading.TextScaled = true
+    heading.Font = Enum.Font.GothamBlack
+    heading.Parent = panel
+
+    local columns = Instance.new("TextLabel")
+    columns.Name = "Columns"
+    columns.Size = UDim2.fromScale(0.96, 0.12)
+    columns.Position = UDim2.fromScale(0.02, 0.265)
+    columns.BackgroundTransparency = 1
+    columns.Text = name == "TimesBoard" and "#     PILOTO                         TIEMPO" or "#     PILOTO                         VICTORIAS"
+    columns.TextColor3 = Color3.fromRGB(190, 205, 215)
+    columns.TextScaled = true
+    columns.Font = Enum.Font.GothamBold
+    columns.TextXAlignment = Enum.TextXAlignment.Left
+    columns.Parent = panel
+
+    for row = 1, 5 do
+        local line = Instance.new("TextLabel")
+        line.Name = "LeaderboardRow" .. row
+        line.Size = UDim2.fromScale(0.96, 0.105)
+        line.Position = UDim2.fromScale(0.02, 0.39 + (row - 1) * 0.112)
+        line.BackgroundColor3 = row % 2 == 0 and Color3.fromRGB(24, 31, 37) or Color3.fromRGB(17, 23, 29)
+        line.BorderSizePixel = 0
+        line.Text = name == "TimesBoard"
+            and string.format("%d       ---                                      --:--.---", row)
+            or string.format("%d       ---                                      --", row)
+        line.TextColor3 = Color3.fromRGB(240, 240, 235)
+        line.TextScaled = true
+        line.Font = Enum.Font.GothamMedium
+        line.TextXAlignment = Enum.TextXAlignment.Left
+        line.Parent = panel
+    end
+
+    return board
 end
 
 local x, y, z = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
@@ -165,10 +240,10 @@ end
 part("RearWorkbench", Vector3.new(46, 1, 6), Vector3.new(x, floorY + 5.4, z - 101), Color3.fromRGB(91, 76, 59), Enum.Material.Wood)
 part("WorkshopPegboard", Vector3.new(46, 8, 0.7), Vector3.new(x, floorY + 12, z - 107), steel, Enum.Material.DiamondPlate)
 
--- Ranking boards mounted on the left and right interior walls.
-local wins = sign("WinsBoard", "MEJORES PILOTOS  |  VICTORIAS", Vector3.new(34, 11, 0.8), Vector3.new(x - halfW + 3.2, floorY + 23, z - 4), black, yellow)
+-- Physical leaderboard screens mounted directly on the left and right interior walls.
+local wins = leaderboardBoard("WinsBoard", "MEJORES PILOTOS  |  VICTORIAS", Vector3.new(34, 11, 0.8), Vector3.new(x - halfW + 3.2, floorY + 23, z - 4), yellow)
 wins.Orientation = Vector3.new(0, 90, 0)
-local times = sign("TimesBoard", "MEJORES TIEMPOS", Vector3.new(34, 11, 0.8), Vector3.new(x + halfW - 3.2, floorY + 23, z - 4), black, cyan)
+local times = leaderboardBoard("TimesBoard", "MEJORES TIEMPOS", Vector3.new(34, 11, 0.8), Vector3.new(x + halfW - 3.2, floorY + 23, z - 4), cyan)
 times.Orientation = Vector3.new(0, -90, 0)
 
 -- Two distinct physical portals in the front half of the interior.
