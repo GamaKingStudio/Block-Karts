@@ -620,7 +620,7 @@ end
 local function computeDividerChains(points, railOffset, railChains)
 	local count = #points
 	local step = 3
-	local safeDistance = 16 -- borde de pista (15) + margen para el muro
+	local safeDistance = 19 -- borde de pista (18) + margen para el muro
 
 	local function distanceToCenterline(x, z)
 		local best = math.huge
@@ -652,7 +652,7 @@ local function computeDividerChains(points, railOffset, railChains)
 	local total = cumulative
 	local minSeparation = 120
 	local maxDistance = railOffset * 2 + 1
-	local minDistance = 31
+	local minDistance = 37
 
 	local chains = {}
 	local current = nil
@@ -892,7 +892,7 @@ local function buildTestCourse()
 
 	-- Beach Resort ampliado: se conserva la recta de salida y el sector norte,
 	-- y se añade un bucle exterior al sureste con curvas rápidas y una zona técnica.
-	local trackWidth = 30
+	local trackWidth = 36
 	local waypoints = {
 		Vector3.new(80, yGround + 0.02, 70),
 		Vector3.new(-65, yGround + 0.02, 70),
@@ -1870,7 +1870,7 @@ local function buildTestCourse()
 	local debugTrans = KartConfig.DEBUG_CHECKPOINTS and 0.75 or 1
 	local triggerHeight = 15
 	local triggerThickness = 2
-	local triggerSpan = 54
+	local triggerSpan = 60
 
 	local finishCF = CFrame.lookAt(Vector3.new(gantryX, yGround + triggerHeight / 2, 70), Vector3.new(gantryX - 10, yGround + triggerHeight / 2, 70))
 	local finishPart = makePart(checkpointsFolder, "FinishLine", Vector3.new(triggerSpan, triggerHeight, triggerThickness), finishCF, Color3.fromRGB(255, 255, 255))
