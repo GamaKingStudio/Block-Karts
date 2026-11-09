@@ -994,7 +994,8 @@ local function buildTestCourse()
 			local bisector = normalIn + normalOut
 			if bisector.Magnitude < 0.001 then bisector = normalOut else bisector = bisector.Unit end
 			local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.35)
-			local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.8)
+			-- Limita el inglete para evitar puntas largas que se cruzan en curvas cerradas.
+			local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.35)
 			local point = waypoints[i] + bisector * miterDistance
 			curbCorners[i] = Vector3.new(point.X, yGround + 0.13, point.Z)
 		end
@@ -1025,9 +1026,11 @@ local function buildTestCourse()
 				local outgoing = outgoingVector.Unit
 				local dot = math.clamp(incoming:Dot(outgoing), -0.999, 0.999)
 				local turnAngle = math.acos(dot)
-				local tangentDistance = 3.5 * math.tan(turnAngle / 2)
-				tangentDistance = math.min(tangentDistance, incomingLength * 0.35, outgoingLength * 0.35)
-				if turnAngle < math.rad(3) then tangentDistance = 0 end
+				-- Curvas más contenidas: evita que la Bézier se repliegue sobre sí misma
+				-- cuando el ángulo entre rectas es muy cerrado.
+				local tangentDistance = 2.5 * math.tan(math.min(turnAngle, math.rad(145)) / 2)
+				tangentDistance = math.min(tangentDistance, incomingLength * 0.20, outgoingLength * 0.20, 7)
+				if turnAngle < math.rad(3) or turnAngle > math.rad(155) then tangentDistance = 0 end
 				local curveStart = corner - incoming * tangentDistance
 				local curveEnd = corner + outgoing * tangentDistance
 				appendPoint(curveStart)
@@ -1907,10 +1910,10 @@ local function buildTestCourse()
 		{ pos = Vector3.new(-65, yGround + triggerHeight / 2, -95),    target = Vector3.new(-50, yGround + triggerHeight / 2, -95) },
 		{ pos = Vector3.new(-50, yGround + triggerHeight / 2, -55),    target = Vector3.new(-50, yGround + triggerHeight / 2, -15) },
 		{ pos = Vector3.new(-37.5, yGround + triggerHeight / 2, -2.5), target = Vector3.new(-25, yGround + triggerHeight / 2, 10) },
-		{ pos = Vector3.new(-12.5, yGround + triggerHeight / 2, -2.5), target = Vector3.new(0, yGround + triggerHeight / 2, -15) },
-		{ pos = Vector3.new(0, yGround + triggerHeight / 2, -50),      target = Vector3.new(0, yGround + triggerHeight / 2, -85) },
+		{ pos = Vector3.new(-7.5, yGround + triggerHeight / 2, -2.5), target = Vector3.new(10, yGround + triggerHeight / 2, -15) },
+		{ pos = Vector3.new(10, yGround + triggerHeight / 2, -50),   target = Vector3.new(10, yGround + triggerHeight / 2, -85) },
 		{ pos = Vector3.new(22.5, yGround + triggerHeight / 2, -95),   target = Vector3.new(45, yGround + triggerHeight / 2, -105) },
-		{ pos = Vector3.new(65, yGround + triggerHeight / 2, -85),     target = Vector3.new(85, yGround + triggerHeight / 2, -65) },
+		{ pos = Vector3.new(115, yGround + triggerHeight / 2, -85),    target = Vector3.new(185, yGround + triggerHeight / 2, -65) },
 		{ pos = Vector3.new(205, yGround + triggerHeight / 2, -37.5), target = Vector3.new(225, yGround + triggerHeight / 2, -10) },
 		{ pos = Vector3.new(225, yGround + triggerHeight / 2, 12.5),  target = Vector3.new(225, yGround + triggerHeight / 2, 35) },
 		{ pos = Vector3.new(247.5, yGround + triggerHeight / 2, 40),  target = Vector3.new(270, yGround + triggerHeight / 2, 45) },
@@ -2541,6 +2544,7 @@ local function initPlayerRaceData(player, spawnCFrame)
 		CanFinishLap = false,
 		IsWrongWay = false,
 		LastTriggerTime = 0.0,
+		LastTriggerIndex = nil,
 	}
 end
 
@@ -2559,10 +2563,6 @@ local function onCheckpointTouched(hitPart, triggerPart)
 	if not pData or pData.RaceCompleted then return end
 
 	local now = os.clock()
-	if now - pData.LastTriggerTime < (KartConfig.CHECKPOINT_DEBOUNCE_TIME or 0.4) then
-		return
-	end
-
 	local cpIndex = triggerPart:GetAttribute("CheckpointIndex")
 	if typeof(cpIndex) ~= "number" then return end
 
@@ -2577,7 +2577,9 @@ local function onCheckpointTouched(hitPart, triggerPart)
 
 	if cpIndex == 0 then
 		if pData.CanFinishLap then
+			if pData.LastTriggerIndex == 0 and now - pData.LastTriggerTime < (KartConfig.CHECKPOINT_DEBOUNCE_TIME or 0.4) then return end
 			pData.LastTriggerTime = now
+			pData.LastTriggerIndex = 0
 			local lapTime = now - pData.LapStartTime
 			local isBest = (pData.BestLapTime == nil) or (lapTime < pData.BestLapTime)
 			if isBest then
@@ -2702,7 +2704,9 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			pData.LapStartTime = now
 			pData.LastValidCFrame = triggerPart.CFrame
 		elseif pData.LapStartTime == 0.0 and pData.NextCheckpoint == 1 then
+			if pData.LastTriggerIndex == 0 and now - pData.LastTriggerTime < (KartConfig.CHECKPOINT_DEBOUNCE_TIME or 0.4) then return end
 			pData.LastTriggerTime = now
+			pData.LastTriggerIndex = 0
 			pData.LapStartTime = now
 			pData.LastValidCFrame = triggerPart.CFrame
 			checkpointPassedRemote:FireClient(player, 0, TOTAL_INTERMEDIATE_CHECKPOINTS)
@@ -2711,7 +2715,11 @@ local function onCheckpointTouched(hitPart, triggerPart)
 	end
 
 	if cpIndex == pData.NextCheckpoint then
+		-- El debounce solo bloquea recontactos del MISMO checkpoint.
+		-- Checkpoints consecutivos cercanos deben poder validarse a alta velocidad.
+		if pData.LastTriggerIndex == cpIndex and now - pData.LastTriggerTime < (KartConfig.CHECKPOINT_DEBOUNCE_TIME or 0.4) then return end
 		pData.LastTriggerTime = now
+		pData.LastTriggerIndex = cpIndex
 		pData.LastValidCFrame = triggerPart.CFrame
 		pData.NextCheckpoint = pData.NextCheckpoint + 1
 		player:SetAttribute("RaceCheckpoint", cpIndex)
