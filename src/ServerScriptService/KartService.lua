@@ -201,7 +201,11 @@ local function tryStartRace()
      d.LapStartTime = os.clock()
      d.RaceStartTime = d.LapStartTime
      d.RaceCompleted = false
-     d.GhostSamples = {}
+      p:SetAttribute("RaceResult", nil)
+      p:SetAttribute("RaceFinalPosition", nil)
+      p:SetAttribute("RaceBestLapTime", nil)
+      p:SetAttribute("RaceTotalTime", nil)
+      d.GhostSamples = {}
      d.LastGhostSampleAt = 0
      d.CanFinishLap = false
      if k and k.chassis then
@@ -2631,6 +2635,8 @@ local function onCheckpointTouched(hitPart, triggerPart)
                 if finalPosition == 1 then saveRaceWin(player) end
                 player:SetAttribute("RaceResult", resultText)
                 player:SetAttribute("RaceFinalPosition", finalPosition)
+                player:SetAttribute("RaceBestLapTime", pData.BestLapTime or 0)
+                player:SetAttribute("RaceTotalTime", totalTime)
                 player:SetAttribute("RaceStarted", false)
                 player:SetAttribute("RaceCountdownActive", false)
                 driverInputs[player] = { throttle = 0, steering = 0, braking = false }
