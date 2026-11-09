@@ -10,10 +10,9 @@ local GARAGE_ORIGIN = Vector3.new(520, 1, 0)
 local existing = Workspace:FindFirstChild(GARAGE_NAME)
 if existing then existing:Destroy() end
 
-if not Workspace:WaitForChild(COURSE_NAME, 120) then
-    warn("[GARAGE] KartTestCourse was not found; garage was not built.")
-    return
-end
+-- The garage is independent from the race course. Do not block lobby creation
+-- while waiting for KartTestCourse: this can leave the server with no garage.
+print("[GARAGE][BUILD] Starting underground garage generation.")
 
 local model = Instance.new("Model")
 model.Name = GARAGE_NAME
