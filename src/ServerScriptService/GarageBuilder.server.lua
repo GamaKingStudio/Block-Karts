@@ -263,6 +263,13 @@ local function createRoomPad(name, roomType, labelText, xOffset, glowColor)
     -- Keep the label readable but remove the bulky black backing block above each portal.
     board.Transparency = 1
     board.CastShadow = false
+    local signGui = board:FindFirstChild("SignFace")
+    local signPanel = signGui and signGui:FindFirstChild("Panel")
+    if signPanel then
+        signPanel.BackgroundTransparency = 1
+        local outline = signPanel:FindFirstChildOfClass("UIStroke")
+        if outline then outline.Transparency = 1 end
+    end
     board.CanCollide = false
     local light = Instance.new("PointLight")
     light.Color = glowColor
