@@ -2867,7 +2867,11 @@ local function addCpuPilot(kart, player)
    if root and humanoid then
     avatar.Name = "CPU_FriendPilot_" .. friend.Username
     avatar.Parent = kart.model
-    avatar:PivotTo(kart.chassis.CFrame * CFrame.new(0, 1.65, 0))
+    -- Ajusta el avatar para que quepa en el kart y alinea la cadera con el asiento.
+    avatar:ScaleTo(0.82)
+    local pilotSeat = kart.seat
+    local pilotBaseCFrame = pilotSeat and pilotSeat.CFrame or kart.chassis.CFrame
+    avatar:PivotTo(pilotBaseCFrame * CFrame.new(0, 1.0, 0))
 
     for _, descendant in ipairs(avatar:GetDescendants()) do
      if descendant:IsA("BasePart") then
@@ -2942,6 +2946,10 @@ local function createCpuOpponent(player)
    hiddenTransparency[descendant] = descendant.Transparency
    descendant.Transparency = 1
    descendant.LocalTransparencyModifier = 0
+   -- El rival no debe bloquear ni activar contactos mientras se graba la vuelta.
+   descendant.CanCollide = false
+   descendant.CanTouch = false
+   descendant.CanQuery = false
   elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
    hiddenTransparency[descendant] = descendant.Transparency
    descendant.Transparency = 1
