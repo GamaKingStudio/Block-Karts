@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
+local ServerStorage = game:GetService("ServerStorage")
 local InsertService = game:GetService("InsertService")
 local DataStoreService = game:GetService("DataStoreService")
 
@@ -2559,6 +2560,18 @@ local function onCheckpointTouched(hitPart, triggerPart)
                         cpuRace.estimatedLapDuration = recordedGhost.duration
                         cpuRace.ghostIndex = 1
 
+                        -- El fantasma solo entra al mundo al comenzar la segunda vuelta.
+                        -- En ServerStorage no puede colisionar ni bloquear al jugador.
+                        local ghostModel = cpuRace.kart.model
+                        for _, ghostPart in ipairs(ghostModel:GetDescendants()) do
+                            if ghostPart:IsA("BasePart") then
+                                ghostPart.CanCollide = false
+                                ghostPart.CanTouch = false
+                                ghostPart.CanQuery = false
+                            end
+                        end
+                        ghostModel.Parent = kartsFolder
+
                         -- Recupera la visibilidad original y muestra el fantasma
                         -- justo al comenzar la segunda vuelta.
                         for hiddenPart, originalTransparency in pairs(cpuRace.hiddenTransparency or {}) do
@@ -2954,10 +2967,16 @@ local function createCpuOpponent(player)
    hiddenTransparency[descendant] = descendant.Transparency
    descendant.Transparency = 1
   end
- end
+ end  -- Mantiene al rival fuera de Workspace durante toda la primera vuelta.
+  -- Ocultar la transparencia no basta para garantizar que no haya colisiones.
+  kart.model.Parent = ServerStorage
+
+
 
  cpuRace = {
-  kart = kart,
+
+
+ kart = kart,
   route = route,
   targetIndex = 1,
   started = false,
