@@ -958,7 +958,8 @@ local function buildTestCourse()
 	-- PIANOS ROJO/BLANCO: recorrido paralelo cerrado con esquinas redondeadas.
 	local curbWidth = 1.6
 	local curbHeight = 0.14
-	local curbEdgeOffset = 1.0
+	-- La cara interior del piano coincide con el borde del asfalto.
+	local curbEdgeOffset = curbWidth / 2
 	local curbTileLength = 1.25
 	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
@@ -979,26 +980,6 @@ local function buildTestCourse()
 	local curbOffset = trackWidth / 2 + curbEdgeOffset
 
 	for sideIndex, side in ipairs({ -1, 1 }) do
-		local curbCorners = {}
-		for i = 1, uniqueCount do
-			local previousIndex = (i - 2) % uniqueCount + 1
-			local nextIndex = i % uniqueCount + 1
-			local incoming = curbDirection(waypoints[previousIndex], waypoints[i])
-			local outgoing = curbDirection(waypoints[i], waypoints[nextIndex])
-			local normalIn = Vector3.new(-incoming.Z, 0, incoming.X) * side
-			local normalOut = Vector3.new(-outgoing.Z, 0, outgoing.X) * side
-			local bisector = normalIn + normalOut
-			if bisector.Magnitude < 0.001 then bisector = normalOut else bisector = bisector.Unit end
-			local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.35)
-			-- Limita el inglete para evitar puntas largas que se cruzan en curvas cerradas.
-			local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.1)
-			local point = waypoints[i] + bisector * miterDistance
-			curbCorners[i] = Vector3.new(point.X, yGround + 0.13, point.Z)
-		end
-
-		-- Redondea cada vértice con una curva Bézier cuadrática.
-		-- Los tramos rectos se conservan entre la salida de una curva
-		-- y la entrada de la siguiente.
 		local pathPoints = {}
 		local function appendPoint(point)
 			local previous = pathPoints[#pathPoints]
@@ -1010,32 +991,55 @@ local function buildTestCourse()
 		for i = 1, uniqueCount do
 			local previousIndex = (i - 2) % uniqueCount + 1
 			local nextIndex = i % uniqueCount + 1
-			local corner = curbCorners[i]
-			local previousCorner = curbCorners[previousIndex]
-			local nextCorner = curbCorners[nextIndex]
-			local incomingVector = corner - previousCorner
-			local outgoingVector = nextCorner - corner
-			local incomingLength = incomingVector.Magnitude
-			local outgoingLength = outgoingVector.Magnitude
-			if incomingLength > 0.01 and outgoingLength > 0.01 then
-				local incoming = incomingVector.Unit
-				local outgoing = outgoingVector.Unit
-				local dot = math.clamp(incoming:Dot(outgoing), -0.999, 0.999)
-				local turnAngle = math.acos(dot)
-				-- Curvas más contenidas: evita que la Bézier se repliegue sobre sí misma
-				-- cuando el ángulo entre rectas es muy cerrado.
-				local tangentDistance = 2.5 * math.tan(math.min(turnAngle, math.rad(145)) / 2)
-				tangentDistance = math.min(tangentDistance, incomingLength * 0.20, outgoingLength * 0.20, 7)
-				if turnAngle < math.rad(3) or turnAngle > math.rad(155) then tangentDistance = 0 end
+			local incoming = curbDirection(waypoints[previousIndex], waypoints[i])
+			local outgoing = curbDirection(waypoints[i], waypoints[nextIndex])
+			local normalIn = Vector3.new(-incoming.Z, 0, incoming.X) * side
+			local normalOut = Vector3.new(-outgoing.Z, 0, outgoing.X) * side
+			local turnsToward = normalIn:Dot(outgoing) > 0
+
+			if turnsToward then
+				-- Lado interior: conserva la intersección geométrica de ambos
+				-- bordes paralelos y redondea solo la punta inmediata del inglete.
+				local bisector = normalIn + normalOut
+				if bisector.Magnitude < 0.001 then
+					bisector = normalOut
+				else
+					bisector = bisector.Unit
+				end
+				local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.25)
+				local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.8)
+				local corner = waypoints[i] + bisector * miterDistance
+				local incomingLength = (waypoints[i] - waypoints[previousIndex]).Magnitude
+				local outgoingLength = (waypoints[nextIndex] - waypoints[i]).Magnitude
+				local tangentDistance = math.min(2.5, incomingLength * 0.15, outgoingLength * 0.15)
 				local curveStart = corner - incoming * tangentDistance
 				local curveEnd = corner + outgoing * tangentDistance
-				appendPoint(curveStart)
-				for step = 1, 12 do
-					local t = step / 12
+				appendPoint(Vector3.new(curveStart.X, yGround + 0.13, curveStart.Z))
+				for step = 1, 8 do
+					local t = step / 8
 					local oneMinusT = 1 - t
 					local point = curveStart * (oneMinusT * oneMinusT)
 						+ corner * (2 * oneMinusT * t)
 						+ curveEnd * (t * t)
+					appendPoint(Vector3.new(point.X, yGround + 0.13, point.Z))
+				end
+			else
+				-- Lado exterior: arco circular real alrededor del vértice.
+				-- Evita que un inglete corto forme una punta que sobresalga
+				-- hacia el asfalto o hacia fuera de la calzada.
+				local angleStart = math.atan2(normalIn.Z, normalIn.X)
+				local angleEnd = math.atan2(normalOut.Z, normalOut.X)
+				local delta = angleEnd - angleStart
+				while delta > math.pi do delta -= 2 * math.pi end
+				while delta < -math.pi do delta += 2 * math.pi end
+				local steps = math.max(2, math.ceil(math.abs(delta) / math.rad(8)))
+				for step = 0, steps do
+					local angle = angleStart + delta * (step / steps)
+					local point = waypoints[i] + Vector3.new(
+						math.cos(angle) * curbOffset,
+						0.13,
+						math.sin(angle) * curbOffset
+					)
 					appendPoint(point)
 				end
 			end
@@ -2838,13 +2842,27 @@ local function placeCharacterInGarage(player, character)
 		warn("[GARAGE] No se encontró BlockKartsGarage; no se pudo ubicar al jugador.")
 		return
 	end
-	-- El lobby es el spawn por defecto. No se crea ni se ocupa ningún kart.
+	-- El lobby es el spawn por defecto. Libera el estado de asiento y
+	-- teletransporta el modelo completo, no solo el HumanoidRootPart.
 	player:SetAttribute("InGarage", true)
 	player:SetAttribute("RaceStarted", false)
 	player:SetAttribute("RaceCountdownActive", false)
+	humanoid.Sit = false
+	pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.AssemblyAngularVelocity = Vector3.zero
-	root.CFrame = GARAGE_SPAWN_CFRAME
+	character:PivotTo(GARAGE_SPAWN_CFRAME)
+
+	-- Reafirma la posición después de que Roblox termine de desmontar al
+	-- personaje del asiento que acaba de ser destruido.
+	task.wait(0.2)
+	if player.Character == character and not activeKarts[player] and root.Parent then
+		humanoid.Sit = false
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+		character:PivotTo(GARAGE_SPAWN_CFRAME)
+		pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Running) end)
+	end
 end
 
 local function spawnPlayerKart(player)
