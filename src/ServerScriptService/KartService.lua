@@ -1925,10 +1925,9 @@ local function buildTestCourse()
 
 	for idx, def in ipairs(checkpointDefinitions) do
 		local cpCF = CFrame.lookAt(def.pos, def.target)
-		-- El checkpoint 22 está en un tramo corto y de giro cerrado.
-		-- Se amplía su profundidad para que el kart no pueda atravesar el
-		-- plano sin activar Touched por una diferencia mínima de trayectoria.
-		local checkpointDepth = (idx == 22) and 10 or triggerThickness
+		-- Los checkpoints del último sector (22-26) tienen mayor profundidad
+		-- para evitar que la velocidad del kart haga que Touched omita el plano.
+		local checkpointDepth = (idx >= 22) and 18 or triggerThickness
 		local cpPart = makePart(checkpointsFolder, "Checkpoint_" .. idx, Vector3.new(triggerSpan, triggerHeight, checkpointDepth), cpCF, Color3.fromRGB(0, 170, 255))
 		cpPart.Transparency = debugTrans
 		cpPart.CanCollide = false
@@ -2714,6 +2713,12 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			checkpointPassedRemote:FireClient(player, 0, TOTAL_INTERMEDIATE_CHECKPOINTS)
 		end
 		return
+	end
+
+	if cpIndex >= 22 and cpIndex ~= pData.NextCheckpoint then
+		print(("[RACE-CHECKPOINT][DIAG] Contacto CP%d ignorado; se esperaba CP%d."):format(
+			cpIndex, pData.NextCheckpoint
+		))
 	end
 
 	if cpIndex == pData.NextCheckpoint then
