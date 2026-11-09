@@ -443,6 +443,21 @@ local function logSeatedAvatar(humanoid, seat)
 					item.Transparency = 0
 				end
 			end
+			local inspected = 0
+			for _, item in ipairs(customBody:GetDescendants()) do
+				if item:IsA("BasePart") and inspected < 12 then
+					inspected += 1
+					local surfaceAppearance = item:FindFirstChildOfClass("SurfaceAppearance")
+					print(("[BLOXY-KART][CLIENT][KART-PART] name=%s class=%s transparency=%.2f localTransparency=%.2f texture=%s surfaceAlpha=%s"):format(
+						item.Name,
+						item.ClassName,
+						item.Transparency,
+						item.LocalTransparencyModifier,
+						item:IsA("MeshPart") and item.TextureID or "n/a",
+						surfaceAppearance and surfaceAppearance.AlphaMode.Name or "none"
+					))
+				end
+			end
 			print(("[BLOXY-KART][CLIENT][KART-VISIBILITY] restored=%d imported body parts"):format(restoredParts))
 		else
 			warn("[BLOXY-KART][CLIENT][KART-VISIBILITY] CustomKartBody not found on the seated kart.")
@@ -771,7 +786,13 @@ RunService:BindToRenderStep("BLOXYKartRestoreBodyVisibility", Enum.RenderPriorit
 			if item.Transparency ~= 0 then item.Transparency = 0 end
 			if item.LocalTransparencyModifier ~= 0 then item.LocalTransparencyModifier = 0 end
 			if not item.CastShadow then item.CastShadow = true end
-			if item:IsA("MeshPart") and not item.DoubleSided then item.DoubleSided = true end
+			if item:IsA("MeshPart") then
+				if not item.DoubleSided then item.DoubleSided = true end
+				local surfaceAppearance = item:FindFirstChildOfClass("SurfaceAppearance")
+				if surfaceAppearance and surfaceAppearance.AlphaMode ~= Enum.AlphaMode.Overlay then
+					surfaceAppearance.AlphaMode = Enum.AlphaMode.Overlay
+				end
+			end
 		elseif item:IsA("Decal") or item:IsA("Texture") then
 			if item.Transparency ~= 0 then item.Transparency = 0 end
 		end
