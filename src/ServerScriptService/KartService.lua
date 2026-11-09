@@ -45,6 +45,7 @@ local requestRespawnRemote = getOrCreateRemote("RequestRespawn")
 local raceCountdownRemote = getOrCreateRemote("RaceCountdown")
 local cameraSelectionRemote = getOrCreateRemote("SelectRaceCamera")
 local selectionStateRemote = getOrCreateRemote("RaceSelectionState")
+local startRaceFromLobbyRemote = getOrCreateRemote("StartRaceFromLobby")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -2471,31 +2472,16 @@ end)
 -- ==========================================================
 -- 4. GESTIÓN Y SPAWN DEL PILOTO
 -- ==========================================================
-local function spawnPlayerKart(player)
-	player:SetAttribute("RaceStarted", false)
-	player:SetAttribute("RaceCountdownActive", false)
-	player:SetAttribute("RaceCamera", nil)
-	selectedCameras[player] = nil
-	raceInProgress = false
-	countdownToken += 1
-	local current = activeKarts[player]
-	if current then
-		current.model:Destroy()
-	end
+local GARAGE_SPAWN_CFRAME = CFrame.new(520, 6.5, 12) * CFrame.Angles(0, math.rad(180), 0)
 
-	local spawnIndex = player:GetAttribute("KartSpawnIndex") or 1
-	local kart = createKart(player, spawnIndex)
-	activeKarts[player] = kart
-	driverInputs[player] = { throttle = 0, steering = 0, braking = false }
-	player:SetAttribute("KartOwnerUserId", player.UserId)
+local function placeCharacterInGarage(player, character)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	if not humanoid or not root then return end
 
-	initPlayerRaceData(player, kart.spawnCFrame)
-
-	local function seatCharacter(character)
-		local humanoid = character:WaitForChild("Humanoid", 10)
-		local root = character:WaitForChild("HumanoidRootPart", 10)
-		if not humanoid or not root or not kart.model.Parent then return end
-
+	-- Si el jugador ya solicitó entrar a una carrera, se sienta en su kart.
+	local kart = activeKarts[player]
+	if kart and kart.model.Parent and kart.seat.Parent then
 		root.CFrame = kart.spawnCFrame * CFrame.new(0, 4, 1)
 		task.wait(0.15)
 		if kart.seat.Parent and not kart.seat.Occupant then
@@ -2508,13 +2494,43 @@ local function spawnPlayerKart(player)
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 			publishSelectionState()
 		end
+		return
 	end
 
-	player.CharacterAdded:Connect(seatCharacter)
-	if player.Character then
-		task.spawn(seatCharacter, player.Character)
+	-- El lobby es el spawn por defecto. No se crea ni se ocupa ningún kart.
+	player:SetAttribute("InGarage", true)
+	player:SetAttribute("RaceStarted", false)
+	player:SetAttribute("RaceCountdownActive", false)
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
+	root.CFrame = GARAGE_SPAWN_CFRAME
+end
+
+local function spawnPlayerKart(player)
+	if activeKarts[player] then return end
+	player:SetAttribute("InGarage", false)
+	player:SetAttribute("RaceStarted", false)
+	player:SetAttribute("RaceCountdownActive", false)
+	player:SetAttribute("RaceCamera", nil)
+	selectedCameras[player] = nil
+
+	local spawnIndex = player:GetAttribute("KartSpawnIndex") or 1
+	local kart = createKart(player, spawnIndex)
+	activeKarts[player] = kart
+	driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+	player:SetAttribute("KartOwnerUserId", player.UserId)
+	initPlayerRaceData(player, kart.spawnCFrame)
+
+	local character = player.Character
+	if character then
+		task.spawn(placeCharacterInGarage, player, character)
 	end
 end
+
+startRaceFromLobbyRemote.OnServerEvent:Connect(function(player)
+	if activeKarts[player] or player:GetAttribute("InGarage") ~= true then return end
+	spawnPlayerKart(player)
+end)
 
 remote.OnServerEvent:Connect(function(player, throttle, steering, braking)
 	if typeof(throttle) ~= "number" or typeof(steering) ~= "number" or typeof(braking) ~= "boolean" then return end
@@ -2568,15 +2584,26 @@ end)
 buildTestCourse()
 hookCheckpoints()
 
+local function setupLobbyPlayer(player, spawnIndex)
+	player:SetAttribute("KartSpawnIndex", spawnIndex)
+	player:SetAttribute("InGarage", true)
+	player:SetAttribute("RaceStarted", false)
+	player:SetAttribute("RaceCountdownActive", false)
+	player:SetAttribute("RaceCamera", nil)
+	player.CharacterAdded:Connect(function(character)
+		task.spawn(placeCharacterInGarage, player, character)
+	end)
+	if player.Character then
+		task.spawn(placeCharacterInGarage, player, player.Character)
+	end
+end
+
 Players.PlayerAdded:Connect(function(player)
-	local existing = #Players:GetPlayers()
-	player:SetAttribute("KartSpawnIndex", existing)
-	spawnPlayerKart(player)
+	setupLobbyPlayer(player, #Players:GetPlayers())
 end)
 
 for index, player in ipairs(Players:GetPlayers()) do
-	player:SetAttribute("KartSpawnIndex", index)
-	spawnPlayerKart(player)
+	setupLobbyPlayer(player, index)
 end
 
 Players.PlayerRemoving:Connect(function(player)
