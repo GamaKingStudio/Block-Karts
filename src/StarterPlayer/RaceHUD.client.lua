@@ -308,10 +308,10 @@ local function drawTrack()
 
  -- Dibujar todos los bordes antes del asfalto evita uniones grises sin contorno.
  for i = 1, #mappedPoints - 1 do
-  table.insert(trackSegments, makeTrackStroke("TrackBorder", mappedPoints[i], mappedPoints[i + 1], 20, borderColor, 1))
+  table.insert(trackSegments, makeTrackStroke("TrackBorder", mappedPoints[i], mappedPoints[i + 1], 26, borderColor, 1))
  end
  for i = 1, #mappedPoints - 1 do
-  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", mappedPoints[i], mappedPoints[i + 1], 14, asphaltColor, 2))
+  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", mappedPoints[i], mappedPoints[i + 1], 16, asphaltColor, 2))
  end
 
  -- Primero las uniones negras; luego las uniones del asfalto.
@@ -321,7 +321,7 @@ local function drawTrack()
   join.Name = "TrackBorderJoin"
   join.AnchorPoint = Vector2.new(0.5, 0.5)
   join.Position = UDim2.fromOffset(point.X, point.Y)
-  join.Size = UDim2.fromOffset(20, 20)
+  join.Size = UDim2.fromOffset(26, 26)
   local corner = Instance.new("UICorner")
   corner.CornerRadius = UDim.new(1, 0)
   corner.Parent = join
@@ -337,7 +337,7 @@ local function drawTrack()
   join.Name = "TrackAsphaltJoin"
   join.AnchorPoint = Vector2.new(0.5, 0.5)
   join.Position = UDim2.fromOffset(point.X, point.Y)
-  join.Size = UDim2.fromOffset(14, 14)
+  join.Size = UDim2.fromOffset(16, 16)
   local corner = Instance.new("UICorner")
   corner.CornerRadius = UDim.new(1, 0)
   corner.Parent = join
