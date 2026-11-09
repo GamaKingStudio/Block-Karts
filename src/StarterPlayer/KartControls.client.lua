@@ -765,14 +765,23 @@ RunService.RenderStepped:Connect(function()
 	local kart = getKartFromSeat(currentSeat)
 	local body = kart and kart:FindFirstChild("CustomKartBody")
 	if not body then return end
-	for _, item in ipairs(body:GetDescendants()) do
+
+	local function restoreVisible(item)
 		if item:IsA("BasePart") then
 			if item.Transparency ~= 0 then item.Transparency = 0 end
 			if item.LocalTransparencyModifier ~= 0 then item.LocalTransparencyModifier = 0 end
+			if not item.CastShadow then item.CastShadow = true end
 			if item:IsA("MeshPart") and not item.DoubleSided then item.DoubleSided = true end
 		elseif item:IsA("Decal") or item:IsA("Texture") then
 			if item.Transparency ~= 0 then item.Transparency = 0 end
 		end
+	end
+
+	-- Include the body root itself in case the imported asset is a BasePart,
+	-- not only a Model containing descendant parts.
+	restoreVisible(body)
+	for _, item in ipairs(body:GetDescendants()) do
+		restoreVisible(item)
 	end
 end)
 
@@ -1063,6 +1072,8 @@ local function clearDriveInput()
 	clearDriftSmoke()
 	mobilePadActive = false
 	mobilePadVector = Vector2.zero
+	mobileAccelerateHeld = false
+	mobileDriftHeld = false
 	for key in pairs(held) do
 		held[key] = false
 	end
