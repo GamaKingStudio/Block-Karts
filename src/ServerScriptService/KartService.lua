@@ -1859,6 +1859,25 @@ local function buildTestCourse()
 		spawnSurfboard(worldPos, placement.rot, placement.lean, placement.scale)
 	end
 
+	-- LIMPIEZA VISUAL: esta versión conserva únicamente el trazado,
+	-- sus pianos, las barras de contención y el arco de meta.
+	-- Todo el atrezo y la ambientación de playa se retiran del circuito.
+	local function isCoreTrackElement(instance)
+		local name = instance.Name
+		return name:match("^RoadSeg_%d+$") ~= nil
+			or name:match("^CornerHub_%d+$") ~= nil
+			or name == "DashLine"
+			or name:match("^Kerb_%d+_%d+$") ~= nil
+			or name:match("^Guardrail") ~= nil
+			or name == "ImportedFinishStructure"
+	end
+
+	for _, child in ipairs(course:GetChildren()) do
+		if not isCoreTrackElement(child) then
+			child:Destroy()
+		end
+	end
+
 	-- Checkpoints
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
 	checkpointsFolder.Name = "CourseCheckpoints"
