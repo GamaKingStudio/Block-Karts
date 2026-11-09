@@ -48,6 +48,7 @@ local raceCountdownRemote = getOrCreateRemote("RaceCountdown")
 local cameraSelectionRemote = getOrCreateRemote("SelectRaceCamera")
 local selectionStateRemote = getOrCreateRemote("RaceSelectionState")
 local startRaceFromLobbyRemote = getOrCreateRemote("StartRaceFromLobby")
+local raceFinishedRemote = getOrCreateRemote("RaceFinished")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -2528,7 +2529,7 @@ local function onCheckpointTouched(hitPart, triggerPart)
 	if not player then return end
 
 	local pData = raceData[player]
-	if not pData then return end
+	if not pData or pData.RaceCompleted then return end
 
 	local now = os.clock()
 	if now - pData.LastTriggerTime < (KartConfig.CHECKPOINT_DEBOUNCE_TIME or 0.4) then
@@ -2556,65 +2557,65 @@ local function onCheckpointTouched(hitPart, triggerPart)
 				pData.BestLapTime = lapTime
                 saveBestLap(player, lapTime)
 			end
-            -- Guarda la primera vuelta y activa el fantasma inmediatamente para la vuelta 2.
+            -- Guarda la vuelta 1 y activa el fantasma para la segunda vuelta.
             if pData.CurrentLap == 1 then
                 table.insert(pData.GhostSamples, { t = lapTime, cf = hitPart.CFrame })
-                if #pData.GhostSamples >= 2 then
-                    local recordedGhost = {
-                        samples = table.clone(pData.GhostSamples),
-                        duration = lapTime,
-                    }
-                    ghostRecords[player.UserId] = recordedGhost
+                if #pData.GhostSamples < 2 and pData.GhostSamples[1] then
+                    table.insert(pData.GhostSamples, { t = lapTime, cf = hitPart.CFrame })
+                end
 
-                    if cpuRace and cpuRace.kart and cpuRace.kart.model and cpuRace.kart.model.Parent then
-                        cpuRace.ghostSamples = recordedGhost.samples
-                        cpuRace.ghostDuration = recordedGhost.duration
-                        cpuRace.estimatedLapDuration = recordedGhost.duration
-                        cpuRace.ghostIndex = 1
+                local recordedGhost = {
+                    samples = table.clone(pData.GhostSamples),
+                    duration = math.max(lapTime, 0.1),
+                }
+                ghostRecords[player.UserId] = recordedGhost
 
-                        -- El fantasma solo entra al mundo al comenzar la segunda vuelta.
-                        -- En ServerStorage no puede colisionar ni bloquear al jugador.
-                        local ghostModel = cpuRace.kart.model
-                        for _, ghostPart in ipairs(ghostModel:GetDescendants()) do
-                            if ghostPart:IsA("BasePart") then
-                                ghostPart.CanCollide = false
-                                ghostPart.CanTouch = false
-                                ghostPart.CanQuery = false
-                            end
+                if cpuRace and cpuRace.kart and cpuRace.kart.model then
+                    local ghostModel = cpuRace.kart.model
+                    cpuRace.ghostSamples = recordedGhost.samples
+                    cpuRace.ghostDuration = recordedGhost.duration
+                    cpuRace.estimatedLapDuration = recordedGhost.duration
+                    cpuRace.ghostIndex = 1
+
+                    -- Publica el kart fantasma antes de iniciar su reproducción.
+                    -- Fuerza una transparencia uniforme para que no quede invisible.
+                    ghostModel.Parent = kartsFolder
+                    for _, ghostPart in ipairs(ghostModel:GetDescendants()) do
+                        if ghostPart:IsA("BasePart") then
+                            local originalTransparency = (cpuRace.hiddenTransparency or {})[ghostPart]
+                            ghostPart.Transparency = math.min(originalTransparency or ghostPart.Transparency, 0.42)
+                            ghostPart.LocalTransparencyModifier = 0
+                            ghostPart.CanCollide = false
+                            ghostPart.CanTouch = false
+                            ghostPart.CanQuery = false
+                        elseif ghostPart:IsA("Decal") or ghostPart:IsA("Texture") then
+                            local originalTransparency = (cpuRace.hiddenTransparency or {})[ghostPart]
+                            ghostPart.Transparency = math.min(originalTransparency or ghostPart.Transparency, 0.42)
                         end
-                        ghostModel.Parent = kartsFolder
-
-                        -- Recupera la visibilidad original y muestra el fantasma
-                        -- justo al comenzar la segunda vuelta.
-                        for hiddenPart, originalTransparency in pairs(cpuRace.hiddenTransparency or {}) do
-                            if hiddenPart and hiddenPart.Parent then
-                                hiddenPart.Transparency = math.max(originalTransparency, 0.42)
-                                if hiddenPart:IsA("BasePart") then
-                                    hiddenPart.LocalTransparencyModifier = 0
-                                end
-                            end
-                        end
-                        cpuRace.hiddenTransparency = nil
-
-                        if not cpuRace.kart.model:FindFirstChild("FirstLapGhostHighlight") then
-                            local highlight = Instance.new("Highlight")
-                            highlight.Name = "FirstLapGhostHighlight"
-                            highlight.FillColor = Color3.fromRGB(50, 220, 255)
-                            highlight.FillTransparency = 0.68
-                            highlight.OutlineColor = Color3.fromRGB(80, 235, 255)
-                            highlight.OutlineTransparency = 0.12
-                            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                            highlight.Parent = cpuRace.kart.model
-                        end
-
-                        cpuRace.startedAt = now
-                        cpuRace.started = true
-                        print(("[CPU-GHOST] Fantasma visible y en marcha desde la vuelta 2: %d muestras, %.2fs"):format(#recordedGhost.samples, lapTime))
-                    else
-                        print(("[CPU-GHOST] Primera vuelta guardada: %d muestras, %.2fs. Se usará en la próxima carrera."):format(#recordedGhost.samples, lapTime))
                     end
+                    cpuRace.hiddenTransparency = nil
+                    if recordedGhost.samples[1] then
+                        ghostModel:PivotTo(recordedGhost.samples[1].cf)
+                    end
+
+                    if not ghostModel:FindFirstChild("FirstLapGhostHighlight") then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "FirstLapGhostHighlight"
+                        highlight.FillColor = Color3.fromRGB(50, 220, 255)
+                        highlight.FillTransparency = 0.68
+                        highlight.OutlineColor = Color3.fromRGB(80, 235, 255)
+                        highlight.OutlineTransparency = 0.12
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        highlight.Parent = ghostModel
+                    end
+
+                    cpuRace.startedAt = now
+                    cpuRace.started = true
+                    print(("[CPU-GHOST] Fantasma activado para vuelta 2: %d muestras, %.2fs, parent=%s"):format(
+                        #recordedGhost.samples, lapTime, ghostModel.Parent:GetFullName()
+                    ))
                 else
-                    warn(("[CPU-GHOST] No se pudo grabar la vuelta: solo %d muestras."):format(#pData.GhostSamples))
+                    warn("[CPU-GHOST] No existe un kart fantasma que activar al terminar la vuelta 1.")
                 end
             end
 
@@ -2624,13 +2625,34 @@ local function onCheckpointTouched(hitPart, triggerPart)
                 local totalTime = now - (pData.RaceStartTime > 0 and pData.RaceStartTime or now)
                 local referenceLap = cpuRace and (cpuRace.ghostDuration or cpuRace.estimatedLapDuration)
                 local referenceTime = referenceLap and referenceLap * (KartConfig.TOTAL_LAPS or 3) or math.huge
-                if totalTime <= referenceTime then
-                    saveRaceWin(player)
-                    player:SetAttribute("RaceResult", "VICTORIA")
-                else
-                    player:SetAttribute("RaceResult", "COMPLETADA")
+                local finalPosition = totalTime <= referenceTime and 1 or 2
+                local resultText = finalPosition == 1 and "VICTORIA" or "SEGUNDO LUGAR"
+
+                if finalPosition == 1 then saveRaceWin(player) end
+                player:SetAttribute("RaceResult", resultText)
+                player:SetAttribute("RaceFinalPosition", finalPosition)
+                player:SetAttribute("RaceStarted", false)
+                player:SetAttribute("RaceCountdownActive", false)
+                driverInputs[player] = { throttle = 0, steering = 0, braking = false }
+
+                -- Inmoviliza el kart y evita que siga registrando vueltas.
+                local finishedKart = activeKarts[player]
+                if finishedKart and finishedKart.chassis and finishedKart.chassis.Parent then
+                    finishedKart.chassis.AssemblyLinearVelocity = Vector3.zero
+                    finishedKart.chassis.AssemblyAngularVelocity = Vector3.zero
+                    if finishedKart.driveForce then finishedKart.driveForce.Enabled = false end
                 end
-                print(("[RACE] %s terminó en %.2fs; referencia CPU %.2fs"):format(player.Name, totalTime, referenceTime))
+
+                raceFinishedRemote:FireClient(
+                    player,
+                    finalPosition,
+                    pData.BestLapTime or 0,
+                    totalTime,
+                    resultText
+                )
+                print(("[RACE] %s terminó en posición %d en %.2fs; mejor vuelta %.2fs; referencia fantasma %.2fs"):format(
+                    player.Name, finalPosition, totalTime, pData.BestLapTime or 0, referenceTime
+                ))
             end
 			pData.CurrentLap = pData.CurrentLap + 1
 			player:SetAttribute("RaceLap", pData.CurrentLap)
@@ -2677,6 +2699,7 @@ end
 requestRespawnRemote.OnServerEvent:Connect(function(player)
 	local kart = activeKarts[player]
 	local pData = raceData[player]
+	if pData and pData.RaceCompleted then return end
 	if not kart or not kart.chassis.Parent then return end
 
 	local targetCF = (pData and pData.LastValidCFrame) or kart.spawnCFrame
