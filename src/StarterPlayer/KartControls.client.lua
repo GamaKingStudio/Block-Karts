@@ -760,7 +760,7 @@ local wheelSpinByKart = setmetatable({}, { __mode = "k" })
 
 -- Reaplica la opacidad del kart del jugador mientras conduce. Roblox puede
 -- cambiar LocalTransparencyModifier al resolver la oclusión de cámara.
-RunService.RenderStepped:Connect(function()
+RunService:BindToRenderStep("BLOXYKartRestoreBodyVisibility", Enum.RenderPriority.Last.Value, function()
 	if not currentSeat or not currentSeat.Parent then return end
 	local kart = getKartFromSeat(currentSeat)
 	local body = kart and kart:FindFirstChild("CustomKartBody")
@@ -777,8 +777,8 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- Include the body root itself in case the imported asset is a BasePart,
-	-- not only a Model containing descendant parts.
+	-- Ejecuta al final del frame, después de la oclusión de cámara de Roblox,
+	-- que puede volver a ocultar localmente la carrocería al sentarse.
 	restoreVisible(body)
 	for _, item in ipairs(body:GetDescendants()) do
 		restoreVisible(item)
