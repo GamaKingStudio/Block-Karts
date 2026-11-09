@@ -114,6 +114,7 @@ local function refreshLeaderboard(boardName, store, ascending, valueFormatter)
  end)
 end
 local function saveBestLap(player, lapTime)
+ if not bestLapStore then return end
  task.spawn(function()
   local value = math.floor(lapTime * 1000 + 0.5)
   local ok = pcall(function()
@@ -127,6 +128,7 @@ local function saveBestLap(player, lapTime)
  end)
 end
 local function saveRaceWin(player)
+ if not winsStore then return end
  task.spawn(function()
   local ok = pcall(function()
    winsStore:UpdateAsync(tostring(player.UserId), function(old) return (tonumber(old) or 0) + 1 end)
