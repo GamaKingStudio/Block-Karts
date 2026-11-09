@@ -206,7 +206,65 @@ part("ClosedSecurityShutter", Vector3.new(104, 22, 0.7), Vector3.new(x, floorY +
 for row = 1, 18 do
     part("ShutterRib_" .. row, Vector3.new(103.5, 0.22, 0.9), Vector3.new(x, floorY + 0.7 + row * 1.15, shutterZ - 0.48), steelLight, Enum.Material.Metal)
 end
-sign("MainSign", "BLOXY KARTZ\nUNDERGROUND GARAGE", Vector3.new(74, 8, 0.9), Vector3.new(x, floorY + 27, shutterZ - 0.65), black, warmWhite)
+-- The race-selection sign takes the former main-sign position above the shutter.
+sign("ReceptionSign", "ELIGE TU CARRERA", Vector3.new(74, 8, 0.9), Vector3.new(x, floorY + 27, shutterZ - 0.65), black, yellow)
+
+-- A sealed-store style sticker is attached directly to the shutter surface.
+local garageSticker = part(
+    "UndergroundGarageSticker",
+    Vector3.new(76, 4.6, 0.16),
+    Vector3.new(x, floorY + 11, shutterZ - 0.43),
+    Color3.fromRGB(239, 194, 62),
+    Enum.Material.SmoothPlastic
+)
+garageSticker.CanCollide = false
+garageSticker.CanTouch = false
+garageSticker.CastShadow = false
+local stickerGui = Instance.new("SurfaceGui")
+stickerGui.Name = "StickerFace"
+stickerGui.Face = Enum.NormalId.Front
+stickerGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+stickerGui.PixelsPerStud = 40
+stickerGui.LightInfluence = 0
+stickerGui.AlwaysOnTop = false
+stickerGui.Parent = garageSticker
+local stickerPanel = Instance.new("Frame")
+stickerPanel.Name = "Panel"
+stickerPanel.Size = UDim2.fromScale(1, 1)
+stickerPanel.BackgroundColor3 = Color3.fromRGB(242, 197, 65)
+stickerPanel.BorderSizePixel = 0
+stickerPanel.Parent = stickerGui
+local stickerBorder = Instance.new("UIStroke")
+stickerBorder.Color = Color3.fromRGB(25, 29, 32)
+stickerBorder.Thickness = 5
+stickerBorder.Parent = stickerPanel
+for _, side in ipairs({0, 1}) do
+    local stripe = Instance.new("Frame")
+    stripe.Name = "ClosureStripe_" .. side
+    stripe.Size = UDim2.new(0.09, 0, 1, 0)
+    stripe.Position = UDim2.new(side == 0 and 0 or 0.91, 0, 0, 0)
+    stripe.BackgroundColor3 = Color3.fromRGB(25, 29, 32)
+    stripe.BorderSizePixel = 0
+    stripe.Parent = stickerPanel
+    local stripeText = Instance.new("TextLabel")
+    stripeText.Size = UDim2.fromScale(1, 1)
+    stripeText.BackgroundTransparency = 1
+    stripeText.Text = "////"
+    stripeText.TextColor3 = Color3.fromRGB(242, 197, 65)
+    stripeText.TextScaled = true
+    stripeText.Font = Enum.Font.GothamBlack
+    stripeText.Parent = stripe
+end
+local stickerText = Instance.new("TextLabel")
+stickerText.Name = "StickerText"
+stickerText.Position = UDim2.fromScale(0.1, 0.08)
+stickerText.Size = UDim2.fromScale(0.8, 0.84)
+stickerText.BackgroundTransparency = 1
+stickerText.Text = "UNDERGROUND GARAGE"
+stickerText.TextColor3 = Color3.fromRGB(25, 29, 32)
+stickerText.TextScaled = true
+stickerText.Font = Enum.Font.GothamBlack
+stickerText.Parent = stickerPanel
 
 -- Large floor markings and a wide central circulation lane for many players.
 part("MainDriveAisle", Vector3.new(24, 0.1, depth - 38), Vector3.new(x, floorY + 0.36, z), Color3.fromRGB(78, 81, 83), Enum.Material.Asphalt)
@@ -397,8 +455,7 @@ for _, side in ipairs({-1, 1}) do
     end
 end
 
--- Overhead race-control sign keeps the central gathering floor completely open.
-sign("ReceptionSign", "RACE CONTROL  |  SELECT YOUR RACE", Vector3.new(32, 5, 0.8), Vector3.new(x, floorY + 19, z + 12), black, yellow)
+-- Race selection now uses the former main-sign position above the shutter.
 
 -- Invisible locator remains at the existing player lobby spawn position.
 local marker = part("GarageLocator", Vector3.new(2, 2, 2), Vector3.new(x, floorY + 2, z + 12), yellow, Enum.Material.Neon)
