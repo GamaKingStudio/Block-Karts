@@ -2536,6 +2536,7 @@ local function initPlayerRaceData(player, spawnCFrame)
 		IsWrongWay = false,
 		LastTriggerTime = 0.0,
 		LastTriggerIndex = nil,
+		PendingCheckpoints = {},
 	}
 end
 
@@ -2715,25 +2716,48 @@ local function onCheckpointTouched(hitPart, triggerPart)
 		return
 	end
 
-	if cpIndex >= 22 and cpIndex ~= pData.NextCheckpoint then
-		print(("[RACE-CHECKPOINT][DIAG] Contacto CP%d ignorado; se esperaba CP%d."):format(
-			cpIndex, pData.NextCheckpoint
-		))
+	-- En curvas cerradas, el volumen de un checkpoint puede tocarse apenas
+	-- antes que el anterior. Guardamos solo el siguiente inmediato y lo
+	-- contabilizamos al validar el checkpoint que falta.
+	if cpIndex > pData.NextCheckpoint then
+		if cpIndex == pData.NextCheckpoint + 1 then
+			pData.PendingCheckpoints[cpIndex] = triggerPart
+			print(("[RACE-CHECKPOINT][QUEUE] CP%d reservado; esperando CP%d."):format(
+				cpIndex, pData.NextCheckpoint
+			))
+		else
+			print(("[RACE-CHECKPOINT][DIAG] Contacto CP%d ignorado; se esperaba CP%d."):format(
+				cpIndex, pData.NextCheckpoint
+			))
+		end
+		return
 	end
 
 	if cpIndex == pData.NextCheckpoint then
 		-- El debounce solo bloquea recontactos del MISMO checkpoint.
-		-- Checkpoints consecutivos cercanos deben poder validarse a alta velocidad.
 		if pData.LastTriggerIndex == cpIndex and now - pData.LastTriggerTime < (KartConfig.CHECKPOINT_DEBOUNCE_TIME or 0.4) then return end
-		pData.LastTriggerTime = now
-		pData.LastTriggerIndex = cpIndex
-		pData.LastValidCFrame = triggerPart.CFrame
-		pData.NextCheckpoint = pData.NextCheckpoint + 1
-		player:SetAttribute("RaceCheckpoint", cpIndex)
-		checkpointPassedRemote:FireClient(player, cpIndex, TOTAL_INTERMEDIATE_CHECKPOINTS)
-		print(("[RACE-CHECKPOINT] %s: %d/%d, vuelta %d"):format(
-			player.Name, cpIndex, TOTAL_INTERMEDIATE_CHECKPOINTS, pData.CurrentLap
-		))
+
+		local function acceptCheckpoint(index, part)
+			pData.LastTriggerTime = now
+			pData.LastTriggerIndex = index
+			pData.LastValidCFrame = part.CFrame
+			pData.NextCheckpoint = index + 1
+			player:SetAttribute("RaceCheckpoint", index)
+			checkpointPassedRemote:FireClient(player, index, TOTAL_INTERMEDIATE_CHECKPOINTS)
+			print(("[RACE-CHECKPOINT] %s: %d/%d, vuelta %d"):format(
+				player.Name, index, TOTAL_INTERMEDIATE_CHECKPOINTS, pData.CurrentLap
+			))
+		end
+
+		acceptCheckpoint(cpIndex, triggerPart)
+
+		-- Consume checkpoints reservados si forman una secuencia continua.
+		while pData.PendingCheckpoints[pData.NextCheckpoint] do
+			local queuedIndex = pData.NextCheckpoint
+			local queuedPart = pData.PendingCheckpoints[queuedIndex]
+			pData.PendingCheckpoints[queuedIndex] = nil
+			acceptCheckpoint(queuedIndex, queuedPart)
+		end
 
 		if pData.NextCheckpoint > TOTAL_INTERMEDIATE_CHECKPOINTS then
 			pData.CanFinishLap = true
