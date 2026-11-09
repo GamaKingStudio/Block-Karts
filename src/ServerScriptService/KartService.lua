@@ -465,6 +465,119 @@ local function computeGuardrailChains(points, offset, side)
 	return chains
 end
 
+-- Baranda divisoria: donde dos partes NO consecutivas del circuito corren tan
+-- juntas que no caben las barandas exteriores (borde a borde < 2 * 5 studs),
+-- se coloca UNA sola baranda por la linea media entre ambas. Se limita a puntos
+-- que quedan fuera del asfalto y se conecta con los extremos de las barandas.
+local function computeDividerChains(points, railOffset, railChains)
+	local count = #points
+	local step = 3
+	local safeDistance = 16 -- borde de pista (15) + margen para el muro
+
+	local function distanceToCenterline(x, z)
+		local best = math.huge
+		for i = 1, count do
+			local a, b = points[i], points[i % count + 1]
+			local dx, dz = b.x - a.x, b.z - a.z
+			local lenSq = dx * dx + dz * dz
+			local t = lenSq > 0 and math.clamp(((x - a.x) * dx + (z - a.z) * dz) / lenSq, 0, 1) or 0
+			local ex, ez = x - (a.x + dx * t), z - (a.z + dz * t)
+			local d = math.sqrt(ex * ex + ez * ez)
+			if d < best then best = d end
+		end
+		return best
+	end
+
+	local samples = {}
+	local cumulative = 0
+	for i = 1, count do
+		local a, b = points[i], points[i % count + 1]
+		local dx, dz = b.x - a.x, b.z - a.z
+		local length = math.sqrt(dx * dx + dz * dz)
+		local pieces = math.max(1, math.floor(length / step))
+		for k = 0, pieces - 1 do
+			local t = k / pieces
+			samples[#samples + 1] = { x = a.x + dx * t, z = a.z + dz * t, s = cumulative + length * t }
+		end
+		cumulative += length
+	end
+	local total = cumulative
+	local minSeparation = 120
+	local maxDistance = railOffset * 2 + 1
+	local minDistance = 31
+
+	local chains = {}
+	local current = nil
+	for i, p in ipairs(samples) do
+		local bestDistance, bestIndex = math.huge, nil
+		for j, q in ipairs(samples) do
+			local ds = math.abs(p.s - q.s)
+			ds = math.min(ds, total - ds)
+			if ds > minSeparation then
+				local d = math.sqrt((p.x - q.x) ^ 2 + (p.z - q.z) ^ 2)
+				if d < bestDistance then bestDistance, bestIndex = d, j end
+			end
+		end
+		local accepted = false
+		-- Solo i < j: cada franja se detecta desde sus dos lados, usamos uno.
+		if bestIndex and bestIndex > i and bestDistance < maxDistance and bestDistance > minDistance then
+			local q = samples[bestIndex]
+			local mx, mz = (p.x + q.x) / 2, (p.z + q.z) / 2
+			if distanceToCenterline(mx, mz) >= safeDistance then
+				accepted = true
+				local mid = { x = mx, z = mz }
+				if current and i - current.last == 1 then
+					current.points[#current.points + 1] = mid
+					current.last = i
+				else
+					current = { points = { mid }, last = i }
+					chains[#chains + 1] = current
+				end
+			end
+		end
+		if not accepted then current = nil end
+	end
+
+	-- Extremos abiertos de las barandas exteriores.
+	local openEnds = {}
+	for _, chain in ipairs(railChains) do
+		openEnds[#openEnds + 1] = chain[1]
+		openEnds[#openEnds + 1] = chain[#chain]
+	end
+	local function connectionIsSafe(p, q)
+		local length = math.sqrt((q.x - p.x) ^ 2 + (q.z - p.z) ^ 2)
+		local pieces = math.max(1, math.ceil(length))
+		for k = 0, pieces do
+			local t = k / pieces
+			if distanceToCenterline(p.x + (q.x - p.x) * t, p.z + (q.z - p.z) * t) < safeDistance - 0.5 then
+				return false
+			end
+		end
+		return true
+	end
+	local function nearestEnd(p)
+		local best, bestDistance = nil, 30
+		for _, e in ipairs(openEnds) do
+			local d = math.sqrt((e.x - p.x) ^ 2 + (e.z - p.z) ^ 2)
+			if d < bestDistance and connectionIsSafe(p, e) then best, bestDistance = e, d end
+		end
+		return best
+	end
+
+	local result = {}
+	for _, c in ipairs(chains) do
+		local pts = c.points
+		if #pts >= 2 then
+			local first = nearestEnd(pts[1])
+			if first then table.insert(pts, 1, { x = first.x, z = first.z }) end
+			local last = nearestEnd(pts[#pts])
+			if last then pts[#pts + 1] = { x = last.x, z = last.z } end
+			result[#result + 1] = pts
+		end
+	end
+	return result
+end
+
 local function buildTestCourse()
 	if mapBuilt then return end
 	mapBuilt = true
@@ -830,9 +943,22 @@ local function buildTestCourse()
 		railCenterline[i] = { x = waypoints[i].X, z = waypoints[i].Z }
 	end
 
+	local railJobs = {}
+	local sideChains = {}
 	for sideIndex, side in ipairs({ -1, 1 }) do
-		local chains = computeGuardrailChains(railCenterline, guardrailOffset, side)
-		for chainIndex, chain in ipairs(chains) do
+		for chainIndex, chain in ipairs(computeGuardrailChains(railCenterline, guardrailOffset, side)) do
+			railJobs[#railJobs + 1] = { sideIndex = sideIndex, chainIndex = chainIndex, chain = chain }
+			sideChains[#sideChains + 1] = chain
+		end
+	end
+	-- Una sola baranda en el centro donde dos tramos de pista corren pegados.
+	for chainIndex, chain in ipairs(computeDividerChains(railCenterline, guardrailOffset, sideChains)) do
+		railJobs[#railJobs + 1] = { sideIndex = 3, chainIndex = chainIndex, chain = chain }
+	end
+
+	for _, job in ipairs(railJobs) do
+		do
+			local sideIndex, chainIndex, chain = job.sideIndex, job.chainIndex, job.chain
 			local cumulative = { 0 }
 			for k = 2, #chain do
 				local dx = chain[k].x - chain[k - 1].x
