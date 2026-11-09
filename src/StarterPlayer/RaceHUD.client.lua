@@ -306,44 +306,46 @@ local function drawTrack()
   mappedPoints[i] = mapPosition(worldPoint)
  end
 
+ -- Dibujar todos los bordes antes del asfalto evita uniones grises sin contorno.
  for i = 1, #mappedPoints - 1 do
-  local p1, p2 = mappedPoints[i], mappedPoints[i + 1]
-  table.insert(trackSegments, makeTrackStroke("TrackBorder", p1, p2, 20, borderColor, 1))
-  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", p1, p2, 14, asphaltColor, 2))
+  table.insert(trackSegments, makeTrackStroke("TrackBorder", mappedPoints[i], mappedPoints[i + 1], 20, borderColor, 1))
+ end
+ for i = 1, #mappedPoints - 1 do
+  table.insert(trackSegments, makeTrackStroke("TrackAsphalt", mappedPoints[i], mappedPoints[i + 1], 14, asphaltColor, 2))
  end
 
- -- Uniones circulares: suavizan las curvas y evitan esquinas dentadas.
+ -- Primero las uniones negras; luego las uniones del asfalto.
  for i = 1, #mappedPoints - 1 do
   local point = mappedPoints[i]
-  local borderJoin = Instance.new("Frame")
-  borderJoin.Name = "TrackBorderJoin"
-  borderJoin.AnchorPoint = Vector2.new(0.5, 0.5)
-  borderJoin.Position = UDim2.fromOffset(point.X, point.Y)
-  borderJoin.Size = UDim2.fromOffset(20, 20)
-  local borderJoinCorner = Instance.new("UICorner")
-  borderJoinCorner.CornerRadius = UDim.new(1, 0)
-  borderJoinCorner.Parent = borderJoin
-  borderJoin.BackgroundColor3 = borderColor
-  borderJoin.BackgroundTransparency = 0
-  borderJoin.BorderSizePixel = 0
-  borderJoin.ZIndex = 1
-  borderJoin.Parent = mapArea
-  table.insert(trackSegments, borderJoin)
-
-  local asphaltJoin = Instance.new("Frame")
-  asphaltJoin.Name = "TrackAsphaltJoin"
-  asphaltJoin.AnchorPoint = Vector2.new(0.5, 0.5)
-  asphaltJoin.Position = UDim2.fromOffset(point.X, point.Y)
-  asphaltJoin.Size = UDim2.fromOffset(14, 14)
-  local asphaltJoinCorner = Instance.new("UICorner")
-  asphaltJoinCorner.CornerRadius = UDim.new(1, 0)
-  asphaltJoinCorner.Parent = asphaltJoin
-  asphaltJoin.BackgroundColor3 = asphaltColor
-  asphaltJoin.BackgroundTransparency = 0
-  asphaltJoin.BorderSizePixel = 0
-  asphaltJoin.ZIndex = 2
-  asphaltJoin.Parent = mapArea
-  table.insert(trackSegments, asphaltJoin)
+  local join = Instance.new("Frame")
+  join.Name = "TrackBorderJoin"
+  join.AnchorPoint = Vector2.new(0.5, 0.5)
+  join.Position = UDim2.fromOffset(point.X, point.Y)
+  join.Size = UDim2.fromOffset(20, 20)
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(1, 0)
+  corner.Parent = join
+  join.BackgroundColor3 = borderColor
+  join.BorderSizePixel = 0
+  join.ZIndex = 1
+  join.Parent = mapArea
+  table.insert(trackSegments, join)
+ end
+ for i = 1, #mappedPoints - 1 do
+  local point = mappedPoints[i]
+  local join = Instance.new("Frame")
+  join.Name = "TrackAsphaltJoin"
+  join.AnchorPoint = Vector2.new(0.5, 0.5)
+  join.Position = UDim2.fromOffset(point.X, point.Y)
+  join.Size = UDim2.fromOffset(14, 14)
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(1, 0)
+  corner.Parent = join
+  join.BackgroundColor3 = asphaltColor
+  join.BorderSizePixel = 0
+  join.ZIndex = 2
+  join.Parent = mapArea
+  table.insert(trackSegments, join)
  end
 
  -- Meta: la pista cruza la recta principal en X=0, Z=70.
