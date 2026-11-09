@@ -182,6 +182,82 @@ end
 createRoomPad("RoomEntryPad_1vCPU", "1vCPU", "ENTRAR  |  1 VS COMPUTADORA", 48, cyan)
 createRoomPad("RoomEntryPad_1vUser", "1vUser", "ENTRAR  |  1 VS USUARIO", -48, red)
 
+-- Neon strips mounted directly under the exposed gray roof girders.
+-- Most stay steady; a few flicker irregularly for an underground race-garage mood.
+local function createBeamNeon(name, size, position, color, flicker)
+    local tube = part(name, size, position, color, Enum.Material.Neon)
+    tube.CanCollide = false
+    tube.CanTouch = false
+    tube.CanQuery = false
+
+    local glow = Instance.new("PointLight")
+    glow.Name = "BeamNeonGlow"
+    glow.Color = color
+    glow.Brightness = flicker and 1.25 or 1.8
+    glow.Range = flicker and 22 or 28
+    glow.Shadows = false
+    glow.Parent = tube
+
+    if flicker then
+        task.spawn(function()
+            while tube.Parent and model.Parent do
+                task.wait(math.random(18, 65) / 10)
+                -- Uneven short cuts, followed by a longer dim pulse.
+                local pulses = math.random(1, 3)
+                for _ = 1, pulses do
+                    if not tube.Parent then break end
+                    tube.Transparency = 0.82
+                    glow.Brightness = 0.08
+                    task.wait(math.random(5, 13) / 100)
+                    tube.Transparency = 0.08
+                    glow.Brightness = 1.5
+                    task.wait(math.random(7, 18) / 100)
+                end
+                tube.Transparency = 0.48
+                glow.Brightness = 0.45
+                task.wait(math.random(12, 30) / 100)
+                tube.Transparency = 0
+                glow.Brightness = 1.25
+            end
+        end)
+    end
+    return tube
+end
+
+-- Short segmented tubes follow the underside of the five long roof beams.
+for beamIndex, zOffset in ipairs({-88, -44, 0, 44, 88}) do
+    for segmentIndex, xOffset in ipairs({-82, -27, 27, 82}) do
+        local color = ((beamIndex + segmentIndex) % 3 == 0) and yellow or cyan
+        local flicker = (beamIndex == 2 and segmentIndex == 2)
+            or (beamIndex == 4 and segmentIndex == 3)
+            or (beamIndex == 5 and segmentIndex == 1)
+        createBeamNeon(
+            "BeamNeon_Long_" .. beamIndex .. "_" .. segmentIndex,
+            Vector3.new(39, 0.22, 0.72),
+            Vector3.new(x + xOffset, ceilingY - 2.12, z + zOffset),
+            color,
+            flicker
+        )
+    end
+end
+
+-- Cross-beam accents add depth overhead; selected sections pulse red/cyan.
+for beamIndex, xOffset in ipairs({-108, -54, 0, 54, 108}) do
+    for segmentIndex, zOffset in ipairs({-66, 0, 66}) do
+        local color = (segmentIndex == 2 and beamIndex % 2 == 0) and red or warmWhite
+        local flicker = (beamIndex == 1 and segmentIndex == 2)
+            or (beamIndex == 3 and segmentIndex == 1)
+            or (beamIndex == 5 and segmentIndex == 3)
+        createBeamNeon(
+            "BeamNeon_Cross_" .. beamIndex .. "_" .. segmentIndex,
+            Vector3.new(0.72, 0.22, 38),
+            Vector3.new(x + xOffset, ceilingY - 2.16, z + zOffset),
+            color,
+            flicker
+        )
+    end
+end
+
 -- Industrial overhead light rows and low wall strips. No outdoor sunlight is needed.
 for _, zOffset in ipairs({-82, -42, 0, 42, 82}) do
     for _, xOffset in ipairs({-82, -27, 27, 82}) do
