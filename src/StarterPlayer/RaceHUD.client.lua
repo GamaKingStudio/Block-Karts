@@ -11,6 +11,7 @@ local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
 local checkpointEvent = raceEvents:WaitForChild("CheckpointPassed")
 local lapEvent = raceEvents:WaitForChild("LapCompleted")
 local wrongWayEvent = raceEvents:WaitForChild("WrongWayStateChanged")
+local raceFinishedEvent = raceEvents:WaitForChild("RaceFinished")
 
 local previous = playerGui:FindFirstChild("BLOXYRaceHUD")
 if previous then previous:Destroy() end
@@ -143,6 +144,20 @@ local lapLabel = label(racePanel, "Lap", UDim2.new(1, -20, 0, 28), UDim2.fromOff
 local timerLabel = label(racePanel, "LapTimer", UDim2.new(0.5, -12, 0, 25), UDim2.fromOffset(8, 34), "00:00.00", 22, Color3.fromRGB(255, 220, 145), "Light")
 local bestLabel = label(racePanel, "BestLap", UDim2.new(0.5, -12, 0, 25), UDim2.new(0.5, 4, 0, 34), "MEJOR --:--.--", 15, Color3.fromRGB(220, 226, 235), "Light")
 local checkpointLabel = label(racePanel, "Checkpoint", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 70), "CHECKPOINT 0 / 26", 15, Color3.fromRGB(220, 226, 235), "Light")
+
+-- Pantalla de resultados: aparece al cruzar la meta en la última vuelta.
+local finishPanel = panel("RaceFinishedPanel", UDim2.fromOffset(430, 236), UDim2.new(0.5, -215, 0.5, -118))
+finishPanel.Visible = false
+finishPanel.ZIndex = 50
+local finishTitle = label(finishPanel, "FinishTitle", UDim2.new(1, -24, 0, 48), UDim2.fromOffset(12, 12), "¡CARRERA TERMINADA!", 29, Color3.fromRGB(255, 210, 90), "Title")
+local finishPosition = label(finishPanel, "FinishPosition", UDim2.new(1, -24, 0, 42), UDim2.fromOffset(12, 68), "1.er LUGAR", 27, Color3.fromRGB(245, 247, 250), "Bold")
+local finishBestLap = label(finishPanel, "FinishBestLap", UDim2.new(1, -24, 0, 32), UDim2.fromOffset(12, 122), "MEJOR VUELTA: --:--.--", 20, Color3.fromRGB(255, 220, 145), "Light")
+local finishTotalTime = label(finishPanel, "FinishTotalTime", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 164), "TIEMPO TOTAL: --:--.--", 18, Color3.fromRGB(220, 226, 235), "Light")
+for _, item in ipairs({ finishTitle, finishPosition, finishBestLap, finishTotalTime }) do
+ item.ZIndex = 51
+ item.TextStrokeColor3 = Color3.fromRGB(12, 16, 24)
+ item.TextStrokeTransparency = 0.08
+end
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(180, 66), UDim2.new(1, -202, 1, -88))
 local speedValue = label(speedPanel, "SpeedValue", UDim2.fromOffset(108, 62), UDim2.fromOffset(0, 0), "0", 46, nil, "Bold")
@@ -471,6 +486,17 @@ lapEvent.OnClientEvent:Connect(function(lap, lapTime, isBest)
  elseif bestLapTime then
   bestLabel.Text = "MEJOR " .. formatTime(bestLapTime)
  end
+end)
+
+raceFinishedEvent.OnClientEvent:Connect(function(position, bestTime, totalTime, resultText)
+ lapStartedAt = nil
+ wrongWayLabel.Visible = false
+ finishPosition.Text = position == 1 and "1.er LUGAR" or "2.º LUGAR"
+ finishPosition.TextColor3 = position == 1 and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(225, 235, 245)
+ finishBestLap.Text = "MEJOR VUELTA: " .. (bestTime and bestTime > 0 and formatTime(bestTime) or "--:--.--")
+ finishTotalTime.Text = "TIEMPO TOTAL: " .. formatTime(totalTime or 0)
+ finishTitle.Text = position == 1 and "¡CARRERA TERMINADA!" or "¡META ALCANZADA!"
+ finishPanel.Visible = true
 end)
 
 wrongWayEvent.OnClientEvent:Connect(function(isWrongWay)
