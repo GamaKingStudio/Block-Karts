@@ -613,14 +613,13 @@ local function computeGuardrailChains(points, offset, side)
 	return chains
 end
 
--- Baranda divisoria: donde dos partes NO consecutivas del circuito corren tan
--- juntas que no caben las barandas exteriores (borde a borde < 2 * 5 studs),
--- se coloca UNA sola baranda por la linea media entre ambas. Se limita a puntos
--- que quedan fuera del asfalto y se conecta con los extremos de las barandas.
+-- Baranda divisoria: se reserva un mínimo de 10 studs libres entre bordes
+-- de calzadas distintas. Con pista de 45 studs, sus ejes deben quedar a 55 studs
+-- o más; las curvas consecutivas del mismo trazado no se consideran otra calzada.
 local function computeDividerChains(points, railOffset, railChains)
 	local count = #points
 	local step = 3
-	local safeDistance = 24 -- borde de pista (22.5) + margen para el muro
+	local safeDistance = 24 -- 22.5 de semiancho + 1.5 de margen para mantener la baranda fuera del asfalto
 
 	local function distanceToCenterline(x, z)
 		local best = math.huge
@@ -652,7 +651,7 @@ local function computeDividerChains(points, railOffset, railChains)
 	local total = cumulative
 	local minSeparation = 120
 	local maxDistance = railOffset * 2 + 1
-	local minDistance = 47 -- evita divisores en separaciones menores al ancho de la nueva pista
+	local minDistance = 55 -- 45 de calzada + 10 libres entre bordes
 
 	local chains = {}
 	local current = nil
@@ -902,25 +901,26 @@ local function buildTestCourse()
 		Vector3.new(-50, yGround + 0.02, -95),
 		Vector3.new(-50, yGround + 0.02, -15),
 		Vector3.new(-25, yGround + 0.02, 10),
-		Vector3.new(0, yGround + 0.02, -15),
-		Vector3.new(0, yGround + 0.02, -85),
+		Vector3.new(10, yGround + 0.02, -15),
+		Vector3.new(10, yGround + 0.02, -85),
 		Vector3.new(45, yGround + 0.02, -105),
-		Vector3.new(85, yGround + 0.02, -65),
-		Vector3.new(125, yGround + 0.02, -10),
-		Vector3.new(125, yGround + 0.02, 35),
-		Vector3.new(170, yGround + 0.02, 45),
-		Vector3.new(205, yGround + 0.02, 85),
-		Vector3.new(215, yGround + 0.02, 135),
-		Vector3.new(185, yGround + 0.02, 180),
+		-- El sector este se desplaza hacia fuera para dejar espacio entre las calzadas.
+		Vector3.new(185, yGround + 0.02, -65),
+		Vector3.new(225, yGround + 0.02, -10),
+		Vector3.new(225, yGround + 0.02, 35),
+		Vector3.new(270, yGround + 0.02, 45),
+		Vector3.new(305, yGround + 0.02, 85),
+		Vector3.new(315, yGround + 0.02, 135),
+		Vector3.new(285, yGround + 0.02, 180),
 		Vector3.new(135, yGround + 0.02, 205),
 		Vector3.new(75, yGround + 0.02, 205),
 		Vector3.new(35, yGround + 0.02, 175),
-		Vector3.new(25, yGround + 0.02, 120),
-		Vector3.new(75, yGround + 0.02, 130),
+		Vector3.new(25, yGround + 0.02, 130),
+		Vector3.new(75, yGround + 0.02, 125),
 		Vector3.new(130, yGround + 0.02, 145),
-		Vector3.new(155, yGround + 0.02, 100),
-		Vector3.new(150, yGround + 0.02, 75),
-		Vector3.new(105, yGround + 0.02, 65),
+		Vector3.new(165, yGround + 0.02, 100),
+		Vector3.new(160, yGround + 0.02, 10),
+		Vector3.new(80, yGround + 0.02, 0),
 		Vector3.new(80, yGround + 0.02, 70),
 	}
 
@@ -1870,7 +1870,7 @@ local function buildTestCourse()
 	local debugTrans = KartConfig.DEBUG_CHECKPOINTS and 0.75 or 1
 	local triggerHeight = 15
 	local triggerThickness = 2
-	local triggerSpan = 60
+	local triggerSpan = trackWidth + 15
 
 	local finishCF = CFrame.lookAt(Vector3.new(gantryX, yGround + triggerHeight / 2, 70), Vector3.new(gantryX - 10, yGround + triggerHeight / 2, 70))
 	local finishPart = makePart(checkpointsFolder, "FinishLine", Vector3.new(triggerSpan, triggerHeight, triggerThickness), finishCF, Color3.fromRGB(255, 255, 255))
@@ -1892,21 +1892,21 @@ local function buildTestCourse()
 		{ pos = Vector3.new(0, yGround + triggerHeight / 2, -50),      target = Vector3.new(0, yGround + triggerHeight / 2, -85) },
 		{ pos = Vector3.new(22.5, yGround + triggerHeight / 2, -95),   target = Vector3.new(45, yGround + triggerHeight / 2, -105) },
 		{ pos = Vector3.new(65, yGround + triggerHeight / 2, -85),     target = Vector3.new(85, yGround + triggerHeight / 2, -65) },
-		{ pos = Vector3.new(105, yGround + triggerHeight / 2, -37.5),  target = Vector3.new(125, yGround + triggerHeight / 2, -10) },
-		{ pos = Vector3.new(125, yGround + triggerHeight / 2, 12.5),   target = Vector3.new(125, yGround + triggerHeight / 2, 35) },
-		{ pos = Vector3.new(147.5, yGround + triggerHeight / 2, 40),   target = Vector3.new(170, yGround + triggerHeight / 2, 45) },
-		{ pos = Vector3.new(187.5, yGround + triggerHeight / 2, 65),   target = Vector3.new(205, yGround + triggerHeight / 2, 85) },
-		{ pos = Vector3.new(210, yGround + triggerHeight / 2, 110),   target = Vector3.new(215, yGround + triggerHeight / 2, 135) },
-		{ pos = Vector3.new(200, yGround + triggerHeight / 2, 157.5), target = Vector3.new(185, yGround + triggerHeight / 2, 180) },
-		{ pos = Vector3.new(160, yGround + triggerHeight / 2, 192.5), target = Vector3.new(135, yGround + triggerHeight / 2, 205) },
-		{ pos = Vector3.new(105, yGround + triggerHeight / 2, 205),   target = Vector3.new(75, yGround + triggerHeight / 2, 205) },
-		{ pos = Vector3.new(55, yGround + triggerHeight / 2, 190),    target = Vector3.new(35, yGround + triggerHeight / 2, 175) },
-		{ pos = Vector3.new(30, yGround + triggerHeight / 2, 147.5),  target = Vector3.new(25, yGround + triggerHeight / 2, 120) },
-		{ pos = Vector3.new(50, yGround + triggerHeight / 2, 125),    target = Vector3.new(75, yGround + triggerHeight / 2, 130) },
-		{ pos = Vector3.new(102.5, yGround + triggerHeight / 2, 137.5), target = Vector3.new(130, yGround + triggerHeight / 2, 145) },
-		{ pos = Vector3.new(142.5, yGround + triggerHeight / 2, 122.5),target = Vector3.new(155, yGround + triggerHeight / 2, 100) },
-		{ pos = Vector3.new(152.5, yGround + triggerHeight / 2, 87.5), target = Vector3.new(150, yGround + triggerHeight / 2, 75) },
-		{ pos = Vector3.new(127.5, yGround + triggerHeight / 2, 70), target = Vector3.new(105, yGround + triggerHeight / 2, 65) },
+		{ pos = Vector3.new(205, yGround + triggerHeight / 2, -37.5), target = Vector3.new(225, yGround + triggerHeight / 2, -10) },
+		{ pos = Vector3.new(225, yGround + triggerHeight / 2, 12.5),  target = Vector3.new(225, yGround + triggerHeight / 2, 35) },
+		{ pos = Vector3.new(247.5, yGround + triggerHeight / 2, 40),  target = Vector3.new(270, yGround + triggerHeight / 2, 45) },
+		{ pos = Vector3.new(287.5, yGround + triggerHeight / 2, 65),  target = Vector3.new(305, yGround + triggerHeight / 2, 85) },
+		{ pos = Vector3.new(310, yGround + triggerHeight / 2, 110), target = Vector3.new(315, yGround + triggerHeight / 2, 135) },
+		{ pos = Vector3.new(300, yGround + triggerHeight / 2, 157.5), target = Vector3.new(285, yGround + triggerHeight / 2, 180) },
+		{ pos = Vector3.new(210, yGround + triggerHeight / 2, 192.5), target = Vector3.new(135, yGround + triggerHeight / 2, 205) },
+		{ pos = Vector3.new(105, yGround + triggerHeight / 2, 205), target = Vector3.new(75, yGround + triggerHeight / 2, 205) },
+		{ pos = Vector3.new(55, yGround + triggerHeight / 2, 190), target = Vector3.new(35, yGround + triggerHeight / 2, 175) },
+		{ pos = Vector3.new(30, yGround + triggerHeight / 2, 152.5), target = Vector3.new(25, yGround + triggerHeight / 2, 130) },
+		{ pos = Vector3.new(50, yGround + triggerHeight / 2, 127.5), target = Vector3.new(75, yGround + triggerHeight / 2, 125) },
+		{ pos = Vector3.new(102.5, yGround + triggerHeight / 2, 135), target = Vector3.new(130, yGround + triggerHeight / 2, 145) },
+		{ pos = Vector3.new(147.5, yGround + triggerHeight / 2, 122.5), target = Vector3.new(165, yGround + triggerHeight / 2, 100) },
+		{ pos = Vector3.new(162.5, yGround + triggerHeight / 2, 55), target = Vector3.new(160, yGround + triggerHeight / 2, 10) },
+		{ pos = Vector3.new(120, yGround + triggerHeight / 2, 5), target = Vector3.new(80, yGround + triggerHeight / 2, 0) },
 	}
 
 	for idx, def in ipairs(checkpointDefinitions) do
