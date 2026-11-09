@@ -2265,7 +2265,7 @@ local function createKart(player, spawnIndex)
 						-- Overlay conserva el color de la malla sin aplicar transparencia por alpha.
 						local surfaceAppearance = part:FindFirstChildOfClass("SurfaceAppearance")
 						if surfaceAppearance then
-							surfaceAppearance.AlphaMode = Enum.AlphaMode.Overlay
+							surfaceAppearance.AlphaMode = Enum.AlphaMode.Opaque
 						end
 					end
 					part.Anchored = false
