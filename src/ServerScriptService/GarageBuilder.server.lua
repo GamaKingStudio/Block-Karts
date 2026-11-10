@@ -122,8 +122,7 @@ local function displayKart(name, center, bodyColor)
     piece("FrontNose", Vector3.new(2.7, 0.32, 1.8), Vector3.new(0, 0.28, 3.35), bodyColor, Enum.Material.SmoothPlastic)
     piece("RearDeck", Vector3.new(4.1, 0.28, 1.3), Vector3.new(0, 0.42, -2.25), C.graphite, Enum.Material.Metal)
     piece("Seat", Vector3.new(1.55, 0.8, 1.5), Vector3.new(0, 0.72, -0.55), C.graphite, Enum.Material.SmoothPlastic)
-    piece("SteeringColumn", Vector3.new(0.14, 0.72, 0.14), Vector3.new(0, 0.68, 1.25), C.steel, Enum.Material.Metal)
-    piece("SteeringWheel", Vector3.new(1.05, 0.13, 0.13), Vector3.new(0, 1.04, 1.25), C.graphite, Enum.Material.Metal)
+    -- Sin columnas verticales expuestas en los karts decorativos junto al spawn.
 
     for side = -1, 1, 2 do
         for axle = -1, 1, 2 do
@@ -182,25 +181,32 @@ part("RightConcreteWall", Vector3.new(wallT, wallHeight, depth - wallT*2), Vecto
 -- Closed roller shutter and flush metal framing.
 part("GateFrameLeft", Vector3.new(2, wallHeight - 2, 2), Vector3.new(x - gateWidth/2 - 1, floorY + wallHeight/2, frontZ - 1), C.steel, Enum.Material.Metal, shell)
 part("GateFrameRight", Vector3.new(2, wallHeight - 2, 2), Vector3.new(x + gateWidth/2 + 1, floorY + wallHeight/2, frontZ - 1), C.steel, Enum.Material.Metal, shell)
-part("ExitGateShutter", Vector3.new(gateWidth, wallHeight - 4, 1.1), Vector3.new(x, floorY + wallHeight/2, frontZ - 2), C.graphite, Enum.Material.Metal, shell)
-for i = 1, 18 do
-    part("ShutterSlat_"..i, Vector3.new(gateWidth - 1, 0.12, 0.08),
-        Vector3.new(x, floorY + 3 + i * 1.2, frontZ - 2.62), C.wall, Enum.Material.Metal, shell).CanCollide = false
+local shutter = part("ExitGateShutter", Vector3.new(gateWidth, wallHeight - 4, 1.1),
+    Vector3.new(x, floorY + wallHeight/2, frontZ - 2), C.graphite, Enum.Material.Metal, shell)
+-- Lamas horizontales uniformes, sin solapamientos ni separaciones exageradas.
+for i = 0, 21 do
+    local slat = part("ShutterSlat_"..(i + 1), Vector3.new(gateWidth - 0.8, 0.34, 0.12),
+        Vector3.new(x, floorY + 2.8 + i * 1.08, frontZ - 2.62),
+        i % 2 == 0 and Color3.fromRGB(67, 74, 82) or Color3.fromRGB(52, 59, 67),
+        Enum.Material.Metal, shell)
+    slat.CanCollide = false
+    slat.CanTouch = false
+    slat.CanQuery = false
 end
 
--- Vinilo de clausura cruzado sobre la cortina metálica.
-local tapeSurfaceZ = frontZ - 2.82
-for index, angle in ipairs({-31, 31}) do
-    local tape = part("UndergroundClosureTape_"..index, Vector3.new(40, 1.55, 0.14),
+-- Vinilo de clausura: bandas diagonales y placa central en el mismo plano visual.
+local tapeSurfaceZ = frontZ - 2.78
+for index, angle in ipairs({-32, 32}) do
+    local tape = part("UndergroundClosureTape_"..index, Vector3.new(31, 1.2, 0.12),
         CFrame.new(x, floorY + wallHeight/2, tapeSurfaceZ) * CFrame.Angles(0, 0, math.rad(angle)),
-        Color3.fromRGB(220, 42, 48), Enum.Material.SmoothPlastic, shell)
+        Color3.fromRGB(218, 39, 45), Enum.Material.SmoothPlastic, shell)
     tape.CanCollide = false
     tape.CanTouch = false
     tape.CanQuery = false
 end
-local closurePlate = part("UndergroundGarageVinyl", Vector3.new(22, 4.2, 0.3),
-    Vector3.new(x, floorY + wallHeight/2, tapeSurfaceZ - 0.16),
-    C.graphite, Enum.Material.SmoothPlastic, shell)
+local closurePlate = part("UndergroundGarageVinyl", Vector3.new(23, 3.6, 0.18),
+    Vector3.new(x, floorY + wallHeight/2, frontZ - 3.02),
+    Color3.fromRGB(25, 29, 35), Enum.Material.SmoothPlastic, shell)
 closurePlate.CanCollide = false
 closurePlate.CanTouch = false
 closurePlate.CanQuery = false
@@ -208,18 +214,19 @@ local closureGui = Instance.new("SurfaceGui")
 closureGui.Name = "UndergroundGarageDisplay"
 closureGui.Face = Enum.NormalId.Front
 closureGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-closureGui.PixelsPerStud = 35
+closureGui.PixelsPerStud = 20
 closureGui.LightInfluence = 0
+closureGui.AlwaysOnTop = false
 closureGui.Parent = closurePlate
 local closureText = Instance.new("TextLabel")
 closureText.Name = "UndergroundGarageText"
 closureText.Size = UDim2.fromScale(1, 1)
-closureText.BackgroundColor3 = C.graphite
-closureText.BackgroundTransparency = 0.05
+closureText.BackgroundTransparency = 1
 closureText.BorderSizePixel = 0
 closureText.Text = "UNDERGROUND GARAGE"
-closureText.TextColor3 = Color3.fromRGB(255, 235, 190)
+closureText.TextColor3 = Color3.fromRGB(255, 238, 205)
 closureText.TextScaled = true
+closureText.TextWrapped = true
 closureText.Font = Enum.Font.GothamBlack
 closureText.Parent = closureGui
 wallSign("ExitGateSign", "TRACK ACCESS", "SALIDA A PISTA", Vector3.new(25, 3.5, 0.7),
