@@ -19,7 +19,7 @@ local function part(name, size, position, color, material, parent, shape)
     local p = Instance.new("Part")
     p.Name = name
     p.Size = size
-    p.Position = position
+    if typeof(position) == "CFrame" then p.CFrame = position else p.Position = position end
     p.Anchored = true
     p.TopSurface = Enum.SurfaceType.Smooth
     p.BottomSurface = Enum.SurfaceType.Smooth
@@ -111,6 +111,7 @@ local shell = Instance.new("Folder")
 shell.Name = "GarageBuilding"
 shell.Parent = model
 part("RearConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, rearZ), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
+local gateCenterX, gateWidth = x, 34
 local frontSideWidth=(width-gateWidth)/2
 part("FrontConcreteWall_Left",Vector3.new(frontSideWidth,wallH,wallT),Vector3.new(x-(gateWidth/2+frontSideWidth/2),floorY+wallH/2,frontZ),Color3.fromRGB(55,58,62),Enum.Material.Concrete,shell)
 part("FrontConcreteWall_Right",Vector3.new(frontSideWidth,wallH,wallT),Vector3.new(x+(gateWidth/2+frontSideWidth/2),floorY+wallH/2,frontZ),Color3.fromRGB(55,58,62),Enum.Material.Concrete,shell)
@@ -120,14 +121,13 @@ part("LeftConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new
 part("RightConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x+halfW-wallT/2, floorY+wallH/2, z), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
 
 -- Fully closed corrugated-metal shutter on the front (+Z) wall.
-local gateCenterX, gateWidth = x, 34
 part("ExitGateFrameLeft", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX-gateWidth/2-1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
 part("ExitGateFrameRight", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX+gateWidth/2+1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
 part("ExitGateShutter", Vector3.new(gateWidth, wallH-4, 1.2), Vector3.new(gateCenterX, floorY+wallH/2, frontZ-2.2), Color3.fromRGB(35,37,40), Enum.Material.Metal, shell)
 for i=1,22 do
  part("ExitShutterRib_"..i, Vector3.new(0.22,wallH-4,0.18),
   Vector3.new(gateCenterX-gateWidth/2+1+(i-1)*(gateWidth-2)/21,floorY+wallH/2,frontZ-2.9),
-  Color3.fromRGB(70,74,78),Enum.Material.CorrugatedMetal,shell)
+  Color3.fromRGB(70,74,78),Enum.Material.Metal,shell)
 end
 sign("ExitGateSign","SALIDA A PISTA",Vector3.new(25,3,0.6),Vector3.new(gateCenterX,floorY+wallH-3.1,frontZ-3.2),black,red)
 for _,side in ipairs({-1,1}) do
@@ -297,6 +297,11 @@ for _, zOff in ipairs({-42,0,42}) do
             Vector3.new(x+xOff,ceilingY-3.2,z+zOff), white)
         local light = lamp:FindFirstChildOfClass("PointLight")
         if light then light.Brightness, light.Range = 1.5, 28 end
+        local spot=Instance.new("SpotLight")
+        spot.Angle=80; spot.Brightness=2; spot.Range=40
+        spot.Color=Color3.fromRGB(220,235,255)
+        spot.Face=Enum.NormalId.Bottom
+        spot.Parent=lamp
     end
 end
 
