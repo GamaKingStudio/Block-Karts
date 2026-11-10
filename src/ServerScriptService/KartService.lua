@@ -1236,12 +1236,12 @@ local function buildTestCourse()
 
 
 	-- ==========================================================
-	-- PIANOS ROJO/BLANCO: recorrido paralelo cerrado con esquinas redondeadas.
+	-- PIANOS ROJO/BLANCO: cadenas recortadas contra el eje de la pista.
+	-- Esto elimina los cruces de bordillos en la bifurcación interior con forma de Y.
 	local curbWidth = 1.6
 	local curbHeight = 0.14
-	-- La cara interior del piano coincide con el borde del asfalto.
-	local curbEdgeOffset = curbWidth / 2
 	local curbTileLength = 1.25
+	local curbOffset = trackWidth / 2 + curbWidth / 2
 	local guardrailOffset = trackWidth / 2 + 5.0
 	local guardrailPostSpacing = 8.0
 	local guardrailPostHeight = 1.75
@@ -1252,119 +1252,47 @@ local function buildTestCourse()
 	local C_GUARDRAIL = Color3.fromRGB(155, 165, 172)
 	local C_GUARDRAIL_DARK = Color3.fromRGB(95, 105, 112)
 
-	local function curbDirection(a, b)
-		local v = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
-		return v.Magnitude > 0.001 and v.Unit or Vector3.new(0, 0, -1)
+	local uniqueCount = #waypoints - 1
+	local curbCenterline = {}
+	for i = 1, uniqueCount do
+		curbCenterline[i] = { x = waypoints[i].X, z = waypoints[i].Z }
 	end
 
-	local uniqueCount = #waypoints - 1
-	local curbOffset = trackWidth / 2 + curbEdgeOffset
-
 	for sideIndex, side in ipairs({ -1, 1 }) do
-		local pathPoints = {}
-		local function appendPoint(point)
-			local previous = pathPoints[#pathPoints]
-			if not previous or (point - previous).Magnitude > 0.015 then
-				pathPoints[#pathPoints + 1] = point
+		local curbChains = computeGuardrailChains(curbCenterline, curbOffset, side)
+		local tileSequence = 0
+		for _, chain in ipairs(curbChains) do
+			local cumulative = { 0 }
+			for i = 2, #chain do
+				local dx, dz = chain[i].x-chain[i-1].x, chain[i].z-chain[i-1].z
+				cumulative[i] = cumulative[i-1] + math.sqrt(dx*dx + dz*dz)
 			end
-		end
-
-		for i = 1, uniqueCount do
-			local previousIndex = (i - 2) % uniqueCount + 1
-			local nextIndex = i % uniqueCount + 1
-			local incoming = curbDirection(waypoints[previousIndex], waypoints[i])
-			local outgoing = curbDirection(waypoints[i], waypoints[nextIndex])
-			local normalIn = Vector3.new(-incoming.Z, 0, incoming.X) * side
-			local normalOut = Vector3.new(-outgoing.Z, 0, outgoing.X) * side
-			local turnsToward = normalIn:Dot(outgoing) > 0
-
-			if turnsToward then
-				-- Lado interior: conserva la intersección geométrica de ambos
-				-- bordes paralelos y redondea solo la punta inmediata del inglete.
-				local bisector = normalIn + normalOut
-				if bisector.Magnitude < 0.001 then
-					bisector = normalOut
-				else
-					bisector = bisector.Unit
+			local totalLength = cumulative[#cumulative]
+			local tileCount = math.max(1, math.ceil(totalLength / curbTileLength))
+			local actualTileLength = totalLength / tileCount
+			local segmentIndex = 1
+			for tileIndex = 1, tileCount do
+				tileSequence += 1
+				local distance = (tileIndex - 0.5) * actualTileLength
+				while segmentIndex < #chain-1 and cumulative[segmentIndex+1] < distance do
+					segmentIndex += 1
 				end
-				local denominator = math.max(math.abs(bisector:Dot(normalOut)), 0.25)
-				local miterDistance = math.min(curbOffset / denominator, curbOffset * 1.8)
-				local corner = waypoints[i] + bisector * miterDistance
-				local incomingLength = (waypoints[i] - waypoints[previousIndex]).Magnitude
-				local outgoingLength = (waypoints[nextIndex] - waypoints[i]).Magnitude
-				local tangentDistance = math.min(2.5, incomingLength * 0.15, outgoingLength * 0.15)
-				local curveStart = corner - incoming * tangentDistance
-				local curveEnd = corner + outgoing * tangentDistance
-				appendPoint(Vector3.new(curveStart.X, yGround + 0.13, curveStart.Z))
-				for step = 1, 8 do
-					local t = step / 8
-					local oneMinusT = 1 - t
-					local point = curveStart * (oneMinusT * oneMinusT)
-						+ corner * (2 * oneMinusT * t)
-						+ curveEnd * (t * t)
-					appendPoint(Vector3.new(point.X, yGround + 0.13, point.Z))
-				end
-			else
-				-- Lado exterior: arco circular real alrededor del vértice.
-				-- Evita que un inglete corto forme una punta que sobresalga
-				-- hacia el asfalto o hacia fuera de la calzada.
-				local angleStart = math.atan2(normalIn.Z, normalIn.X)
-				local angleEnd = math.atan2(normalOut.Z, normalOut.X)
-				local delta = angleEnd - angleStart
-				while delta > math.pi do delta -= 2 * math.pi end
-				while delta < -math.pi do delta += 2 * math.pi end
-				local steps = math.max(2, math.ceil(math.abs(delta) / math.rad(8)))
-				for step = 0, steps do
-					local angle = angleStart + delta * (step / steps)
-					local point = waypoints[i] + Vector3.new(
-						math.cos(angle) * curbOffset,
-						0.13,
-						math.sin(angle) * curbOffset
-					)
-					appendPoint(point)
-				end
+				local a, b = chain[segmentIndex], chain[segmentIndex+1]
+				local segLength = cumulative[segmentIndex+1] - cumulative[segmentIndex]
+				local alpha = segLength > 0.001 and math.clamp((distance-cumulative[segmentIndex])/segLength,0,1) or 0
+				local center = Vector3.new(a.x+(b.x-a.x)*alpha, yGround+0.13, a.z+(b.z-a.z)*alpha)
+				local direction = Vector3.new(b.x-a.x,0,b.z-a.z)
+				if direction.Magnitude > 0.001 then direction = direction.Unit else direction = Vector3.new(0,0,-1) end
+				local tile = makePart(
+					course,
+					("Kerb_%d_%d"):format(sideIndex,tileSequence),
+					Vector3.new(curbWidth,curbHeight,math.max(0.1,actualTileLength-0.025)),
+					CFrame.lookAt(center,center+direction),
+					guardrailColors[((tileSequence-1)%#guardrailColors)+1],
+					Enum.Material.SmoothPlastic
+				)
+				tile.CanCollide, tile.CanTouch, tile.CanQuery = false,false,false
 			end
-		end
-
-		if #pathPoints > 2 then appendPoint(pathPoints[1]) end
-		local cumulative = { 0 }
-		for i = 2, #pathPoints do
-			cumulative[i] = cumulative[i - 1] + (pathPoints[i] - pathPoints[i - 1]).Magnitude
-		end
-		local totalLength = cumulative[#cumulative]
-
-		local function pointAtDistance(distance)
-			distance = distance % totalLength
-			for i = 2, #cumulative do
-				if distance <= cumulative[i] then
-					local segmentLength = cumulative[i] - cumulative[i - 1]
-					local alpha = segmentLength > 0.001 and (distance - cumulative[i - 1]) / segmentLength or 0
-					return pathPoints[i - 1]:Lerp(pathPoints[i], alpha)
-				end
-			end
-			return pathPoints[1]
-		end
-
-		local tileCount = math.max(1, math.floor(totalLength / curbTileLength))
-		local actualTileLength = totalLength / tileCount
-		for tileIndex = 1, tileCount do
-			local distance = (tileIndex - 0.5) * actualTileLength
-			local center = pointAtDistance(distance)
-			local before = pointAtDistance(distance - actualTileLength * 0.45)
-			local after = pointAtDistance(distance + actualTileLength * 0.45)
-			local direction = after - before
-			if direction.Magnitude > 0.001 then direction = direction.Unit else direction = Vector3.new(0, 0, -1) end
-			local tile = makePart(
-				course,
-				("Kerb_%d_%d"):format(sideIndex, tileIndex),
-				Vector3.new(curbWidth, curbHeight, math.max(0.1, actualTileLength - 0.025)),
-				CFrame.lookAt(center, center + direction),
-				guardrailColors[((tileIndex - 1) % #guardrailColors) + 1],
-				Enum.Material.SmoothPlastic
-			)
-			tile.CanCollide = false
-			tile.CanTouch = false
-			tile.CanQuery = false
 		end
 	end
 
@@ -2139,23 +2067,71 @@ local function buildTestCourse()
 		spawnSurfboard(worldPos, placement.rot, placement.lean, placement.scale)
 	end
 
-	-- LIMPIEZA VISUAL: esta versión conserva únicamente el trazado,
-	-- sus pianos, las barras de contención y el arco de meta.
-	-- Todo el atrezo y la ambientación de playa se retiran del circuito.
+	-- Caseta de salvavidas importada (asset solicitado).
+	local LIFEGUARD_ASSET_ID = 79023241633025
+	local lifeguardOk, lifeguardAssetOrError = pcall(function()
+		return InsertService:LoadAsset(LIFEGUARD_ASSET_ID)
+	end)
+	if lifeguardOk and lifeguardAssetOrError then
+		local loadedLifeguard = lifeguardAssetOrError
+		local source = loadedLifeguard:IsA("Model") and loadedLifeguard or loadedLifeguard:FindFirstChildWhichIsA("Model", true)
+		if source then
+			local station = source:Clone()
+			station.Name = "LifeguardStation"
+			station.Parent = course
+			local _, bounds = station:GetBoundingBox()
+			local longest = math.max(bounds.X,bounds.Y,bounds.Z)
+			if longest > 0.01 then
+				local ok, err = pcall(function() station:ScaleTo(18/longest) end)
+				if ok then
+					local boxCF, boxSize = station:GetBoundingBox()
+					local pivotToBox = station:GetPivot():ToObjectSpace(boxCF)
+					local targetBox = CFrame.new(-205,yGround+boxSize.Y/2,105) * CFrame.Angles(0,math.rad(90),0)
+					station:PivotTo(targetBox*pivotToBox:Inverse())
+					for _, part in ipairs(station:GetDescendants()) do
+						if part:IsA("BasePart") then
+							part.Anchored=true
+							part.CanCollide=false
+							part.CanTouch=false
+							part.CanQuery=false
+						end
+					end
+					print(("[BLOXY-KART][LIFEGUARD] Caseta cargada desde asset %d."):format(LIFEGUARD_ASSET_ID))
+				else
+					warn("[BLOXY-KART][LIFEGUARD] No se pudo escalar el modelo: "..tostring(err))
+					station:Destroy()
+				end
+			else
+				station:Destroy()
+			end
+		else
+			warn(("[BLOXY-KART][LIFEGUARD] El asset %d no contiene un Model utilizable."):format(LIFEGUARD_ASSET_ID))
+		end
+		loadedLifeguard:Destroy()
+	else
+		warn(("[BLOXY-KART][LIFEGUARD] No se pudo cargar el asset %d: %s"):format(LIFEGUARD_ASSET_ID,tostring(lifeguardAssetOrError)))
+	end
+
+	-- LIMPIEZA VISUAL: conservar arena, trazado y únicamente los nuevos assets de playa.
+	-- El borrado anterior eliminaba IslandSand y dejaba visible el océano/baseplate azul.
 	local function isCoreTrackElement(instance)
 		local name = instance.Name
-		return name:match("^RoadSeg_%d+$") ~= nil
+		return name == "IslandSand"
+			or name:match("^RoadSeg_%d+$") ~= nil
 			or name:match("^CornerHub_%d+$") ~= nil
 			or name == "DashLine"
 			or name:match("^Kerb_%d+_%d+$") ~= nil
 			or name:match("^Guardrail") ~= nil
 			or name == "ImportedFinishStructure"
+			or name == "Palm"
+			or name == "Palm_ProceduralFallback"
+			or name == "BeachLounger"
+			or name == "Surfboard"
+			or name == "LifeguardStation"
 	end
 
 	for _, child in ipairs(course:GetChildren()) do
-		if not isCoreTrackElement(child) then
-			child:Destroy()
-		end
+		if not isCoreTrackElement(child) then child:Destroy() end
 	end
 
 	-- Checkpoints
