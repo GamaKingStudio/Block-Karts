@@ -310,15 +310,11 @@ end
 leaderboardBoard("WinsBoard", "MOST WINS", Vector3.new(x - 29, floorY + 20, rearZ + 2), C.cyan)
 leaderboardBoard("TimesBoard", "BEST LAP TIMES", Vector3.new(x + 29, floorY + 20, rearZ + 2), C.amber)
 
--- Player gathering area and ten unobtrusive spawn markers.
+-- Player gathering area: keep the ten invisible spawn points, without visible floor discs.
 for row = 1, 2 do
     for col = 1, 5 do
         local sx = x + (col - 3) * 10
         local sz = z - 57 + (row - 1) * 13
-        local disc = part("SpawnDisc_"..row.."_"..col, Vector3.new(5.5, 0.35, 5.5),
-            Vector3.new(sx, floorY + 0.42, sz), C.wallDark, Enum.Material.Metal, nil, Enum.PartType.Cylinder)
-        disc.Orientation = Vector3.new(0, 0, 90)
-        disc.CanCollide = true
         local spawn = Instance.new("SpawnLocation")
         spawn.Name = "PlayerSpawn_"..row.."_"..col
         spawn.Size = Vector3.new(5, 0.3, 5)
