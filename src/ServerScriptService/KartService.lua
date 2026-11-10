@@ -2122,6 +2122,100 @@ local function buildTestCourse()
 		return true
 	end
 
+	-- Segundo asset decorativo solicitado: se carga una vez y se clona en
+	-- claros de arena, manteniendo sus mallas y texturas originales.
+	local BEACH_PROP_ASSET_ID = 374942072898
+	local beachPropTemplate = nil
+	local beachPropLoadOk, beachPropAssetOrError = pcall(function()
+		return InsertService:LoadAsset(BEACH_PROP_ASSET_ID)
+	end)
+	if beachPropLoadOk and beachPropAssetOrError then
+		local loadedProp = beachPropAssetOrError
+		local candidate = loadedProp:IsA("Model") and loadedProp or loadedProp:FindFirstChildWhichIsA("Model", true)
+		if candidate and #candidate:GetDescendants() > 0 then
+			beachPropTemplate = candidate:Clone()
+			beachPropTemplate.Name = "BeachPropTemplate"
+		else
+			warn(("[BLOXY-KART][BEACH-PROP] El asset %d cargó, pero no contiene un Model utilizable."):format(BEACH_PROP_ASSET_ID))
+		end
+		loadedProp:Destroy()
+	else
+		warn(("[BLOXY-KART][BEACH-PROP] No se pudo cargar el asset %d: %s"):format(BEACH_PROP_ASSET_ID, tostring(beachPropAssetOrError)))
+	end
+
+	local function spawnRandomBeachProp(template, assetName, x, z, yaw, targetSize, tint)
+		if not template then return false end
+		local model = template:Clone()
+		model.Name = assetName
+		model:SetAttribute("GeneratedByKartService", true)
+		model.Parent = course
+		local _, originalSize = model:GetBoundingBox()
+		local longest = math.max(originalSize.X, originalSize.Y, originalSize.Z)
+		if longest <= 0.01 then
+			model:Destroy()
+			return false
+		end
+		local scaled, scaleError = pcall(function()
+			model:ScaleTo(targetSize / longest)
+		end)
+		if not scaled then
+			warn(("[BLOXY-KART][BEACH-PROP] No se pudo escalar %s: %s"):format(assetName, tostring(scaleError)))
+			model:Destroy()
+			return false
+		end
+		for _, descendant in ipairs(model:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				if tint then descendant.Color = tint end
+				descendant.Anchored = true
+				descendant.CanCollide = false
+				descendant.CanTouch = false
+				descendant.CanQuery = false
+				descendant.Massless = true
+			end
+		end
+		local boxCFrame, boxSize = model:GetBoundingBox()
+		local pivotToBox = model:GetPivot():ToObjectSpace(boxCFrame)
+		local targetBox = CFrame.new(x, yGround + boxSize.Y / 2, z)
+			* CFrame.Angles(0, math.rad(yaw), 0)
+		model:PivotTo(targetBox * pivotToBox:Inverse())
+		return true
+	end
+
+	local randomPropCount, randomBoardCount, randomAttempts = 0, 0, 0
+	local randomBeach = Random.new(20261110)
+	while randomPropCount < 5 and randomAttempts < 240 do
+		randomAttempts += 1
+		local x = randomBeach:NextNumber(SAND_X_MIN + 45, SAND_X_MAX - 45)
+		local z = randomBeach:NextNumber(SAND_Z_MIN + 45, SAND_Z_MAX - 45)
+		if beachPropTemplate and distanceToTrack(x, z) < 145 and isFree(x, z, 6) then
+			if spawnRandomBeachProp(beachPropTemplate, "RandomBeachProp", x, z,
+					randomBeach:NextNumber(0, 360), randomBeach:NextNumber(7, 10)) then
+				randomPropCount += 1
+				reserve(x, z, 6)
+			end
+		end
+	end
+
+	local boardAttempts = 0
+	while randomBoardCount < 5 and boardAttempts < 240 do
+		boardAttempts += 1
+		local x = randomBeach:NextNumber(SAND_X_MIN + 45, SAND_X_MAX - 45)
+		local z = randomBeach:NextNumber(SAND_Z_MIN + 45, SAND_Z_MAX - 45)
+		if surfboardTemplate and distanceToTrack(x, z) < 145 and isFree(x, z, 5) then
+			if spawnRandomBeachProp(surfboardTemplate, "RandomSurfboard", x, z,
+					randomBeach:NextNumber(0, 360), randomBeach:NextNumber(7, 9),
+					surfboardColors[surfboardRandom:NextInteger(1, #surfboardColors)]) then
+				randomBoardCount += 1
+				reserve(x, z, 5)
+			end
+		end
+	end
+	if randomPropCount > 0 or randomBoardCount > 0 then
+		print(("[BLOXY-KART][BEACH-PROP] Decoración aleatoria en arena: %d props (asset %d), %d tablas (asset %d).")
+			:format(randomPropCount, BEACH_PROP_ASSET_ID, randomBoardCount, SURFBOARD_ASSET_ID))
+	end
+	if beachPropTemplate then beachPropTemplate:Destroy() end
+
 	-- Centro de referencia del circuito Beach Resort (derivado del trazado de waypoints).
 	-- Las tablas se distribuyen en claros perimetrales visibles desde la pista, sin invadir asfalto ni barreras.
 	local TRACK_CENTER = Vector3.new(5, yGround, -15)
