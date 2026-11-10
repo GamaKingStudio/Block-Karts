@@ -710,7 +710,7 @@ local wheelSpinByKart = setmetatable({}, { __mode = "k" })
 
 -- Reaplica la opacidad del kart del jugador mientras conduce. Roblox puede
 -- cambiar LocalTransparencyModifier al resolver la oclusión de cámara.
-RunService:BindToRenderStep("BLOXYKartRestoreBodyVisibility", Enum.RenderPriority.Last.Value, function()
+RunService:BindToRenderStep("BLOXYKartRestoreBodyVisibility", Enum.RenderPriority.Last.Value + 1, function()
 	if not currentSeat or not currentSeat.Parent then return end
 	local kart = getKartFromSeat(currentSeat)
 	-- En móvil la cámara puede aplicar transparencia local a piezas fuera de
