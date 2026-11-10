@@ -148,10 +148,12 @@ local frontZ = z + halfD - wallT / 2
 local rearZ = z - halfD + wallT / 2
 
 -- Restrained global lighting: the integrated garage lights do most of the work.
-Lighting.Ambient = Color3.fromRGB(93, 101, 111)
-Lighting.OutdoorAmbient = Color3.fromRGB(75, 83, 94)
-Lighting.Brightness = 2
-Lighting.ClockTime = 0
+-- Mantener luz de día en todo el circuito: este script corre junto al constructor de pista.
+Lighting.Ambient = Color3.fromRGB(150, 158, 170)
+Lighting.OutdoorAmbient = Color3.fromRGB(180, 190, 205)
+Lighting.Brightness = 3
+Lighting.ExposureCompensation = 0.12
+Lighting.ClockTime = 13.6
 Lighting.GlobalShadows = true
 local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
 atmosphere.Density = 0.025
