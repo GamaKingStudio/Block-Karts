@@ -232,7 +232,7 @@ closureText.Parent = closureGui
 wallSign("ExitGateSign", "TRACK ACCESS", "SALIDA A PISTA", Vector3.new(25, 3.5, 0.7),
     Vector3.new(x, floorY + wallHeight - 3.2, frontZ - 3), C.amber, Vector3.new(x, floorY + 12, z))
 
--- Structural columns and exposed beams, kept aligned and visually consistent.
+-- Structural columns: continuous side bays plus a symmetric exposed rear frame.
 for _, xOff in ipairs({-56, -28, 0, 28, 56}) do
     for _, zOff in ipairs({-76, 0, 76}) do
         if not (xOff == 0 and (zOff == 0 or zOff == 76 or zOff == -76)) then
@@ -241,14 +241,40 @@ for _, xOff in ipairs({-56, -28, 0, 28, 56}) do
         end
     end
 end
+
+-- Exposed steel portal frame on the rear wall, mirrored left/right.
+local rearFrameZ = rearZ + 2.45
+for _, xOff in ipairs({-56, -28, 0, 28, 56}) do
+    part("RearSteelColumn_"..xOff, Vector3.new(0.85, wallHeight - 2, 0.9),
+        Vector3.new(x + xOff, floorY + wallHeight/2, rearFrameZ), C.steel, Enum.Material.Metal, shell)
+end
+for _, heightOff in ipairs({4, 26}) do
+    part("RearSteelCrossBeam_"..heightOff, Vector3.new(width - 8, 0.9, 0.9),
+        Vector3.new(x, floorY + heightOff, rearFrameZ), C.steel, Enum.Material.Metal, shell)
+end
+-- Short matching braces make the rear structure read as a warehouse truss.
+for _, side in ipairs({-1, 1}) do
+    for _, level in ipairs({-1, 1}) do
+        local startX = x + side * 56
+        local endX = x + side * 28
+        local startY = floorY + (level == -1 and 4 or 26)
+        local endY = floorY + (level == -1 and 26 or 4)
+        local mid = Vector3.new((startX + endX)/2, (startY + endY)/2, rearFrameZ)
+        local length = math.sqrt((endX - startX)^2 + (endY - startY)^2)
+        local angle = math.atan2(endY - startY, endX - startX)
+        part("RearSteelBrace_"..side.."_"..level, Vector3.new(length, 0.65, 0.75),
+            CFrame.new(mid) * CFrame.Angles(0, 0, angle), C.steel, Enum.Material.Metal, shell)
+    end
+end
+
 part("GarageRoof", Vector3.new(width + 6, 4, depth + 6), Vector3.new(x, ceilingY + 2, z), C.graphite, Enum.Material.Concrete, shell)
 for _, zOff in ipairs({-64, -32, 0, 32, 64}) do
-    part("RoofBeam_"..zOff, Vector3.new(width - 8, 1.1, 1.6),
-        Vector3.new(x, ceilingY - 1.1, z + zOff), C.graphite, Enum.Material.Metal, shell)
+    part("RoofBeam_"..zOff, Vector3.new(width - 8, 1.35, 1.8),
+        Vector3.new(x, ceilingY - 1.1, z + zOff), C.steel, Enum.Material.Metal, shell)
 end
 for _, xOff in ipairs({-40, 0, 40}) do
-    part("CrossBeam_"..xOff, Vector3.new(1.6, 1.1, depth - 12),
-        Vector3.new(x + xOff, ceilingY - 1.1, z), C.graphite, Enum.Material.Metal, shell)
+    part("CrossBeam_"..xOff, Vector3.new(1.8, 1.35, depth - 12),
+        Vector3.new(x + xOff, ceilingY - 1.1, z), C.steel, Enum.Material.Metal, shell)
 end
 
 -- Integrated white ceiling strips and soft cyan perimeter lighting.
@@ -268,7 +294,7 @@ wallSign("ReceptionSign", "BLOXY KARTS", "COMPETITION PADDOCK", Vector3.new(38, 
     Vector3.new(x, floorY + wallHeight - 7, rearZ + 2), C.cyan, Vector3.new(x, floorY + 12, z))
 
 local function leaderboardBoard(name, title, position, accent)
-    local board = part(name, Vector3.new(28, 8, 0.8), position, C.graphite, Enum.Material.Metal)
+    local board = part(name, Vector3.new(20, 7, 0.8), position, C.graphite, Enum.Material.Metal)
     local gui = Instance.new("SurfaceGui")
     gui.Name = "LeaderboardDisplay"
     gui.Face = Enum.NormalId.Back
@@ -307,8 +333,9 @@ local function leaderboardBoard(name, title, position, accent)
     end
     return board
 end
-leaderboardBoard("WinsBoard", "MOST WINS", Vector3.new(x - 29, floorY + 20, rearZ + 2), C.cyan)
-leaderboardBoard("TimesBoard", "BEST LAP TIMES", Vector3.new(x + 29, floorY + 20, rearZ + 2), C.amber)
+-- Los tableros quedan centrados en los dos vanos exteriores, sin tapar las columnas.
+leaderboardBoard("WinsBoard", "MOST WINS", Vector3.new(x - 42, floorY + 18, rearZ + 3.1), C.cyan)
+leaderboardBoard("TimesBoard", "BEST LAP TIMES", Vector3.new(x + 42, floorY + 18, rearZ + 3.1), C.amber)
 
 -- Player gathering area: keep the ten invisible spawn points, without visible floor discs.
 for row = 1, 2 do
