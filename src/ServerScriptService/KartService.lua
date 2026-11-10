@@ -151,7 +151,7 @@ task.spawn(function()
  local allPadsLogged = false
 
  -- El constructor puede reemplazar BlockKartsGarage después de iniciar este
- -- servicio. Por eso buscamos el modelo y sus pads continuamente, no una sola vez.
+ -- servicio. Buscamos el modelo y sus pads continuamente, no una sola vez.
  while true do
   local garage = Workspace:FindFirstChild("BlockKartsGarage")
   if garage ~= boundGarage then
