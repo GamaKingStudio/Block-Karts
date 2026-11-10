@@ -3713,11 +3713,13 @@ anotherRaceRemote.OnServerEvent:Connect(function(player)
  if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
  cpuKart = nil
  cpuRace = nil
- createCpuOpponent(playersInRoom[1])
- if not cpuKart or not cpuRace then
-  anotherRaceRequests = {}
-  warn("[RACE] No se pudo preparar el rival para la siguiente carrera.")
-  return
+ if roomTargetPlayers == 1 then
+  createCpuOpponent(playersInRoom[1])
+  if not cpuKart or not cpuRace then
+   anotherRaceRequests = {}
+   warn("[RACE] No se pudo preparar el rival para la siguiente carrera.")
+   return
+  end
  end
 
  anotherRaceRequests = {}
@@ -3767,7 +3769,8 @@ local function enterMatchmakingRoom(player, padIndex)
  if roomTargetPlayers == 0 then
   roomPreparing = true
   roomTargetPlayers = targetPlayers
-  createCpuOpponent(player)
+  -- El rival CPU solo se crea en la sala individual; las salas 2-4 son humanas.
+  if targetPlayers == 1 then createCpuOpponent(player) end
   roomPreparing = false
   if player.Parent ~= Players then
    if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
@@ -3776,12 +3779,13 @@ local function enterMatchmakingRoom(player, padIndex)
    roomTargetPlayers = 0
    return
   end
-  if not cpuKart or not cpuRace then
+  if targetPlayers == 1 and (not cpuKart or not cpuRace) then
    roomTargetPlayers = 0
    if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
    cpuKart = nil
    cpuRace = nil
    player:SetAttribute("RoomStatus", "ERROR AL PREPARAR")
+   warn("[MATCHMAKING] No se pudo crear el rival CPU para la sala individual.")
    return
   end
  end
@@ -3906,6 +3910,7 @@ task.spawn(function()
  local garage = Workspace:WaitForChild("BlockKartsGarage", 120)
  if not garage then warn("[MATCHMAKING] No se encontró BlockKartsGarage."); return end
  local padNames = {"RoomEntryPad_1vCPU", "MatchmakingPad_2", "MatchmakingPad_3", "MatchmakingPad_4"}
+ local pads = {}
  for index, padName in ipairs(padNames) do
   local pad = garage:WaitForChild(padName, 30)
   if not pad or not pad:IsA("BasePart") then
@@ -3913,6 +3918,7 @@ task.spawn(function()
    continue
   end
   pad.CanTouch = true
+  pads[index] = pad
   pad.Touched:Connect(function(hit)
    local character = hit and hit:FindFirstAncestorOfClass("Model")
    local player = character and Players:GetPlayerFromCharacter(character)
@@ -3922,6 +3928,30 @@ task.spawn(function()
   end)
  end
  print("[MATCHMAKING] Pads de 1, 2, 3 y 4 pilotos conectados.")
+
+ -- Respaldo por proximidad: Touched puede perderse durante la carga del personaje.
+ local lastPadByPlayer = {}
+ while garage.Parent do
+  for _, player in ipairs(Players:GetPlayers()) do
+   local standingPad, standingIndex = nil, nil
+   for index, pad in ipairs(pads) do
+    if pad and pad.Parent and isPlayerStandingOnPad(player, pad) then
+     standingPad, standingIndex = pad, index
+     break
+    end
+   end
+   if standingPad then
+    if lastPadByPlayer[player] ~= standingPad then
+     lastPadByPlayer[player] = standingPad
+     beginMatchmakingEntry(player, standingPad,
+      standingPad:GetAttribute("RequiredPlayers") or standingPad:GetAttribute("PadIndex") or standingIndex)
+    end
+   else
+    lastPadByPlayer[player] = nil
+   end
+  end
+  task.wait(0.15)
+ end
 end)
 
 RunService.Heartbeat:Connect(function(dt)
