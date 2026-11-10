@@ -2050,7 +2050,7 @@ local function buildTestCourse()
 		{ offset = Vector3.new(345, 0, 225), rot = -20, lean = 18, scale = 0.96 },
 		{ offset = Vector3.new(325, 0, 265), rot = 45, lean = 8, scale = 1.04 },
 		{ offset = Vector3.new(255, 0, 265), rot = -35, lean = 15, scale = 0.92 },
-		{ offset = Vector3.new(195, 0, 265), rot = 18, lean = 10, scale = 1.02 },
+		{ offset = Vector3.new(165, 0, 275), rot = 18, lean = 10, scale = 1.02 },
 		-- Costado oriental, visibles desde las curvas del lado derecho.
 		{ offset = Vector3.new(315, 0, -80), rot = 65, lean = 14, scale = 0.98 },
 		{ offset = Vector3.new(195, 0, 265), rot = -55, lean = 9, scale = 1.06 },
