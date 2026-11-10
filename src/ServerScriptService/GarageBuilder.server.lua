@@ -251,9 +251,39 @@ for i,pos in ipairs(padPositions) do
  local pad=part(padName,Vector3.new(14,0.4,14),Vector3.new(px,floorY+0.7,pz),i%2==0 and Color3.fromRGB(0,255,130) or Color3.fromRGB(0,180,255),Enum.Material.Neon)
  pad:SetAttribute("LobbyRoomType","HumanMatchmaking"); pad:SetAttribute("RoomCapacity",4); pad:SetAttribute("PadIndex",i)
  pad.CanCollide=true; pad.CanTouch=i==1
- local gui=Instance.new("BillboardGui"); gui.Name="QueueStatus"; gui.Size=UDim2.fromOffset(240,70); gui.StudsOffset=Vector3.new(0,8,0); gui.AlwaysOnTop=true; gui.Parent=pad
- local label=Instance.new("TextLabel"); label.Name="QueueLabel"; label.Size=UDim2.fromScale(1,1); label.BackgroundColor3=Color3.fromRGB(15,20,28); label.BackgroundTransparency=0.12; label.TextColor3=white; label.TextScaled=true; label.Font=Enum.Font.GothamBold; label.Text=string.format("[PAD %d - 0/4]",i); label.Parent=gui
- local stroke=Instance.new("UIStroke"); stroke.Color=cyan; stroke.Thickness=2; stroke.Parent=label
+ local gui=Instance.new("SurfaceGui")
+ gui.Name="QueueStatus"
+ gui.Face=Enum.NormalId.Top
+ gui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud
+ gui.PixelsPerStud=45
+ gui.LightInfluence=0.15
+ gui.AlwaysOnTop=false
+ gui.Parent=pad
+ local panel=Instance.new("Frame")
+ panel.Name="StencilPanel"
+ panel.Size=UDim2.fromScale(1,1)
+ panel.BackgroundTransparency=1
+ panel.Parent=gui
+ local label=Instance.new("TextLabel")
+ label.Name="QueueLabel"
+ label.Size=UDim2.fromScale(0.9,0.55)
+ label.Position=UDim2.fromScale(0.05,0.12)
+ label.BackgroundTransparency=1
+ label.Text=string.format("PAD %02d",i)
+ label.TextColor3=white
+ label.TextScaled=true
+ label.Font=Enum.Font.RobotoMono
+ label.Parent=panel
+ local status=Instance.new("TextLabel")
+ status.Name="QueueCount"
+ status.Size=UDim2.fromScale(0.9,0.24)
+ status.Position=UDim2.fromScale(0.05,0.68)
+ status.BackgroundTransparency=1
+ status.Text="0/4"
+ status.TextColor3=yellow
+ status.TextScaled=true
+ status.Font=Enum.Font.RobotoMono
+ status.Parent=panel
 end
 
 -- Safety stripe in front of the matchmaking row.
