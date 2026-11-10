@@ -230,6 +230,7 @@ for bay=1,2 do
  end
  part("LiftArm_"..bay,Vector3.new(13,0.7,1),Vector3.new(bx,floorY+3,z+4),Color3.fromRGB(0,120,215),Enum.Material.Metal)
  part("LiftPlatform_"..bay,Vector3.new(13,0.5,8),Vector3.new(bx,floorY+2,z+4),steel,Enum.Material.DiamondPlate)
+ buildDisplayKart("WorkshopDisplayKart_"..bay,Vector3.new(bx,floorY+4.15,z+4),bay==1 and Color3.fromRGB(220,55,48) or Color3.fromRGB(35,135,220))
 end
 for station,zOff in ipairs({-35,0,35}) do
  local sx=x-49
@@ -239,6 +240,18 @@ end
 for i=1,4 do
  local barrel=part("WorkshopBarrel_"..i,Vector3.new(3,4,3),Vector3.new(x-53,floorY+2,z-55+i*8),i%2==0 and Color3.fromRGB(30,80,140) or Color3.fromRGB(180,40,35),Enum.Material.Metal,nil,Enum.PartType.Cylinder)
  barrel.Orientation=Vector3.new(0,0,90)
+end
+for station,zOff in ipairs({-35,0,35}) do
+    part("WorkshopToolbox_"..station,Vector3.new(4,2.4,2.2),
+        Vector3.new(x-45,floorY+3.3,z+zOff-1),Color3.fromRGB(190,45,38),Enum.Material.Metal)
+end
+for stack=1,2 do
+    for tire=1,3 do
+        local tyre=part("WorkshopTire_"..stack.."_"..tire,Vector3.new(2.2,0.8,2.2),
+            Vector3.new(x-55,floorY+0.45+(tire-1)*0.78,z+39+(stack-1)*4),
+            Color3.fromRGB(24,26,29),Enum.Material.Rubber,nil,Enum.PartType.Cylinder)
+        tyre.Orientation=Vector3.new(0,0,90)
+    end
 end
 
 -- CENTRAL-LOWER: four true 1:1 square matchmaking pads (14x14).
@@ -308,6 +321,8 @@ for _,zOff in ipairs({-43,-7,29,65}) do
  base.Orientation=Vector3.new(0,0,90)
  local ring=part("DisplayNeonRing_"..displayIndex,Vector3.new(12.8,0.25,12.8),Vector3.new(px,floorY+1.18,pz),cyan,Enum.Material.Neon,nil,Enum.PartType.Cylinder)
  ring.Orientation=Vector3.new(0,0,90); ring.CanCollide=false
+ local displayColors={Color3.fromRGB(225,55,48),Color3.fromRGB(35,135,220),Color3.fromRGB(235,180,35),Color3.fromRGB(60,190,115)}
+ buildDisplayKart("ShowroomKart_"..displayIndex,Vector3.new(px,floorY+2.65,pz),displayColors[displayIndex])
  sign("DisplayLabel_"..displayIndex,"KART "..displayIndex,Vector3.new(10,2,0.4),Vector3.new(px,floorY+3,pz-6.5),black,white)
 end
 -- Tool shelves and industrial storage in the rear/right corner.
