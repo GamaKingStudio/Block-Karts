@@ -2164,6 +2164,11 @@ local function buildTestCourse()
 		return true
 	end
 
+	-- Límites locales de arena: los límites declarados dentro de buildBeachLife
+	-- no son visibles desde esta rutina de decoración del circuito.
+	local SAND_X_MIN, SAND_X_MAX = -275, 375
+	local SAND_Z_MIN, SAND_Z_MAX = -325, 325
+
 	local randomPropCount, randomBoardCount, randomAttempts = 0, 0, 0
 	local randomBeach = Random.new(20261110)
 
