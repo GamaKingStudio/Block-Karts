@@ -3692,8 +3692,15 @@ local function enterMatchmakingRoom(player, padIndex)
   local usedSlot = participant:GetAttribute("KartSpawnIndex")
   if typeof(usedSlot) == "number" then occupiedSlots[usedSlot] = true end
  end
- local spawnSlot = 1
- while occupiedSlots[spawnSlot] do spawnSlot += 1 end
+ -- El rival CPU ocupa el puesto 2; los cuatro puestos humanos lo evitan.
+ local spawnSlot = nil
+ for _, candidate in ipairs({1, 3, 4, 5}) do
+  if not occupiedSlots[candidate] then
+   spawnSlot = candidate
+   break
+  end
+ end
+ if not spawnSlot then return end
  roomPlayers[player] = true
  player:SetAttribute("KartSpawnIndex", spawnSlot)
  player:SetAttribute("InRaceRoom", true)
