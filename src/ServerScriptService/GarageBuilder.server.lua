@@ -59,11 +59,11 @@ local function lightStrip(name, size, position, color, brightness, range)
     return p
 end
 
-local function wallSign(name, title, subtitle, size, position, accent)
+local function wallSign(name, title, subtitle, size, position, accent, face)
     local board = part(name, size, position, C.graphite, Enum.Material.Metal)
     local gui = Instance.new("SurfaceGui")
     gui.Name = "SignFace"
-    gui.Face = Enum.NormalId.Front
+    gui.Face = face or Enum.NormalId.Front
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     gui.PixelsPerStud = 32
     gui.LightInfluence = 0.08
@@ -220,13 +220,13 @@ end
 
 -- Back wall: permanent identity and live leaderboard panels.
 wallSign("ReceptionSign", "BLOXY KARTS", "COMPETITION PADDOCK", Vector3.new(38, 5, 0.8),
-    Vector3.new(x, floorY + wallHeight - 7, rearZ + 2), C.cyan)
+    Vector3.new(x, floorY + wallHeight - 7, rearZ + 2), C.cyan, Enum.NormalId.Back)
 
 local function leaderboardBoard(name, title, position, accent)
     local board = part(name, Vector3.new(28, 8, 0.8), position, C.graphite, Enum.Material.Metal)
     local gui = Instance.new("SurfaceGui")
     gui.Name = "LeaderboardDisplay"
-    gui.Face = Enum.NormalId.Front
+    gui.Face = Enum.NormalId.Back
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     gui.PixelsPerStud = 30
     gui.LightInfluence = 0.08
@@ -285,10 +285,10 @@ for row = 1, 2 do
         spawn.Parent = model
     end
 end
-local gathering = part("SpawnZoneBase", Vector3.new(74, 0.1, 16), Vector3.new(x, floorY + 0.34, z + 48), C.wallDark, Enum.Material.Asphalt)
+local gathering = part("SpawnZoneBase", Vector3.new(74, 0.1, 16), Vector3.new(x, floorY + 0.34, z - 22), C.wallDark, Enum.Material.Asphalt)
 gathering.CanCollide = false
 wallSign("SpawnZoneTitle", "DRIVER LOUNGE", "PUNTO DE ENCUENTRO", Vector3.new(25, 3, 0.6),
-    Vector3.new(x, floorY + 4, z + 58), C.white)
+    Vector3.new(x, floorY + 4, z - 12), C.white)
 
 -- Left wing: two clean service bays with lifts; no loose barrels or clutter.
 wallSign("WorkshopTitle", "RACE WORKSHOP", "AJUSTES Y MANTENIMIENTO", Vector3.new(27, 4, 0.7),
@@ -386,12 +386,12 @@ for i, zOff in ipairs({-43, -7, 29, 65}) do
 end
 
 -- Clear exit lane with subtle guidance; the shutter remains closed until race departure.
-local lane = part("ExitDriveLane", Vector3.new(18, 0.1, depth - 90),
-    Vector3.new(x, floorY + 0.38, z + 35), C.wallDark, Enum.Material.Asphalt)
+local lane = part("ExitDriveLane", Vector3.new(18, 0.1, 30),
+    Vector3.new(x, floorY + 0.38, z + 63), C.wallDark, Enum.Material.Asphalt)
 lane.CanCollide = false
 for _, side in ipairs({-1, 1}) do
     local line = part("ExitLaneLine_"..side, Vector3.new(0.16, 0.06, depth - 94),
-        Vector3.new(x + side * 9.5, floorY + 0.45, z + 35), C.amber, Enum.Material.SmoothPlastic)
+        Vector3.new(x + side * 9.5, floorY + 0.45, z + 63), C.amber, Enum.Material.SmoothPlastic)
     line.CanCollide = false
 end
 
