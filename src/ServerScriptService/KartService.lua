@@ -2173,12 +2173,16 @@ local function buildTestCourse()
 	local randomPropCount, randomBoardCount, randomAttempts = 0, 0, 0
 	local randomBeach = Random.new(20261110)
 
+	if surfboardTemplate and (type(distanceToTrack) ~= "function" or type(isFree) ~= "function") then
+		warn("[BLOXY-KART][BEACH-PROP] Se omite distribución aleatoria: helpers de buildBeachLife no pertenecen al ámbito de buildTestCourse.")
+	end
+
 	local boardAttempts = 0
 	while randomBoardCount < 5 and boardAttempts < 240 do
 		boardAttempts += 1
 		local x = randomBeach:NextNumber(SAND_X_MIN + 45, SAND_X_MAX - 45)
 		local z = randomBeach:NextNumber(SAND_Z_MIN + 45, SAND_Z_MAX - 45)
-		if surfboardTemplate and distanceToTrack(x, z) < 145 and isFree(x, z, 5) then
+		if surfboardTemplate and type(distanceToTrack) == "function" and type(isFree) == "function" and distanceToTrack(x, z) < 145 and isFree(x, z, 5) then
 			if spawnRandomBeachProp(surfboardTemplate, "RandomSurfboard", x, z,
 					randomBeach:NextNumber(0, 360), randomBeach:NextNumber(7, 9),
 					surfboardColors[surfboardRandom:NextInteger(1, #surfboardColors)]) then
