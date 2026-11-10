@@ -358,10 +358,10 @@ end
 -- ==========================================================
 local function configureBeachLighting()
 	Lighting.ClockTime = 13.6
-	Lighting.Brightness = 2.8
-	Lighting.ExposureCompensation = 0.05
-	Lighting.Ambient = Color3.fromRGB(105, 125, 150)
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 170, 190)
+	Lighting.Brightness = 3.6
+	Lighting.ExposureCompensation = 0.2
+	Lighting.Ambient = Color3.fromRGB(165, 175, 190)
+	Lighting.OutdoorAmbient = Color3.fromRGB(205, 215, 228)
 	Lighting.GeographicLatitude = 18
 	Lighting.ShadowSoftness = 0.7
 	Lighting.EnvironmentDiffuseScale = 0.4
@@ -386,14 +386,14 @@ local function configureBeachLighting()
 	local atmosphere = getEffect("Atmosphere", "BloxyBeachAtmosphere")
 	atmosphere.Color = Color3.fromRGB(199, 225, 255)
 	atmosphere.Decay = Color3.fromRGB(112, 151, 185)
-	atmosphere.Density = 0.22
-	atmosphere.Glare = 0.08
-	atmosphere.Haze = 1.15
-	atmosphere.Offset = 0.12
+	atmosphere.Density = 0.07
+	atmosphere.Glare = 0.04
+	atmosphere.Haze = 0.3
+	atmosphere.Offset = 0.05
 
 	local colorCorrection = getEffect("ColorCorrectionEffect", "BloxyBeachColor")
-	colorCorrection.Brightness = 0.015
-	colorCorrection.Contrast = 0.055
+	colorCorrection.Brightness = 0.035
+	colorCorrection.Contrast = 0.025
 	colorCorrection.Saturation = 0.12
 	colorCorrection.TintColor = Color3.fromRGB(255, 248, 235)
 
@@ -2122,26 +2122,9 @@ local function buildTestCourse()
 		return true
 	end
 
-	-- Segundo asset decorativo solicitado: se carga una vez y se clona en
-	-- claros de arena, manteniendo sus mallas y texturas originales.
+	-- El asset 374942072898 se desactiva: sus piezas se veían como palitos.
 	local BEACH_PROP_ASSET_ID = 374942072898
 	local beachPropTemplate = nil
-	local beachPropLoadOk, beachPropAssetOrError = pcall(function()
-		return InsertService:LoadAsset(BEACH_PROP_ASSET_ID)
-	end)
-	if beachPropLoadOk and beachPropAssetOrError then
-		local loadedProp = beachPropAssetOrError
-		local candidate = loadedProp:IsA("Model") and loadedProp or loadedProp:FindFirstChildWhichIsA("Model", true)
-		if candidate and #candidate:GetDescendants() > 0 then
-			beachPropTemplate = candidate:Clone()
-			beachPropTemplate.Name = "BeachPropTemplate"
-		else
-			warn(("[BLOXY-KART][BEACH-PROP] El asset %d cargó, pero no contiene un Model utilizable."):format(BEACH_PROP_ASSET_ID))
-		end
-		loadedProp:Destroy()
-	else
-		warn(("[BLOXY-KART][BEACH-PROP] No se pudo cargar el asset %d: %s"):format(BEACH_PROP_ASSET_ID, tostring(beachPropAssetOrError)))
-	end
 
 	local function spawnRandomBeachProp(template, assetName, x, z, yaw, targetSize, tint)
 		if not template then return false end
@@ -2183,18 +2166,6 @@ local function buildTestCourse()
 
 	local randomPropCount, randomBoardCount, randomAttempts = 0, 0, 0
 	local randomBeach = Random.new(20261110)
-	while randomPropCount < 5 and randomAttempts < 240 do
-		randomAttempts += 1
-		local x = randomBeach:NextNumber(SAND_X_MIN + 45, SAND_X_MAX - 45)
-		local z = randomBeach:NextNumber(SAND_Z_MIN + 45, SAND_Z_MAX - 45)
-		if beachPropTemplate and distanceToTrack(x, z) < 145 and isFree(x, z, 6) then
-			if spawnRandomBeachProp(beachPropTemplate, "RandomBeachProp", x, z,
-					randomBeach:NextNumber(0, 360), randomBeach:NextNumber(7, 10)) then
-				randomPropCount += 1
-				reserve(x, z, 6)
-			end
-		end
-	end
 
 	local boardAttempts = 0
 	while randomBoardCount < 5 and boardAttempts < 240 do
@@ -3336,7 +3307,9 @@ local function placeCharacterInGarage(player, character)
 			player:SetAttribute("RaceCamera", nil)
 			selectedCameras[player] = nil
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
-			publishSelectionState()		end
+			publishSelectionState()
+			tryStartRace()
+		end
 		return
 	end
 
@@ -3839,6 +3812,10 @@ local function enterMatchmakingRoom(player, padIndex)
  selectedCameras[player] = nil
 
  spawnPlayerKart(player)
+ if targetPlayers == 1 then
+  selectedCameras[player] = "Classic"
+  player:SetAttribute("RaceCamera", "Classic")
+ end
  task.defer(function()
   publishSelectionState()
   tryStartRace()
