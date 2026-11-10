@@ -1247,11 +1247,11 @@ local function buildTestCourse()
 		{ Color3.fromRGB(245, 195, 75), Color3.fromRGB(75, 125, 145) },
 		{ Color3.fromRGB(75, 135, 205), Color3.fromRGB(245, 238, 215) },
 	}
-	for i, x in ipairs({ -96, -85, -74, -63 }) do
-		spawnChangingCabin(i, x, -185, changingCabinColors[i][1], changingCabinColors[i][2])
+	for i, x in ipairs({ 210, 222, 234, 246 }) do
+		spawnChangingCabin(i, x, 120, changingCabinColors[i][1], changingCabinColors[i][2])
 	end
 	local changingWalkway = makePart(course, "ChangingCabinsBoardwalk",
-		Vector3.new(46, 0.22, 3.2), CFrame.new(-79.5, yGround + 0.12, -178.2),
+		Vector3.new(46, 0.22, 3.2), CFrame.new(228, yGround + 0.12, 125.9),
 		C_WOOD_LIGHT, Enum.Material.WoodPlanks)
 	changingWalkway.CanCollide = false
 	changingWalkway.CanTouch = false
@@ -2089,9 +2089,9 @@ local function buildTestCourse()
 	-- quedaban demasiado cerca de la calzada.
 	spawnBeachCluster(Vector3.new(145, yGround, 260), 18)
 	spawnBeachCluster(Vector3.new(220, yGround, 260), -22)
-	-- Nuevos rincones de reposeras en la arena amplia del sector central-norte.
-	spawnBeachCluster(Vector3.new(80, yGround, -180), 12)
-	spawnBeachCluster(Vector3.new(155, yGround, -180), -18)
+	-- Nuevos rincones de reposeras dentro de la gran zona de arena central del circuito.
+	spawnBeachCluster(Vector3.new(215, yGround, 95), 12)
+	spawnBeachCluster(Vector3.new(245, yGround, 95), -18)
 
 	-- Tablas de surf importadas desde el asset del usuario.
 	-- Se carga una sola plantilla y se clona para cada punto decorativo.
@@ -2279,9 +2279,9 @@ local function buildTestCourse()
 		{ offset = Vector3.new(95, 0, -175), rot = -30, lean = 12, scale = 1.00 },
 		{ offset = Vector3.new(5, 0, -185), rot = 50, lean = 7, scale = 0.95 },
 		{ offset = Vector3.new(-85, 0, -175), rot = -65, lean = 15, scale = 1.03 },
-		-- Tablas adicionales junto a las nuevas zonas de descanso del sector central.
-		{ offset = Vector3.new(35, 0, -195), rot = 24, lean = 12, scale = 1.00 },
-		{ offset = Vector3.new(115, 0, -195), rot = -32, lean = 16, scale = 0.98 },
+		-- Tablas adicionales en los claros de arena del interior del circuito.
+		{ offset = Vector3.new(195, 0, 155), rot = 24, lean = 12, scale = 1.00 },
+		{ offset = Vector3.new(250, 0, 145), rot = -32, lean = 16, scale = 0.98 },
 		-- Sector sur, repartidas para que el atrezo se lea desde distintos tramos.
 		{ offset = Vector3.new(315, 0, 255), rot = -15, lean = 11, scale = 0.97 },
 		{ offset = Vector3.new(-35, 0, 175), rot = 40, lean = 17, scale = 1.05 },
