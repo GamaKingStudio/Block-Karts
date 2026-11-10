@@ -52,6 +52,7 @@ local raceFinishedRemote = getOrCreateRemote("RaceFinished")
 local returnToLobbyRemote = getOrCreateRemote("ReturnToLobby")
 local anotherRaceRemote = getOrCreateRemote("AnotherRace")
 local returnedToLobbyRemote = getOrCreateRemote("ReturnedToLobby")
+local matchmakingEntryCountdownRemote = getOrCreateRemote("MatchmakingEntryCountdown")
 
 -- ==========================================================
 -- CONTENEDORES Y ESTADO
@@ -162,6 +163,8 @@ local anotherRaceRequests = {}
 local roomFinishTimes = {}
 local cpuKart = nil
 local cpuRace = nil
+local entryCountdowns = {}
+local entryCountdownSerial = 0
 
 local function getRacePlayers()
  local list = {}
@@ -2171,15 +2174,44 @@ local function buildTestCourse()
 					local pivotToBox = station:GetPivot():ToObjectSpace(boxCF)
 					local targetBox = CFrame.new(-205,yGround+boxSize.Y/2,105) * CFrame.Angles(0,math.rad(90),0)
 					station:PivotTo(targetBox*pivotToBox:Inverse())
-					for _, part in ipairs(station:GetDescendants()) do
-						if part:IsA("BasePart") then
-							part.Anchored=true
-							part.CanCollide=false
-							part.CanTouch=false
-							part.CanQuery=false
+					local paintedParts = 0
+					local redParts = 0
+					local whitePaint = Color3.fromRGB(245, 246, 242)
+					local rescueRed = Color3.fromRGB(190, 35, 42)
+					for _, descendant in ipairs(station:GetDescendants()) do
+						if descendant:IsA("SurfaceAppearance") or descendant:IsA("Decal") or descendant:IsA("Texture") then
+							descendant:Destroy()
+						elseif descendant:IsA("BasePart") then
+							local partName = string.lower(descendant.Name)
+							local isGlass = partName:find("glass", 1, true)
+								or partName:find("crystal", 1, true)
+								or partName:find("pane", 1, true)
+								or partName:find("vidrio", 1, true)
+							local isRedTrim = not isGlass and (
+								partName:find("roof", 1, true) or partName:find("techo", 1, true)
+								or partName:find("frame", 1, true) or partName:find("marco", 1, true)
+								or partName:find("railing", 1, true) or partName:find("baranda", 1, true)
+								or partName:find("handrail", 1, true) or partName:find("rail", 1, true)
+								or partName:find("trim", 1, true) or partName:find("doorframe", 1, true)
+								or partName:find("windowframe", 1, true))
+							descendant.Anchored = true
+							descendant.CanCollide = false
+							descendant.CanTouch = false
+							descendant.CanQuery = false
+							if not isGlass then
+								descendant.Color = isRedTrim and rescueRed or whitePaint
+								descendant.Material = Enum.Material.SmoothPlastic
+								descendant.Reflectance = 0
+								if descendant:IsA("MeshPart") then
+									pcall(function() descendant.TextureID = "" end)
+								end
+								if isRedTrim then redParts += 1 end
+								paintedParts += 1
+							end
 						end
 					end
-					print(("[BLOXY-KART][LIFEGUARD] Caseta cargada desde asset %d."):format(LIFEGUARD_ASSET_ID))
+					print(("[BLOXY-KART][LIFEGUARD] Caseta cargada y pintada: %d piezas blancas, %d rojas. Asset %d.")
+						:format(paintedParts - redParts, redParts, LIFEGUARD_ASSET_ID))
 				else
 					warn("[BLOXY-KART][LIFEGUARD] No se pudo escalar el modelo: "..tostring(err))
 					station:Destroy()
@@ -3721,6 +3753,81 @@ local function enterMatchmakingRoom(player, padIndex)
  ))
 end
 
+local function isPlayerStandingOnPad(player, pad)
+ local character = player.Character
+ local root = character and character:FindFirstChild("HumanoidRootPart")
+ if not root or not pad or not pad.Parent then return false end
+ local localPosition = pad.CFrame:PointToObjectSpace(root.Position)
+ return math.abs(localPosition.X) <= pad.Size.X / 2 + 3
+  and math.abs(localPosition.Z) <= pad.Size.Z / 2 + 3
+  and localPosition.Y >= -4 and localPosition.Y <= 12
+end
+
+local function cancelMatchmakingEntry(player)
+ if entryCountdowns[player] then
+  entryCountdowns[player] = nil
+  matchmakingEntryCountdownRemote:FireClient(player, false)
+ end
+end
+
+local function beginMatchmakingEntry(player, pad, padIndex)
+ if not player or player.Parent ~= Players or player:GetAttribute("InGarage") ~= true
+  or activeKarts[player] or roomPlayers[player] or entryCountdowns[player] then return end
+
+ local targetPlayers = math.clamp(math.floor(tonumber(padIndex) or 1), 1, 4)
+ if raceInProgress or (roomTargetPlayers > 0 and roomTargetPlayers ~= targetPlayers)
+  or roomPreparing then
+  player:SetAttribute("RoomStatus", raceInProgress and "SALA EN CARRERA" or "OTRA SALA EN ESPERA")
+  return
+ end
+
+ entryCountdownSerial += 1
+ local token = entryCountdownSerial
+ entryCountdowns[player] = token
+ player:SetAttribute("RoomStatus", "INGRESANDO A SALA")
+ print(("[MATCHMAKING][ENTRY] %s inició cuenta de entrada para sala %d."):format(player.Name, targetPlayers))
+
+ task.spawn(function()
+  for seconds = 5, 1, -1 do
+   if entryCountdowns[player] ~= token then return end
+   if player.Parent ~= Players or player:GetAttribute("InGarage") ~= true
+    or not isPlayerStandingOnPad(player, pad) then
+    cancelMatchmakingEntry(player)
+    if player.Parent == Players and player:GetAttribute("InGarage") == true then
+     player:SetAttribute("RoomStatus", nil)
+    end
+    print(("[MATCHMAKING][ENTRY] Entrada cancelada para %s: salió de la plataforma."):format(player.Name))
+    return
+   end
+   matchmakingEntryCountdownRemote:FireClient(player, seconds, targetPlayers)
+   for _ = 1, 10 do
+    if entryCountdowns[player] ~= token then return end
+    if not isPlayerStandingOnPad(player, pad) then
+     cancelMatchmakingEntry(player)
+     if player.Parent == Players and player:GetAttribute("InGarage") == true then
+      player:SetAttribute("RoomStatus", nil)
+     end
+     print(("[MATCHMAKING][ENTRY] Entrada cancelada para %s: salió de la plataforma."):format(player.Name))
+     return
+    end
+    task.wait(0.1)
+   end
+  end
+
+  if entryCountdowns[player] ~= token then return end
+  entryCountdowns[player] = nil
+  matchmakingEntryCountdownRemote:FireClient(player, 0, targetPlayers)
+  if player.Parent == Players and player:GetAttribute("InGarage") == true
+   and isPlayerStandingOnPad(player, pad) then
+   player:SetAttribute("RoomStatus", nil)
+   enterMatchmakingRoom(player, targetPlayers)
+   print(("[MATCHMAKING][ENTRY] %s confirmó entrada a sala %d."):format(player.Name, targetPlayers))
+  else
+   matchmakingEntryCountdownRemote:FireClient(player, false)
+  end
+ end)
+end
+
 task.spawn(function()
  local garage = Workspace:WaitForChild("BlockKartsGarage", 120)
  if not garage then warn("[MATCHMAKING] No se encontró BlockKartsGarage."); return end
@@ -3732,14 +3839,12 @@ task.spawn(function()
    continue
   end
   pad.CanTouch = true
-  local debounce = {}
   pad.Touched:Connect(function(hit)
    local character = hit and hit:FindFirstAncestorOfClass("Model")
    local player = character and Players:GetPlayerFromCharacter(character)
-   if not player or debounce[player] then return end
-   debounce[player] = true
-   task.delay(1.25, function() debounce[player] = nil end)
-   enterMatchmakingRoom(player, pad:GetAttribute("RequiredPlayers") or pad:GetAttribute("PadIndex") or index)
+   if not player then return end
+   beginMatchmakingEntry(player, pad,
+    pad:GetAttribute("RequiredPlayers") or pad:GetAttribute("PadIndex") or index)
   end)
  end
  print("[MATCHMAKING] Pads de 1, 2, 3 y 4 pilotos conectados.")
@@ -3893,6 +3998,8 @@ for index, player in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+ cancelMatchmakingEntry(player)
+ entryCountdowns[player] = nil
  local wasInRoom = roomPlayers[player] == true
  local kart = activeKarts[player]
  if kart then kart.model:Destroy() end
