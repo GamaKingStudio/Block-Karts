@@ -189,7 +189,7 @@ for i = 1, 18 do
 end
 
 -- Vinilo de clausura cruzado sobre la cortina metálica.
-local tapeSurfaceZ = frontZ - 2.72
+local tapeSurfaceZ = frontZ - 2.82
 for index, angle in ipairs({-31, 31}) do
     local tape = part("UndergroundClosureTape_"..index, Vector3.new(40, 1.55, 0.14),
         CFrame.new(x, floorY + wallHeight/2, tapeSurfaceZ) * CFrame.Angles(0, 0, math.rad(angle)),
@@ -333,10 +333,7 @@ wallSign("WorkshopTitle", "RACE WORKSHOP", "AJUSTES Y MANTENIMIENTO", Vector3.ne
     Vector3.new(x - 43, floorY + 16, z - 5), C.amber, Vector3.new(x, floorY + 16, z - 5))
 for bay = 1, 2 do
     local bx = x - 43 + (bay - 1) * 19
-    for _, side in ipairs({-1, 1}) do
-        part("LiftColumn_"..bay.."_"..side, Vector3.new(0.9, 10, 0.9),
-            Vector3.new(bx + side * 5, floorY + 5, z + 5), C.blue, Enum.Material.Metal)
-    end
+    -- Se retiran los postes del elevador: se veían como palitos en la zona de aparición.
     part("LiftPlatform_"..bay, Vector3.new(12, 0.45, 7),
         Vector3.new(bx, floorY + 1.3, z + 5), C.graphite, Enum.Material.Metal)
     displayKart("WorkshopKart_"..bay, Vector3.new(bx, floorY + 2.05, z + 5),
