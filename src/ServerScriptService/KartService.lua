@@ -1220,7 +1220,22 @@ local function buildTestCourse()
 		cabinPart("Door", Vector3.new(3.15, 5.55, 0.18), Vector3.new(0, 2.95, 4.22), trimColor, Enum.Material.WoodPlanks)
 		cabinPart("DoorHandle", Vector3.new(0.12, 0.45, 0.12), Vector3.new(1.1, 2.9, 4.34), C_DARKWOOD, Enum.Material.Metal)
 		cabinPart("Roof", Vector3.new(9.8, 0.55, 9.4), Vector3.new(0, 7.65, 0), trimColor, Enum.Material.WoodPlanks)
-		cabinPart("Sign", Vector3.new(4.7, 0.65, 0.22), Vector3.new(0, 7.0, 4.42), C_WHITE, Enum.Material.SmoothPlastic)
+		local sign = cabinPart("Sign", Vector3.new(4.7, 0.65, 0.22), Vector3.new(0, 7.0, 4.42), C_WHITE, Enum.Material.SmoothPlastic)
+		local signGui = Instance.new("SurfaceGui")
+		signGui.Name = "ChangingCabinSignGui"
+		signGui.Face = Enum.NormalId.Back
+		signGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		signGui.PixelsPerStud = 36
+		signGui.Parent = sign
+		local signText = Instance.new("TextLabel")
+		signText.Name = "SignText"
+		signText.Size = UDim2.fromScale(1, 1)
+		signText.BackgroundTransparency = 1
+		signText.Text = "CAMBIADOR"
+		signText.TextColor3 = Color3.fromRGB(45, 58, 68)
+		signText.Font = Enum.Font.GothamBold
+		signText.TextScaled = true
+		signText.Parent = signGui
 		for slat = -1, 1 do
 			cabinPart("Vent_" .. slat, Vector3.new(0.12, 0.12, 0.12),
 				Vector3.new(slat * 0.55, 6.1, 4.34), C_DARKWOOD, Enum.Material.Wood)
