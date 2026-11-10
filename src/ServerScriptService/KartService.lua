@@ -1169,6 +1169,9 @@ local function buildTestCourse()
 	-- Beach Resort ampliado: se conserva la recta de salida y el sector norte,
 	-- y se añade un bucle exterior al sureste con curvas rápidas y una zona técnica.
 	local trackWidth = 45
+	-- Centro exacto de la recta principal (entre X=80 y X=-65).
+	-- Se declara antes de generar las líneas de pista que lo usan.
+	local gantryX = 7.5
 	local waypoints = {
 		Vector3.new(80, yGround + 0.02, 70),
 		Vector3.new(-65, yGround + 0.02, 70),
@@ -1394,8 +1397,6 @@ local function buildTestCourse()
 	end
 
 	-- Arco de meta: el asset completo del usuario reemplaza los postes y el banner procedural.
-	-- Centro exacto de la recta principal (entre X=80 y X=-65).
-	local gantryX = 7.5
 	local spanWidth = trackWidth + 6
 	local FINISH_STRUCTURE_ASSET_ID = 77625250062263
 	local finishAssetOk, finishAssetOrError = pcall(function()
