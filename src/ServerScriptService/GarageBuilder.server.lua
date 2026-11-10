@@ -122,7 +122,7 @@ local Lighting = game:GetService("Lighting")
 Lighting.Ambient = Color3.fromRGB(100, 105, 115)
 Lighting.OutdoorAmbient = Color3.fromRGB(85, 90, 100)
 Lighting.Brightness = 2
-Lighting.ClockTime = 14
+Lighting.ClockTime = 0
 Lighting.GlobalShadows = true
 local bloom=Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect")
 bloom.Intensity=0.25; bloom.Size=18; bloom.Threshold=0.9; bloom.Parent=Lighting
