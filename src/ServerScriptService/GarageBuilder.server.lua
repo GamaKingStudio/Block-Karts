@@ -8,7 +8,7 @@ local GARAGE_ORIGIN = Vector3.new(520, 1, 0)
 local existing = Workspace:FindFirstChild(GARAGE_NAME)
 if existing then existing:Destroy() end
 
-print("[GARAGE][BUILD] Building 160 x 120 blueprint garage.")
+print("[GARAGE][BUILD] Building 120 x 160 underground garage.")
 local model = Instance.new("Model")
 model.Name = GARAGE_NAME
 model:SetAttribute("GeneratedByGarageBuilder", true)
@@ -72,9 +72,9 @@ local function sign(name, text, size, position, faceColor, textColor, parent, fa
 end
 
 local black = Color3.fromRGB(16, 19, 22)
-local concrete = Color3.fromRGB(61, 65, 69)
-local dark = Color3.fromRGB(29, 33, 37)
-local steel = Color3.fromRGB(91, 100, 108)
+local concrete = Color3.fromRGB(65, 68, 75)
+local dark = Color3.fromRGB(55, 58, 62)
+local steel = Color3.fromRGB(30, 32, 35)
 local steelLight = Color3.fromRGB(139, 148, 153)
 local yellow = Color3.fromRGB(244, 184, 55)
 local cyan = Color3.fromRGB(35, 205, 220)
@@ -82,41 +82,73 @@ local red = Color3.fromRGB(220, 65, 58)
 local white = Color3.fromRGB(232, 239, 241)
 
 local x, y, z = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
-local width, depth = 160, 120
+
+-- Underground lighting requested by the garage blueprint.
+Lighting = game:GetService("Lighting")
+Lighting.Technology = Enum.Technology.Future
+Lighting.Ambient = Color3.fromRGB(25, 28, 35)
+Lighting.OutdoorAmbient = Color3.fromRGB(10, 12, 16)
+Lighting.Brightness = 0.5
+Lighting.ClockTime = 0
+Lighting.GlobalShadows = true
+local width, depth = 120, 160
 local halfW, halfD = width/2, depth/2
 local floorY = y + 2.25
-local wallH, wallT = 28, 3
+local wallH, wallT = 30, 4
 local ceilingY = floorY + wallH
 local frontZ, rearZ = z + halfD - wallT/2, z - halfD + wallT/2
 
--- Main underground shell. The front-right section is intentionally open for the exit gate.
+-- Main underground shell: 120 x 160 x 30, completely enclosed.
 part("GarageFoundation", Vector3.new(width + 8, 4, depth + 8), Vector3.new(x, y, z), dark, Enum.Material.Concrete)
-part("GarageFloor", Vector3.new(width - 4, 0.6, depth - 4), Vector3.new(x, floorY, z), concrete, Enum.Material.Concrete)
+part("GarageFloor", Vector3.new(width - 4, 0.6, depth - 4), Vector3.new(x, floorY, z), Color3.fromRGB(65,68,75), Enum.Material.Concrete)
 local shell = Instance.new("Folder")
 shell.Name = "GarageBuilding"
 shell.Parent = model
-part("RearConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, rearZ), dark, Enum.Material.Concrete, shell)
-part("LeftConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x-halfW+wallT/2, floorY+wallH/2, z), dark, Enum.Material.Concrete, shell)
-part("RightConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x+halfW-wallT/2, floorY+wallH/2, z), dark, Enum.Material.Concrete, shell)
+part("RearConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, rearZ), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
+part("FrontConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, frontZ), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
+part("LeftConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x-halfW+wallT/2, floorY+wallH/2, z), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
+part("RightConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x+halfW-wallT/2, floorY+wallH/2, z), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
 
--- Front wall has a 34-stud vehicle exit on the right, matching the plan.
-local gateCenterX = x + 48
-local gateWidth = 34
-local leftSpan = (gateCenterX - gateWidth/2) - (x-halfW)
-local rightStart = gateCenterX + gateWidth/2
-local rightSpan = (x+halfW) - rightStart
-part("FrontWall_Left", Vector3.new(leftSpan, wallH, wallT),
-    Vector3.new((x-halfW + gateCenterX-gateWidth/2)/2, floorY+wallH/2, frontZ), dark, Enum.Material.Concrete, shell)
-part("FrontWall_Right", Vector3.new(rightSpan, wallH, wallT),
-    Vector3.new((rightStart + x+halfW)/2, floorY+wallH/2, frontZ), dark, Enum.Material.Concrete, shell)
-part("ExitGateHeader", Vector3.new(gateWidth, 6, wallT), Vector3.new(gateCenterX, floorY+wallH-3, frontZ), steel, Enum.Material.DiamondPlate, shell)
--- Raised shutter slats leave a clear opening below for karts to pass through.
-for i = 1, 10 do
-    part("ExitShutterSlat_"..i, Vector3.new(gateWidth-1, 0.28, 0.7),
-        Vector3.new(gateCenterX, floorY+wallH-7+(i-1)*0.48, frontZ-0.45), steelLight, Enum.Material.Metal)
+-- Fully closed corrugated-metal shutter on the front (+Z) wall.
+local gateCenterX, gateWidth = x, 34
+part("ExitGateFrameLeft", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX-gateWidth/2-1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
+part("ExitGateFrameRight", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX+gateWidth/2+1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
+part("ExitGateShutter", Vector3.new(gateWidth, wallH-4, 1.2), Vector3.new(gateCenterX, floorY+(wallH-4)/2, frontZ-1.1), Color3.fromRGB(35,37,40), Enum.Material.Metal, shell)
+for i=1,22 do
+ part("ExitShutterRib_"..i, Vector3.new(0.22,wallH-4,0.18),
+  Vector3.new(gateCenterX-gateWidth/2+1+(i-1)*(gateWidth-2)/21,floorY+(wallH-4)/2,frontZ-1.78),
+  Color3.fromRGB(70,74,78),Enum.Material.CorrugatedMetal,shell)
 end
-sign("ExitGateSign", "SALIDA A PISTA", Vector3.new(gateWidth-2, 3.4, 0.5),
-    Vector3.new(gateCenterX, floorY+wallH-4.8, frontZ-0.9), black, yellow)
+sign("ExitGateSign","SALIDA A PISTA",Vector3.new(25,3,0.6),Vector3.new(gateCenterX,floorY+wallH-2.3,frontZ-2),black,red)
+for _,side in ipairs({-1,1}) do
+ neon("ExitWarning_"..side,Vector3.new(0.7,7,0.7),Vector3.new(gateCenterX+side*19,floorY+wallH-7,frontZ-2),red)
+end
+
+-- Four structural corner columns plus intermediate 4x30x4 concrete pillars.
+for _, xOff in ipairs({-56,-28,0,28,56}) do
+ for _, zOff in ipairs({-76,0,76}) do
+  if not (xOff==0 and zOff==0) then
+   part("StructuralPillar_"..xOff.."_"..zOff,Vector3.new(4,30,4),Vector3.new(x+xOff,floorY+13.5,z+zOff),Color3.fromRGB(45,48,52),Enum.Material.Concrete,shell)
+  end
+ end
+end
+
+-- Roof, exposed steel beams and hazard-marked lower wall skirting.
+part("GarageRoof",Vector3.new(width+6,4,depth+6),Vector3.new(x,ceilingY+2,z),black,Enum.Material.Concrete,shell)
+for _,zOff in ipairs({-64,-32,0,32,64}) do
+ part("RoofBeam_Z"..zOff,Vector3.new(width-8,1.5,2.5),Vector3.new(x,ceilingY-1,z+zOff),Color3.fromRGB(30,32,35),Enum.Material.Metal,shell)
+end
+for _,xOff in ipairs({-40,0,40}) do
+ part("RoofCrossBeam_X"..xOff,Vector3.new(2.5,1.5,depth-12),Vector3.new(x+xOff,ceilingY-1.1,z),Color3.fromRGB(30,32,35),Enum.Material.DiamondPlate,shell)
+end
+for side=-1,1,2 do
+ for i=1,24 do
+  local stripe=part("HazardSkirting_"..side.."_"..i,Vector3.new(1.3,0.45,0.35),
+   CFrame.new(x+side*(halfW-2.5),floorY+0.7,z-74+(i-1)*6)*CFrame.Angles(0,0,math.rad(35)),
+   i%2==0 and yellow or black,Enum.Material.SmoothPlastic,shell)
+  stripe.CanCollide=false
+ end
+end
 
 -- Roof and structural girders preserve the industrial underground identity.
 part("GarageRoof", Vector3.new(width+6, 4, depth+6), Vector3.new(x, ceilingY+2, z), black, Enum.Material.Concrete, shell)
@@ -135,150 +167,113 @@ for _, xOff in ipairs({-70, -35, 35, 70}) do
     end
 end
 
--- CENTER BACK: physical global ranking + best times, with a central podium.
+-- BACK (-Z): two ranking screens. Keep the center area clear: no podium.
 local function leaderboardBoard(name, title, size, position, accent)
-    local board = part(name, size, position, black, Enum.Material.DiamondPlate)
-    local gui = Instance.new("SurfaceGui")
-    gui.Name, gui.Face = "LeaderboardDisplay", Enum.NormalId.Front
-    gui.SizingMode, gui.PixelsPerStud, gui.LightInfluence = Enum.SurfaceGuiSizingMode.PixelsPerStud, 32, 0.1
-    gui.Parent = board
-    local panel = Instance.new("Frame")
-    panel.Name = "Panel"
-    panel.Size = UDim2.fromScale(1,1)
-    panel.BackgroundColor3 = Color3.fromRGB(10,15,20)
-    panel.BorderSizePixel = 0
-    panel.Parent = gui
-    local stroke = Instance.new("UIStroke")
-    stroke.Color, stroke.Thickness = accent, 3
-    stroke.Parent = panel
-    local heading = Instance.new("TextLabel")
-    heading.Name, heading.Size = "Heading", UDim2.fromScale(0.96,0.22)
-    heading.Position = UDim2.fromScale(0.02,0.025)
-    heading.BackgroundColor3 = Color3.fromRGB(28,36,43)
-    heading.BorderSizePixel = 0
-    heading.Text, heading.TextColor3 = title, accent
-    heading.TextScaled, heading.Font = true, Enum.Font.GothamBlack
-    heading.Parent = panel
-    local columns = Instance.new("TextLabel")
-    columns.Name, columns.Size = "Columns", UDim2.fromScale(0.96,0.12)
-    columns.Position = UDim2.fromScale(0.02,0.265)
-    columns.BackgroundTransparency = 1
-    columns.Text = name == "TimesBoard" and "#   PILOTO                         TIEMPO" or "#   PILOTO                         VICTORIAS"
-    columns.TextColor3, columns.TextScaled = Color3.fromRGB(190,205,215), true
-    columns.Font, columns.TextXAlignment = Enum.Font.GothamBold, Enum.TextXAlignment.Left
-    columns.Parent = panel
-    for row = 1,5 do
-        local line = Instance.new("TextLabel")
-        line.Name = "LeaderboardRow"..row
-        line.Size = UDim2.fromScale(0.96,0.105)
-        line.Position = UDim2.fromScale(0.02,0.39+(row-1)*0.112)
-        line.BackgroundColor3 = row%2==0 and Color3.fromRGB(24,31,37) or Color3.fromRGB(17,23,29)
-        line.BorderSizePixel = 0
-        line.Text = name == "TimesBoard" and string.format("%d       ---                         --:--.---",row)
-            or string.format("%d       ---                         --",row)
-        line.TextColor3, line.TextScaled = white, true
-        line.Font, line.TextXAlignment = Enum.Font.GothamMedium, Enum.TextXAlignment.Left
-        line.Parent = panel
-    end
-    return board
+ local board=part(name,size,position,black,Enum.Material.DiamondPlate)
+ local gui=Instance.new("SurfaceGui"); gui.Name="LeaderboardDisplay"; gui.Face=Enum.NormalId.Front
+ gui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud; gui.PixelsPerStud=32; gui.LightInfluence=0.1; gui.Parent=board
+ local panel=Instance.new("Frame"); panel.Name="Panel"; panel.Size=UDim2.fromScale(1,1); panel.BackgroundColor3=Color3.fromRGB(15,20,28); panel.BorderSizePixel=0; panel.Parent=gui
+ local stroke=Instance.new("UIStroke"); stroke.Color=accent; stroke.Thickness=3; stroke.Parent=panel
+ local heading=Instance.new("TextLabel"); heading.Name="Heading"; heading.Size=UDim2.fromScale(0.96,0.22); heading.Position=UDim2.fromScale(0.02,0.025); heading.BackgroundTransparency=1; heading.Text=title; heading.TextColor3=accent; heading.TextScaled=true; heading.Font=Enum.Font.GothamBlack; heading.Parent=panel
+ for row=1,5 do
+  local line=Instance.new("TextLabel"); line.Name="LeaderboardRow"..row; line.Size=UDim2.fromScale(0.96,0.12); line.Position=UDim2.fromScale(0.02,0.27+(row-1)*0.14); line.BackgroundColor3=row%2==0 and Color3.fromRGB(24,31,37) or Color3.fromRGB(17,23,29); line.BorderSizePixel=0; line.Text=string.format("%d   ---",row); line.TextColor3=white; line.TextScaled=true; line.Font=Enum.Font.GothamMedium; line.Parent=panel
+ end
+ return board
+end
+leaderboardBoard("WinsBoard","RANKING GLOBAL",Vector3.new(30,9,0.8),Vector3.new(x-27,floorY+21,rearZ+2),Color3.fromRGB(0,220,255))
+leaderboardBoard("TimesBoard","MEJORES TIEMPOS",Vector3.new(30,9,0.8),Vector3.new(x+27,floorY+21,rearZ+2),white)
+
+-- Ten cylindrical spawn discs in two rows, with cyan neon outer rings.
+for row=1,2 do
+ for col=1,5 do
+  local sx=x+(col-3)*10
+  local sz=z-57+(row-1)*13
+  local disc=part("SpawnLocation_"..row.."_"..col,Vector3.new(6,0.5,6),Vector3.new(sx,floorY+0.38,sz),Color3.fromRGB(38,45,52),Enum.Material.Metal,nil,Enum.PartType.Cylinder)
+  disc.Orientation=Vector3.new(0,0,90); disc.CanCollide=true
+  local ring=part("SpawnNeonRing_"..row.."_"..col,Vector3.new(6.5,0.22,6.5),Vector3.new(sx,floorY+0.68,sz),cyan,Enum.Material.Neon,nil,Enum.PartType.Cylinder)
+  ring.Orientation=Vector3.new(0,0,90); ring.Transparency=0.2; ring.CanCollide=false
+  local spawn=Instance.new("SpawnLocation"); spawn.Name="PlayerSpawn_"..row.."_"..col; spawn.Size=Vector3.new(5.5,0.4,5.5); spawn.Position=Vector3.new(sx,floorY+0.85,sz); spawn.Anchored=true; spawn.Neutral=true; spawn.Transparency=1; spawn.CanCollide=false; spawn.Parent=model
+ end
 end
 
-leaderboardBoard("WinsBoard", "RANKING GLOBAL", Vector3.new(27,8,0.8), Vector3.new(x-25, floorY+21, rearZ+2), yellow)
-leaderboardBoard("TimesBoard", "MEJORES TIEMPOS", Vector3.new(27,8,0.8), Vector3.new(x+25, floorY+21, rearZ+2), cyan)
-sign("PodiumTitle", "PODIO Y CLASIFICACIONES", Vector3.new(42,4,0.7),
-    Vector3.new(x, floorY+14, rearZ+3), black, white)
-for place = 1,3 do
-    local px = x + (place-2)*8
-    local h = place==2 and 7 or (place==1 and 5.5 or 4)
-    local podium = part("Podium_"..place, Vector3.new(7,h,5), Vector3.new(px,floorY+0.35+h/2,rearZ+12),
-        place==2 and yellow or steel, Enum.Material.Metal)
-    sign("PodiumNumber_"..place, tostring(place), Vector3.new(6,3,0.3),
-        Vector3.new(px,floorY+h+1,rearZ+9), black, white)
+-- LEFT (-X): two hydraulic lift bays and compact customization workshop.
+sign("WorkshopTitle","TALLER DE PERSONALIZACIÓN",Vector3.new(28,5,0.7),Vector3.new(x-43,floorY+16,z-5),black,yellow)
+for bay=1,2 do
+ local bx=x-43+(bay-1)*19
+ for _,sx in ipairs({-5,5}) do
+  part("LiftPost_"..bay.."_"..sx,Vector3.new(1.2,12,1.2),Vector3.new(bx+sx,floorY+6,z+4),Color3.fromRGB(0,120,215),Enum.Material.Metal)
+ end
+ part("LiftArm_"..bay,Vector3.new(13,0.7,1),Vector3.new(bx,floorY+3,z+4),Color3.fromRGB(0,120,215),Enum.Material.Metal)
+ part("LiftPlatform_"..bay,Vector3.new(13,0.5,8),Vector3.new(bx,floorY+2,z+4),steel,Enum.Material.DiamondPlate)
+end
+for station,zOff in ipairs({-35,0,35}) do
+ local sx=x-49
+ part("WorkshopBench_"..station,Vector3.new(12,1.2,6),Vector3.new(sx,floorY+1.5,z+zOff),Color3.fromRGB(102,77,53),Enum.Material.Wood)
+ part("WorkshopCabinet_"..station,Vector3.new(12,4,2),Vector3.new(sx,floorY+3.2,z+zOff-4),steel,Enum.Material.DiamondPlate)
+end
+for i=1,4 do
+ local barrel=part("WorkshopBarrel_"..i,Vector3.new(3,4,3),Vector3.new(x-53,floorY+2,z-55+i*8),i%2==0 and Color3.fromRGB(30,80,140) or Color3.fromRGB(180,40,35),Enum.Material.Metal,nil,Enum.PartType.Cylinder)
+ barrel.Orientation=Vector3.new(0,0,90)
 end
 
--- LEFT SIDE: personalization workshop, benches, toolboards and tire racks.
-sign("WorkshopTitle", "TALLER DE PERSONALIZACIÓN", Vector3.new(28,5,0.7),
-    Vector3.new(x-64,floorY+13,z-4), black, yellow)
-for station, zOff in ipairs({-34, 0, 34}) do
-    local sx = x-65
-    part("WorkshopBench_"..station, Vector3.new(22,1.2,7), Vector3.new(sx,floorY+4,z+zOff), Color3.fromRGB(102,77,53), Enum.Material.Wood)
-    part("WorkshopCabinet_"..station, Vector3.new(20,5,2), Vector3.new(sx,floorY+2.8,z+zOff-5), steel, Enum.Material.DiamondPlate)
-    for tool = 1,4 do
-        part("WorkshopTool_"..station.."_"..tool, Vector3.new(0.45,3.2,0.35),
-            Vector3.new(sx-8+(tool-1)*5.2,floorY+8,z+zOff-5.9), yellow, Enum.Material.Metal)
-    end
-end
-for rack = 1,3 do
-    local rz = z-43+(rack-1)*12
-    for tire = 1,3 do
-        local wheel = part("WorkshopTire_"..rack.."_"..tire, Vector3.new(4.5,1.4,4.5),
-            Vector3.new(x-45,floorY+1.1+(tire-1)*1.65,rz), black, Enum.Material.Rubber, nil, Enum.PartType.Cylinder)
-        wheel.Orientation = Vector3.new(0,0,90)
-    end
+-- CENTRAL-LOWER: four true 1:1 square matchmaking pads (14x14).
+local padPositions={{x-27,z+24},{x-9,z+24},{x+9,z+24},{x+27,z+24}}
+for i,pos in ipairs(padPositions) do
+ local px,pz=pos[1],pos[2]
+ local padName=i==1 and "RoomEntryPad_1vCPU" or ("MatchmakingPad_"..i)
+ local trim=part(padName.."_Frame",Vector3.new(15,0.45,15),Vector3.new(px,floorY+0.45,pz),Color3.fromRGB(35,39,44),Enum.Material.DiamondPlate)
+ trim.CanCollide=true
+ local pad=part(padName,Vector3.new(14,0.4,14),Vector3.new(px,floorY+0.7,pz),i%2==0 and Color3.fromRGB(0,255,130) or Color3.fromRGB(0,180,255),Enum.Material.Neon)
+ pad:SetAttribute("LobbyRoomType","HumanMatchmaking"); pad:SetAttribute("RoomCapacity",4); pad:SetAttribute("PadIndex",i)
+ pad.CanCollide=true; pad.CanTouch=i==1
+ local gui=Instance.new("BillboardGui"); gui.Name="QueueStatus"; gui.Size=UDim2.fromOffset(240,70); gui.StudsOffset=Vector3.new(0,8,0); gui.AlwaysOnTop=true; gui.Parent=pad
+ local label=Instance.new("TextLabel"); label.Name="QueueLabel"; label.Size=UDim2.fromScale(1,1); label.BackgroundColor3=Color3.fromRGB(15,20,28); label.BackgroundTransparency=0.12; label.TextColor3=white; label.TextScaled=true; label.Font=Enum.Font.GothamBold; label.Text=string.format("[PAD %d - 0/4]",i); label.Parent=gui
+ local stroke=Instance.new("UIStroke"); stroke.Color=cyan; stroke.Thickness=2; stroke.Parent=label
 end
 
--- CENTER: four matchmaking floor pads. Pad 1 retains the exact live 1vCPU name/attribute.
-local padPositions = {-24, -8, 8, 24}
-local padLabels = {"MATCHMAKING 1","MATCHMAKING 2","MATCHMAKING 3","MATCHMAKING 4"}
-for i, xOff in ipairs(padPositions) do
-    local px, pz = x+xOff, z-10
-    local padName = i==1 and "RoomEntryPad_1vCPU" or (i==2 and "RoomEntryPad_1vUser" or "MatchmakingPad_"..i)
-    local pad = part(padName, Vector3.new(12,0.65,24), Vector3.new(px,floorY+0.55,pz),
-        i%2==0 and red or cyan, Enum.Material.Neon)
-    pad:SetAttribute("LobbyRoomType", i==1 and "1vCPU" or (i==2 and "1vUser" or "FutureMatchmaking"))
-    pad:SetAttribute("RoomCapacity", 1)
-    pad.CanTouch = i==1 -- only the already implemented 1vCPU entry is active
-    pad.CanCollide = true
-    local trim = part(padName.."_Trim", Vector3.new(12.8,0.18,24.8), Vector3.new(px,floorY+0.25,pz), yellow, Enum.Material.Metal)
-    trim.CanCollide, trim.CanTouch = false, false
-    sign(padName.."_Sign", padLabels[i], Vector3.new(11.5,3.2,0.5),
-        Vector3.new(px,floorY+3.2,pz-13), black, white)
-    neon("PadArrow_"..i, Vector3.new(2.5,0.25,0.35), Vector3.new(px,floorY+0.95,pz+8), white)
+-- Safety stripe in front of the matchmaking row.
+for i=1,18 do
+ local stripe=part("MatchmakingSafety_"..i,Vector3.new(1.4,0.08,1.2),CFrame.new(x-36+(i-1)*4,floorY+0.36,z+34)*CFrame.Angles(0,0,math.rad(35)),i%2==0 and yellow or black,Enum.Material.SmoothPlastic)
+ stripe.CanCollide=false
 end
 
--- LOWER CENTER: open spawn / gathering zone with a semicircular floor marking.
-local spawnCenter = Vector3.new(x, floorY+0.42, z+39)
-local spawnBase = part("SpawnZoneBase", Vector3.new(68,0.12,23), spawnCenter, Color3.fromRGB(48,53,57), Enum.Material.Asphalt)
-spawnBase.CanCollide = false
-for _, xOff in ipairs({-23,-8,8,23}) do
-    local ring = part("SpawnMarker_"..xOff, Vector3.new(7,0.16,7),
-        Vector3.new(x+xOff,floorY+0.55,z+37), xOff%2==0 and cyan or yellow, Enum.Material.Neon, nil, Enum.PartType.Cylinder)
-    ring.Orientation = Vector3.new(90,0,0)
-    ring.CanCollide = false
-end
-sign("SpawnZoneTitle", "ZONA DE APARICIÓN", Vector3.new(34,3.8,0.6),
-    Vector3.new(x,floorY+3,z+49), black, white)
+-- Open center gathering strip; keep it free of podiums and obstacles.
+local spawnCenter=Vector3.new(x,floorY+0.34,z+48)
+local spawnBase=part("SpawnZoneBase",Vector3.new(76,0.12,18),spawnCenter,Color3.fromRGB(48,53,57),Enum.Material.Asphalt)
+spawnBase.CanCollide=false
+sign("SpawnZoneTitle","ZONA DE REUNIÓN",Vector3.new(30,3.5,0.6),Vector3.new(x,floorY+3,z+58),black,white)
 
--- RIGHT SIDE: six vehicle display pads in a 2 x 3 showroom.
-sign("VehicleStoreTitle", "TIENDA DE VEHÍCULOS / TIENDA", Vector3.new(39,5,0.7),
-    Vector3.new(x+59,floorY+17,z-9), black, cyan)
-local displayIndex = 0
-for _, zOff in ipairs({-35,-8,19}) do
-    for _, xOff in ipairs({43,70}) do
-        displayIndex += 1
-        local px, pz = x+xOff, z+zOff
-        local base = part("KartDisplay_"..displayIndex, Vector3.new(22,1,17),
-            Vector3.new(px,floorY+0.8,pz), black, Enum.Material.Metal)
-        part("DisplayEdge_"..displayIndex, Vector3.new(22.5,0.22,17.5),
-            Vector3.new(px,floorY+1.38,pz), displayIndex%2==0 and cyan or yellow, Enum.Material.DiamondPlate)
-        part("DisplayTop_"..displayIndex, Vector3.new(20.5,0.12,15.5),
-            Vector3.new(px,floorY+1.55,pz), steel, Enum.Material.Metal)
-        sign("DisplayLabel_"..displayIndex, "VEHÍCULO "..displayIndex, Vector3.new(17,2.3,0.4),
-            Vector3.new(px,floorY+3.2,pz-8.5), black, white)
-    end
+-- RIGHT (+X): four circular vehicle display plinths.
+sign("VehicleStoreTitle","TIENDA DE VEHÍCULOS",Vector3.new(30,5,0.7),Vector3.new(x+43,floorY+17,z-5),black,cyan)
+local displayIndex=0
+for _,zOff in ipairs({-43,-7,29,65}) do
+ displayIndex+=1
+ local px,pz=x+42,z+zOff
+ local base=part("KartDisplay_"..displayIndex,Vector3.new(12,0.7,12),Vector3.new(px,floorY+0.7,pz),black,Enum.Material.Metal,nil,Enum.PartType.Cylinder)
+ base.Orientation=Vector3.new(0,0,90)
+ local ring=part("DisplayNeonRing_"..displayIndex,Vector3.new(12.8,0.25,12.8),Vector3.new(px,floorY+1.18,pz),cyan,Enum.Material.Neon,nil,Enum.PartType.Cylinder)
+ ring.Orientation=Vector3.new(0,0,90); ring.CanCollide=false
+ sign("DisplayLabel_"..displayIndex,"KART "..displayIndex,Vector3.new(10,2,0.4),Vector3.new(px,floorY+3,pz-6.5),black,white)
+end
+-- Tool shelves and industrial storage in the rear/right corner.
+for rack=1,2 do
+ local rx=x+54
+ local rz=z-65+(rack-1)*18
+ part("StoreShelf_"..rack,Vector3.new(2,7,12),Vector3.new(rx,floorY+3.5,rz),steel,Enum.Material.DiamondPlate)
+ for level=1,3 do part("StoreShelfLevel_"..rack.."_"..level,Vector3.new(5,0.35,12),Vector3.new(rx-1.5,floorY+level*2,rz),dark,Enum.Material.Metal) end
 end
 
--- Drive lane from spawn zone to the open exit gate.
-local lane = part("ExitDriveLane", Vector3.new(22,0.1,depth-66),
-    Vector3.new(gateCenterX,floorY+0.38,z+31), Color3.fromRGB(48,52,55), Enum.Material.Asphalt)
+-- Internal route/exit guide (shutter remains closed until a race departure system opens it).
+local lane = part("ExitDriveLane", Vector3.new(18,0.1,depth-90),
+    Vector3.new(gateCenterX,floorY+0.38,z+35), Color3.fromRGB(48,52,55), Enum.Material.Asphalt)
 lane.CanCollide = false
 for _, side in ipairs({-1,1}) do
-    part("ExitLaneLine_"..side, Vector3.new(0.3,0.08,depth-70),
-        Vector3.new(gateCenterX+side*11.5,floorY+0.45,z+31), yellow, Enum.Material.SmoothPlastic)
+    part("ExitLaneLine_"..side, Vector3.new(0.3,0.08,depth-94),
+        Vector3.new(gateCenterX+side*9.5,floorY+0.45,z+35), yellow, Enum.Material.SmoothPlastic)
 end
 for i = 1,4 do
     neon("ExitArrow_"..i, Vector3.new(3,0.2,0.45),
-        Vector3.new(gateCenterX,floorY+0.55,frontZ-7-(i-1)*5), cyan)
+        Vector3.new(gateCenterX,floorY+0.55,frontZ-8-(i-1)*5), cyan)
 end
 
 -- Garage identity sign stays physical and mounted; race entry logic is unchanged.
@@ -319,5 +314,5 @@ marker.Transparency = 1
 marker.CanCollide, marker.CanTouch, marker.CanQuery = false, false, false
 model.PrimaryPart = marker
 
-print(("[GARAGE] Blueprint garage built at %s (%d x %d). Existing 1vCPU pad and leaderboard IDs preserved; race track untouched.")
-    :format(tostring(GARAGE_ORIGIN), width, depth))
+print(("[GARAGE] Underground garage built at %s (%d x %d x %d). Square matchmaking pads and closed shell generated; race track untouched.")
+    :format(tostring(GARAGE_ORIGIN), width, depth, wallH))
