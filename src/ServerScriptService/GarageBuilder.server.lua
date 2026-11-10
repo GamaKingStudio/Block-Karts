@@ -59,11 +59,12 @@ local function lightStrip(name, size, position, color, brightness, range)
     return p
 end
 
-local function wallSign(name, title, subtitle, size, position, accent, face)
+local function wallSign(name, title, subtitle, size, position, accent, lookAtPosition)
     local board = part(name, size, position, C.graphite, Enum.Material.Metal)
+    if lookAtPosition then board.CFrame = CFrame.lookAt(position, lookAtPosition) end
     local gui = Instance.new("SurfaceGui")
     gui.Name = "SignFace"
-    gui.Face = face or Enum.NormalId.Front
+    gui.Face = Enum.NormalId.Front
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     gui.PixelsPerStud = 32
     gui.LightInfluence = 0.08
@@ -185,7 +186,7 @@ for i = 1, 18 do
         Vector3.new(x, floorY + 3 + i * 1.2, frontZ - 2.62), C.wall, Enum.Material.Metal, shell).CanCollide = false
 end
 wallSign("ExitGateSign", "TRACK ACCESS", "SALIDA A PISTA", Vector3.new(25, 3.5, 0.7),
-    Vector3.new(x, floorY + wallHeight - 3.2, frontZ - 3), C.amber)
+    Vector3.new(x, floorY + wallHeight - 3.2, frontZ - 3), C.amber, Vector3.new(x, floorY + 12, z))
 
 -- Structural columns and exposed beams, kept aligned and visually consistent.
 for _, xOff in ipairs({-56, -28, 0, 28, 56}) do
@@ -220,7 +221,7 @@ end
 
 -- Back wall: permanent identity and live leaderboard panels.
 wallSign("ReceptionSign", "BLOXY KARTS", "COMPETITION PADDOCK", Vector3.new(38, 5, 0.8),
-    Vector3.new(x, floorY + wallHeight - 7, rearZ + 2), C.cyan, Enum.NormalId.Back)
+    Vector3.new(x, floorY + wallHeight - 7, rearZ + 2), C.cyan, Vector3.new(x, floorY + 12, z))
 
 local function leaderboardBoard(name, title, position, accent)
     local board = part(name, Vector3.new(28, 8, 0.8), position, C.graphite, Enum.Material.Metal)
@@ -288,11 +289,11 @@ end
 local gathering = part("SpawnZoneBase", Vector3.new(74, 0.1, 16), Vector3.new(x, floorY + 0.34, z - 22), C.wallDark, Enum.Material.Asphalt)
 gathering.CanCollide = false
 wallSign("SpawnZoneTitle", "DRIVER LOUNGE", "PUNTO DE ENCUENTRO", Vector3.new(25, 3, 0.6),
-    Vector3.new(x, floorY + 4, z - 12), C.white)
+    Vector3.new(x, floorY + 4, z - 12), C.white, Vector3.new(x, floorY + 4, z + 24))
 
 -- Left wing: two clean service bays with lifts; no loose barrels or clutter.
 wallSign("WorkshopTitle", "RACE WORKSHOP", "AJUSTES Y MANTENIMIENTO", Vector3.new(27, 4, 0.7),
-    Vector3.new(x - 43, floorY + 16, z - 5), C.amber)
+    Vector3.new(x - 43, floorY + 16, z - 5), C.amber, Vector3.new(x, floorY + 16, z - 5))
 for bay = 1, 2 do
     local bx = x - 43 + (bay - 1) * 19
     for _, side in ipairs({-1, 1}) do
@@ -370,7 +371,7 @@ end
 
 -- Right wing: compact showroom plinths with consistent spacing.
 wallSign("VehicleStoreTitle", "KART COLLECTION", "VEHÍCULOS DESTACADOS", Vector3.new(27, 4, 0.7),
-    Vector3.new(x + 43, floorY + 17, z - 5), C.cyan)
+    Vector3.new(x + 43, floorY + 17, z - 5), C.cyan, Vector3.new(x, floorY + 17, z - 5))
 local displayColors = {C.red, C.blue, C.amber, Color3.fromRGB(65, 170, 125)}
 for i, zOff in ipairs({-43, -7, 29, 65}) do
     local px, pz = x + 42, z + zOff
@@ -390,7 +391,7 @@ local lane = part("ExitDriveLane", Vector3.new(18, 0.1, 30),
     Vector3.new(x, floorY + 0.38, z + 63), C.wallDark, Enum.Material.Asphalt)
 lane.CanCollide = false
 for _, side in ipairs({-1, 1}) do
-    local line = part("ExitLaneLine_"..side, Vector3.new(0.16, 0.06, depth - 94),
+    local line = part("ExitLaneLine_"..side, Vector3.new(0.16, 0.06, 30),
         Vector3.new(x + side * 9.5, floorY + 0.45, z + 63), C.amber, Enum.Material.SmoothPlastic)
     line.CanCollide = false
 end
