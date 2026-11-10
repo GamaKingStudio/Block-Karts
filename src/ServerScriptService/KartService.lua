@@ -2190,6 +2190,7 @@ local function buildTestCourse()
 							local isRedTrim = not isGlass and (
 								partName:find("roof", 1, true) or partName:find("techo", 1, true)
 								or partName:find("frame", 1, true) or partName:find("marco", 1, true)
+								or partName:find("window", 1, true) or partName:find("ventana", 1, true)
 								or partName:find("railing", 1, true) or partName:find("baranda", 1, true)
 								or partName:find("handrail", 1, true) or partName:find("rail", 1, true)
 								or partName:find("trim", 1, true) or partName:find("doorframe", 1, true)
@@ -3816,14 +3817,20 @@ local function beginMatchmakingEntry(player, pad, padIndex)
 
   if entryCountdowns[player] ~= token then return end
   entryCountdowns[player] = nil
-  matchmakingEntryCountdownRemote:FireClient(player, 0, targetPlayers)
+  local roomAvailable = not raceInProgress and not roomPreparing
+   and (roomTargetPlayers == 0 or roomTargetPlayers == targetPlayers)
+   and #getRacePlayers() < targetPlayers
   if player.Parent == Players and player:GetAttribute("InGarage") == true
-   and isPlayerStandingOnPad(player, pad) then
+   and isPlayerStandingOnPad(player, pad) and roomAvailable then
+   matchmakingEntryCountdownRemote:FireClient(player, 0, targetPlayers)
    player:SetAttribute("RoomStatus", nil)
    enterMatchmakingRoom(player, targetPlayers)
    print(("[MATCHMAKING][ENTRY] %s confirmó entrada a sala %d."):format(player.Name, targetPlayers))
   else
    matchmakingEntryCountdownRemote:FireClient(player, false)
+   if player.Parent == Players and player:GetAttribute("InGarage") == true then
+    player:SetAttribute("RoomStatus", raceInProgress and "SALA EN CARRERA" or "OTRA SALA EN ESPERA")
+   end
   end
  end)
 end
