@@ -126,32 +126,16 @@ entryGui.DisplayOrder = 60
 entryGui.Enabled = false
 entryGui.Parent = playerGui
 
-local entryPanel = Instance.new("Frame")
-entryPanel.Name = "EntryPanel"
-entryPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-entryPanel.Position = UDim2.new(0.5, 0, 0.36, 0)
-entryPanel.Size = UDim2.fromOffset(430, 220)
-entryPanel.BackgroundColor3 = Color3.fromRGB(13, 19, 27)
-entryPanel.BackgroundTransparency = 0.12
-entryPanel.BorderSizePixel = 0
-entryPanel.Parent = entryGui
-local entryCorner = Instance.new("UICorner")
-entryCorner.CornerRadius = UDim.new(0, 16)
-entryCorner.Parent = entryPanel
-local entryStroke = Instance.new("UIStroke")
-entryStroke.Color = Color3.fromRGB(255, 197, 72)
-entryStroke.Thickness = 2
-entryStroke.Transparency = 0.12
-entryStroke.Parent = entryPanel
-
-local entryTitle = label(entryPanel, "EntryTitle", UDim2.new(1, -30, 0, 34),
- UDim2.fromOffset(15, 14), "ENTRANDO A SALA", 23, Color3.fromRGB(245, 247, 250), "Title")
-local entryNumber = label(entryPanel, "EntryNumber", UDim2.new(1, -30, 0, 100),
- UDim2.fromOffset(15, 48), "5", 78, Color3.fromRGB(255, 197, 72), "Bold")
-local entryDetail = label(entryPanel, "EntryDetail", UDim2.new(1, -30, 0, 38),
- UDim2.fromOffset(15, 160), "MANTENTE EN LA PLATAFORMA", 17, Color3.fromRGB(220, 226, 235), "Light")
-entryNumber.TextStrokeColor3 = Color3.fromRGB(5, 9, 14)
-entryNumber.TextStrokeTransparency = 0.12
+local entryTitle = label(entryGui, "EntryTitle", UDim2.new(1, -40, 0, 42),
+ UDim2.new(0, 20, 0.29, 0), "ENTRANDO A SALA", 25, Color3.fromRGB(255, 255, 255), "Title")
+local entryNumber = label(entryGui, "EntryNumber", UDim2.new(1, -40, 0, 112),
+ UDim2.new(0, 20, 0.34, 0), "5", 88, Color3.fromRGB(255, 197, 72), "Bold")
+local entryDetail = label(entryGui, "EntryDetail", UDim2.new(1, -40, 0, 38),
+ UDim2.new(0, 20, 0.48, 0), "MANTENTE EN LA PLATAFORMA", 18, Color3.fromRGB(255, 255, 255), "Light")
+for _, textLabel in ipairs({entryTitle, entryNumber, entryDetail}) do
+ textLabel.TextStrokeColor3 = Color3.fromRGB(12, 18, 25)
+ textLabel.TextStrokeTransparency = 0.12
+end
 local entryDisplayToken = 0
 
 matchmakingEntryCountdownEvent.OnClientEvent:Connect(function(value, capacity)
