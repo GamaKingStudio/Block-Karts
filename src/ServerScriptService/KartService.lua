@@ -200,7 +200,7 @@ local function publishSelectionState()
  end
  updateMatchmakingPads()
  for _, p in ipairs(list) do
-  selectionStateRemote:FireClient(p, ready, #list, selectedCameras[p] ~= nil)
+  selectionStateRemote:FireClient(p, ready, roomTargetPlayers, selectedCameras[p] ~= nil)
  end
 end
 
@@ -215,14 +215,21 @@ local function tryStartRace()
   return
  end
 
+ local allReady = true
  for _, p in ipairs(list) do
   local k = activeKarts[p]
-  if not k or not k.seat.Parent or not k.seat.Occupant
-   or k.seat.Occupant.Parent ~= p.Character or not selectedCameras[p] then
+  local seated = k and k.seat.Parent and k.seat.Occupant
+   and k.seat.Occupant.Parent == p.Character
+  if not selectedCameras[p] or not seated then
+   allReady = false
    p:SetAttribute("RoomStatus", selectedCameras[p] and "SIÉNTATE EN TU KART" or "ELIGE CÁMARA")
-   publishSelectionState()
-   return
+  else
+   p:SetAttribute("RoomStatus", "LISTO")
   end
+ end
+ if not allReady then
+  publishSelectionState()
+  return
  end
 
  raceInProgress = true
