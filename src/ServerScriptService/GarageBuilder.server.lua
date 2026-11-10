@@ -195,7 +195,7 @@ for i = 0, 21 do
 end
 
 -- Vinilo de clausura: bandas diagonales y placa central en el mismo plano visual.
-local tapeSurfaceZ = frontZ - 2.78
+local tapeSurfaceZ = frontZ - 3.22 -- delante de la placa, visible desde el interior
 for index, angle in ipairs({-32, 32}) do
     local tape = part("UndergroundClosureTape_"..index, Vector3.new(31, 1.2, 0.12),
         CFrame.new(x, floorY + wallHeight/2, tapeSurfaceZ) * CFrame.Angles(0, 0, math.rad(angle)),
@@ -205,7 +205,7 @@ for index, angle in ipairs({-32, 32}) do
     tape.CanQuery = false
 end
 local closurePlate = part("UndergroundGarageVinyl", Vector3.new(23, 3.6, 0.18),
-    Vector3.new(x, floorY + wallHeight/2, frontZ - 3.02),
+    Vector3.new(x, floorY + wallHeight/2, frontZ - 2.98),
     Color3.fromRGB(25, 29, 35), Enum.Material.SmoothPlastic, shell)
 closurePlate.CanCollide = false
 closurePlate.CanTouch = false
