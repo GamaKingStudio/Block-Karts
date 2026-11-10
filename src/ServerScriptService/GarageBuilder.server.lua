@@ -269,16 +269,16 @@ for _, zOff in ipairs({-35,-8,19}) do
 end
 
 -- Drive lane from spawn zone to the open exit gate.
-local lane = part("ExitDriveLane", Vector3.new(22,0.1,depth-18),
-    Vector3.new(gateCenterX,floorY+0.38,z+2), Color3.fromRGB(48,52,55), Enum.Material.Asphalt)
+local lane = part("ExitDriveLane", Vector3.new(22,0.1,depth-66),
+    Vector3.new(gateCenterX,floorY+0.38,z+31), Color3.fromRGB(48,52,55), Enum.Material.Asphalt)
 lane.CanCollide = false
 for _, side in ipairs({-1,1}) do
-    part("ExitLaneLine_"..side, Vector3.new(0.3,0.08,depth-22),
-        Vector3.new(gateCenterX+side*11.5,floorY+0.45,z+2), yellow, Enum.Material.SmoothPlastic)
+    part("ExitLaneLine_"..side, Vector3.new(0.3,0.08,depth-70),
+        Vector3.new(gateCenterX+side*11.5,floorY+0.45,z+31), yellow, Enum.Material.SmoothPlastic)
 end
 for i = 1,4 do
     neon("ExitArrow_"..i, Vector3.new(3,0.2,0.45),
-        Vector3.new(gateCenterX,floorY+0.55,frontZ-9+(i-1)*5), cyan)
+        Vector3.new(gateCenterX,floorY+0.55,frontZ-7-(i-1)*5), cyan)
 end
 
 -- Garage identity sign stays physical and mounted; race entry logic is unchanged.
