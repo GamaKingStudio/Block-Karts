@@ -190,7 +190,7 @@ wallSign("ExitGateSign", "TRACK ACCESS", "SALIDA A PISTA", Vector3.new(25, 3.5, 
 -- Structural columns and exposed beams, kept aligned and visually consistent.
 for _, xOff in ipairs({-56, -28, 0, 28, 56}) do
     for _, zOff in ipairs({-76, 0, 76}) do
-        if not (xOff == 0 and zOff == 0) then
+        if not (xOff == 0 and (zOff == 0 or zOff == 76 or zOff == -76)) then
             part("StructuralColumn_"..xOff.."_"..zOff, Vector3.new(3, wallHeight, 3),
                 Vector3.new(x + xOff, floorY + wallHeight/2, z + zOff), C.wallDark, Enum.Material.Concrete, shell)
         end
