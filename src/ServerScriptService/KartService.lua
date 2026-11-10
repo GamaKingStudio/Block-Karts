@@ -3306,6 +3306,10 @@ local function placeCharacterInGarage(player, character)
 			player:SetAttribute("RaceCountdownActive", false)
 			player:SetAttribute("RaceCamera", nil)
 			selectedCameras[player] = nil
+			if roomPlayers[player] and roomTargetPlayers == 1 then
+				selectedCameras[player] = "Classic"
+				player:SetAttribute("RaceCamera", "Classic")
+			end
 			driverInputs[player] = { throttle = 0, steering = 0, braking = false }
 			publishSelectionState()
 			tryStartRace()
