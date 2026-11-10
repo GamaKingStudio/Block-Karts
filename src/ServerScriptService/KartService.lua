@@ -3447,7 +3447,7 @@ end
 
 local function createCpuOpponent(player)
  if cpuKart then cpuKart.model:Destroy(); cpuKart = nil end
- local kart = createKart({ UserId = -999001 }, 2)
+ local kart = createKart({ UserId = -999001 }, 0)
  kart.model.Name = "Kart_CPU_01"
  kart.model:SetAttribute("IsCPUOpponent", true)
  kart.model:SetAttribute("OwnerUserId", -999001)
@@ -3692,9 +3692,9 @@ local function enterMatchmakingRoom(player, padIndex)
   local usedSlot = participant:GetAttribute("KartSpawnIndex")
   if typeof(usedSlot) == "number" then occupiedSlots[usedSlot] = true end
  end
- -- El rival CPU ocupa el puesto 2; los cuatro puestos humanos lo evitan.
+ -- El kart CPU queda oculto fuera de la parrilla; los humanos usan los puestos 1-4.
  local spawnSlot = nil
- for _, candidate in ipairs({1, 3, 4, 5}) do
+ for _, candidate in ipairs({1, 2, 3, 4}) do
   if not occupiedSlots[candidate] then
    spawnSlot = candidate
    break
