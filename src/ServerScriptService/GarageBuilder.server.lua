@@ -84,13 +84,19 @@ local white = Color3.fromRGB(232, 239, 241)
 local x, y, z = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
 
 -- Underground lighting requested by the garage blueprint.
-Lighting = game:GetService("Lighting")
+local Lighting = game:GetService("Lighting")
 Lighting.Technology = Enum.Technology.Future
 Lighting.Ambient = Color3.fromRGB(25, 28, 35)
 Lighting.OutdoorAmbient = Color3.fromRGB(10, 12, 16)
 Lighting.Brightness = 0.5
 Lighting.ClockTime = 0
 Lighting.GlobalShadows = true
+local bloom=Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect")
+bloom.Intensity=0.65; bloom.Size=24; bloom.Threshold=0.85; bloom.Parent=Lighting
+local correction=Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect")
+correction.Contrast=0.1; correction.Saturation=0.05; correction.TintColor=Color3.fromRGB(245,250,255); correction.Parent=Lighting
+local atmosphere=Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
+atmosphere.Density=0.3; atmosphere.Offset=0; atmosphere.Color=Color3.fromRGB(80,90,105); atmosphere.Parent=Lighting
 local width, depth = 120, 160
 local halfW, halfD = width/2, depth/2
 local floorY = y + 2.25
@@ -105,7 +111,11 @@ local shell = Instance.new("Folder")
 shell.Name = "GarageBuilding"
 shell.Parent = model
 part("RearConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, rearZ), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
-part("FrontConcreteWall", Vector3.new(width, wallH, wallT), Vector3.new(x, floorY + wallH/2, frontZ), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
+local frontSideWidth=(width-gateWidth)/2
+part("FrontConcreteWall_Left",Vector3.new(frontSideWidth,wallH,wallT),Vector3.new(x-(gateWidth/2+frontSideWidth/2),floorY+wallH/2,frontZ),Color3.fromRGB(55,58,62),Enum.Material.Concrete,shell)
+part("FrontConcreteWall_Right",Vector3.new(frontSideWidth,wallH,wallT),Vector3.new(x+(gateWidth/2+frontSideWidth/2),floorY+wallH/2,frontZ),Color3.fromRGB(55,58,62),Enum.Material.Concrete,shell)
+part("FrontConcreteLintel",Vector3.new(gateWidth,2,wallT),Vector3.new(x,floorY+wallH-1,frontZ),Color3.fromRGB(55,58,62),Enum.Material.Concrete,shell)
+part("FrontConcreteSill",Vector3.new(gateWidth,2,wallT),Vector3.new(x,floorY+1,frontZ),Color3.fromRGB(55,58,62),Enum.Material.Concrete,shell)
 part("LeftConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x-halfW+wallT/2, floorY+wallH/2, z), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
 part("RightConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.new(x+halfW-wallT/2, floorY+wallH/2, z), Color3.fromRGB(55,58,62), Enum.Material.Concrete, shell)
 
@@ -113,13 +123,13 @@ part("RightConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.ne
 local gateCenterX, gateWidth = x, 34
 part("ExitGateFrameLeft", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX-gateWidth/2-1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
 part("ExitGateFrameRight", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX+gateWidth/2+1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
-part("ExitGateShutter", Vector3.new(gateWidth, wallH-4, 1.2), Vector3.new(gateCenterX, floorY+(wallH-4)/2, frontZ-1.1), Color3.fromRGB(35,37,40), Enum.Material.Metal, shell)
+part("ExitGateShutter", Vector3.new(gateWidth, wallH-4, 1.2), Vector3.new(gateCenterX, floorY+wallH/2, frontZ-2.2), Color3.fromRGB(35,37,40), Enum.Material.Metal, shell)
 for i=1,22 do
  part("ExitShutterRib_"..i, Vector3.new(0.22,wallH-4,0.18),
-  Vector3.new(gateCenterX-gateWidth/2+1+(i-1)*(gateWidth-2)/21,floorY+(wallH-4)/2,frontZ-1.78),
+  Vector3.new(gateCenterX-gateWidth/2+1+(i-1)*(gateWidth-2)/21,floorY+wallH/2,frontZ-2.9),
   Color3.fromRGB(70,74,78),Enum.Material.CorrugatedMetal,shell)
 end
-sign("ExitGateSign","SALIDA A PISTA",Vector3.new(25,3,0.6),Vector3.new(gateCenterX,floorY+wallH-2.3,frontZ-2),black,red)
+sign("ExitGateSign","SALIDA A PISTA",Vector3.new(25,3,0.6),Vector3.new(gateCenterX,floorY+wallH-3.1,frontZ-3.2),black,red)
 for _,side in ipairs({-1,1}) do
  neon("ExitWarning_"..side,Vector3.new(0.7,7,0.7),Vector3.new(gateCenterX+side*19,floorY+wallH-7,frontZ-2),red)
 end
@@ -148,23 +158,6 @@ for side=-1,1,2 do
    i%2==0 and yellow or black,Enum.Material.SmoothPlastic,shell)
   stripe.CanCollide=false
  end
-end
-
--- Roof and structural girders preserve the industrial underground identity.
-part("GarageRoof", Vector3.new(width+6, 4, depth+6), Vector3.new(x, ceilingY+2, z), black, Enum.Material.Concrete, shell)
-for _, zOff in ipairs({-42, 0, 42}) do
-    part("RoofBeam_Z"..zOff, Vector3.new(width-10, 1.4, 2.2), Vector3.new(x, ceilingY-1, z+zOff), steel, Enum.Material.DiamondPlate, shell)
-end
-for _, xOff in ipairs({-52, 0, 52}) do
-    part("RoofCrossBeam_X"..xOff, Vector3.new(2, 1.4, depth-12), Vector3.new(x+xOff, ceilingY-1.1, z), steel, Enum.Material.DiamondPlate, shell)
-end
-for _, xOff in ipairs({-70, -35, 35, 70}) do
-    for _, zOff in ipairs({-48, 48}) do
-        local pillar = part("Pillar_"..xOff.."_"..zOff, Vector3.new(3.2, wallH-1, 3.2),
-            Vector3.new(x+xOff, floorY+(wallH-1)/2, z+zOff), Color3.fromRGB(48,53,57), Enum.Material.Concrete)
-        part("PillarBand_"..xOff.."_"..zOff, Vector3.new(3.28, 1, 3.28),
-            Vector3.new(x+xOff, floorY+2, z+zOff), yellow, Enum.Material.Metal)
-    end
 end
 
 -- BACK (-Z): two ranking screens. Keep the center area clear: no podium.
