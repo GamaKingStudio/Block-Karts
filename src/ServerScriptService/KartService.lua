@@ -157,6 +157,7 @@ local raceHasStarted = false
 local countdownToken = 0
 local roomPlayers = {}
 local roomTargetPlayers = 0
+local roomPreparing = false
 local anotherRaceRequests = {}
 local roomFinishTimes = {}
 local cpuKart = nil
@@ -3655,9 +3656,19 @@ local function enterMatchmakingRoom(player, padIndex)
  for _ in pairs(roomPlayers) do currentCount += 1 end
  if currentCount >= targetPlayers then return end
 
+ if roomPreparing then return end
  if roomTargetPlayers == 0 then
+  roomPreparing = true
   roomTargetPlayers = targetPlayers
   createCpuOpponent(player)
+  roomPreparing = false
+  if player.Parent ~= Players then
+   if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
+   cpuKart = nil
+   cpuRace = nil
+   roomTargetPlayers = 0
+   return
+  end
   if not cpuKart or not cpuRace then
    roomTargetPlayers = 0
    if cpuKart and cpuKart.model then cpuKart.model:Destroy() end
@@ -3669,8 +3680,15 @@ local function enterMatchmakingRoom(player, padIndex)
  end
 
  currentCount += 1
+ local occupiedSlots = {}
+ for participant in pairs(roomPlayers) do
+  local usedSlot = participant:GetAttribute("KartSpawnIndex")
+  if typeof(usedSlot) == "number" then occupiedSlots[usedSlot] = true end
+ end
+ local spawnSlot = 1
+ while occupiedSlots[spawnSlot] do spawnSlot += 1 end
  roomPlayers[player] = true
- player:SetAttribute("KartSpawnIndex", currentCount)
+ player:SetAttribute("KartSpawnIndex", spawnSlot)
  player:SetAttribute("InRaceRoom", true)
  player:SetAttribute("RoomStatus", targetPlayers == 1 and "ELIGE CÁMARA"
   or string.format("ESPERANDO PILOTOS %d/%d", currentCount, targetPlayers))
