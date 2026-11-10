@@ -723,12 +723,293 @@ local function computeDividerChains(points, railOffset, railChains)
 	return result
 end
 
+-- ==========================================================
+-- VIDA DE PLAYA: sombrillas, reposeras, tablas de surf, toallas, redes de
+-- voley, castillos de arena, orilla con espuma. TODO queda por fuera de las
+-- barandas: ningun elemento se coloca a menos de 34 studs del eje de la pista
+-- (las barandas estan a 20) ni sobre estructuras ya existentes.
+-- Posiciones aleatorias con semilla fija: se ven igual en cada partida.
+-- ==========================================================
+local BEACH_PALETTE = {
+	Color3.fromRGB(220, 40, 40),
+	Color3.fromRGB(35, 120, 230),
+	Color3.fromRGB(250, 205, 30),
+	Color3.fromRGB(30, 185, 160),
+	Color3.fromRGB(245, 125, 30),
+	Color3.fromRGB(235, 90, 160),
+	Color3.fromRGB(150, 90, 220),
+}
+
+local function buildBeachLife(course, centerline, yGround)
+	local rng = Random.new(20261109)
+	local count = #centerline
+	local folder = Instance.new("Folder")
+	folder.Name = "BeachLife"
+	folder:SetAttribute("GeneratedByKartService", true)
+	folder.Parent = course
+
+	local SAND_X_MIN, SAND_X_MAX = -275, 375 -- bordes de la isla de arena (IslandSand)
+	local SAND_Z_MIN, SAND_Z_MAX = -325, 325
+	local TRACK_CLEARANCE = 34
+
+	local function distanceToTrack(x, z)
+		local best = math.huge
+		for i = 1, count do
+			local a, b = centerline[i], centerline[i % count + 1]
+			local dx, dz = b.x - a.x, b.z - a.z
+			local lenSq = dx * dx + dz * dz
+			local t = lenSq > 0 and math.clamp(((x - a.x) * dx + (z - a.z) * dz) / lenSq, 0, 1) or 0
+			local ex, ez = x - (a.x + dx * t), z - (a.z + dz * t)
+			local d = math.sqrt(ex * ex + ez * ez)
+			if d < best then best = d end
+		end
+		return best
+	end
+
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Include
+	overlapParams.FilterDescendantsInstances = { course }
+
+	local placed = {}
+	local function isFree(x, z, radius)
+		if x < SAND_X_MIN + 35 or x > SAND_X_MAX - 35 or z < SAND_Z_MIN + 35 or z > SAND_Z_MAX - 35 then
+			return false
+		end
+		if distanceToTrack(x, z) < TRACK_CLEARANCE + radius then return false end
+		-- Zona de boxes/pit lane (no es parte del circuito pero ocupa espacio).
+		if x > -5 and x < 140 and z > 55 and z < 130 then return false end
+		-- Muelle, pasarelas de madera y botes del lado oeste/norte.
+		if x > -190 and x < -128 and z > -80 and z < 120 then return false end
+		if x > -145 and x < -5 and z > -156 and z < -134 then return false end
+		for _, q in ipairs(placed) do
+			local minGap = radius + q.r + 1.5
+			if (x - q.x) ^ 2 + (z - q.z) ^ 2 < minGap * minGap then return false end
+		end
+		-- Estructuras ya construidas (tribunas, kioscos, muelle...), por encima del suelo.
+		local hits = Workspace:GetPartBoundsInBox(
+			CFrame.new(x, yGround + 3.5, z),
+			Vector3.new(radius * 2, 4.8, radius * 2),
+			overlapParams
+		)
+		for _, hit in ipairs(hits) do
+			if hit.Parent ~= folder then return false end
+		end
+		return true
+	end
+	local function reserve(x, z, r)
+		placed[#placed + 1] = { x = x, z = z, r = r }
+	end
+
+	local function part(name, size, cframe, color, material, shape)
+		local p = makePart(folder, name, size, cframe, color, material, shape)
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.CastShadow = size.Magnitude > 4
+		return p
+	end
+	local function pick(list) return list[rng:NextInteger(1, #list)] end
+
+	-- Sombrilla: poste inclinado + dos discos concentricos de colores.
+	local function umbrella(x, z)
+		local c1, c2 = pick(BEACH_PALETTE), Color3.fromRGB(250, 250, 250)
+		local base = CFrame.new(x, yGround, z)
+			* CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+			* CFrame.Angles(math.rad(rng:NextNumber(-9, 9)), 0, math.rad(rng:NextNumber(-9, 9)))
+		part("UmbrellaPole", Vector3.new(0.32, 7.6, 0.32), base * CFrame.new(0, 3.3, 0), Color3.fromRGB(235, 235, 235), Enum.Material.Metal)
+		part("UmbrellaCanopy", Vector3.new(0.45, 9.6, 9.6), base * CFrame.new(0, 7.0, 0) * CFrame.Angles(0, 0, math.pi / 2), c1, Enum.Material.Fabric, "Cylinder")
+		part("UmbrellaCenter", Vector3.new(0.5, 5.2, 5.2), base * CFrame.new(0, 7.12, 0) * CFrame.Angles(0, 0, math.pi / 2), c2, Enum.Material.Fabric, "Cylinder")
+		part("UmbrellaTip", Vector3.new(0.7, 0.7, 0.7), base * CFrame.new(0, 7.5, 0), Color3.fromRGB(235, 235, 235), Enum.Material.Metal, "Ball")
+	end
+
+	-- Reposera: asiento con patas, respaldo inclinado y toalla de color.
+	local function lounger(x, z, yaw)
+		local accent = pick(BEACH_PALETTE)
+		local base = CFrame.new(x, yGround, z) * CFrame.Angles(0, yaw, 0)
+		local frame = Color3.fromRGB(245, 245, 245)
+		part("LoungerSeat", Vector3.new(3, 0.3, 5), base * CFrame.new(0, 0.95, 0), frame, Enum.Material.SmoothPlastic)
+		for _, lx in ipairs({ -1.3, 1.3 }) do
+			for _, lz in ipairs({ -2.2, 2.2 }) do
+				part("LoungerLeg", Vector3.new(0.3, 0.95, 0.3), base * CFrame.new(lx, 0.47, lz), Color3.fromRGB(110, 118, 125), Enum.Material.Metal)
+			end
+		end
+		local theta = math.rad(38)
+		local hinge = Vector3.new(0, 1.1, -2.5)
+		local backCenter = hinge + Vector3.new(0, math.sin(theta), -math.cos(theta)) * 1.6
+		part("LoungerBack", Vector3.new(3, 0.3, 3.2), base * CFrame.new(backCenter) * CFrame.Angles(theta, 0, 0), frame, Enum.Material.SmoothPlastic)
+		part("LoungerCushion", Vector3.new(2.6, 0.12, 4.6), base * CFrame.new(0, 1.16, 0.1), accent, Enum.Material.Fabric)
+		part("LoungerBackCushion", Vector3.new(2.6, 0.12, 2.8), base * CFrame.new(backCenter + Vector3.new(0, 0.12, 0)) * CFrame.Angles(theta, 0, 0), accent, Enum.Material.Fabric)
+	end
+
+	-- Tabla de surf clavada en la arena, algo inclinada (con aleta y franja).
+	local function surfboard(x, z, yaw)
+		local c1, c2 = pick(BEACH_PALETTE), pick(BEACH_PALETTE)
+		local base = CFrame.new(x, yGround, z)
+			* CFrame.Angles(0, yaw, 0)
+			* CFrame.Angles(math.rad(rng:NextNumber(-14, 14)), 0, math.rad(rng:NextNumber(-5, 5)))
+		part("Surfboard", Vector3.new(1.7, 7.6, 0.28), base * CFrame.new(0, 3.3, 0), c1, Enum.Material.SmoothPlastic)
+		part("SurfboardStripe", Vector3.new(0.5, 7.62, 0.3), base * CFrame.new(0, 3.3, 0), c2, Enum.Material.SmoothPlastic)
+		part("SurfboardFin", Vector3.new(0.12, 1.3, 0.9), base * CFrame.new(0, 0.2, 0.55), Color3.fromRGB(40, 44, 50), Enum.Material.SmoothPlastic)
+	end
+
+	local function towel(x, z, yaw)
+		local c1, c2 = pick(BEACH_PALETTE), Color3.fromRGB(250, 250, 250)
+		local base = CFrame.new(x, yGround + 0.04, z) * CFrame.Angles(0, yaw, 0)
+		part("Towel", Vector3.new(3.4, 0.07, 6.2), base, c1, Enum.Material.Fabric)
+		for _, sz in ipairs({ -1.8, 0, 1.8 }) do
+			part("TowelStripe", Vector3.new(3.42, 0.08, 0.5), base * CFrame.new(0, 0.005, sz), c2, Enum.Material.Fabric)
+		end
+	end
+
+	local function beachBall(x, z)
+		local r = 0.9
+		part("BeachBall", Vector3.new(r * 2, r * 2, r * 2), CFrame.new(x, yGround + r, z), pick(BEACH_PALETTE), Enum.Material.SmoothPlastic, "Ball")
+		part("BeachBallBand", Vector3.new(0.3, r * 1.9, r * 1.9), CFrame.new(x, yGround + r, z) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(250, 250, 250), Enum.Material.SmoothPlastic, "Cylinder")
+	end
+
+	local function sandcastle(x, z)
+		local sandDark = Color3.fromRGB(222, 195, 132)
+		part("CastleBase", Vector3.new(1.6, 6, 6), CFrame.new(x, yGround + 0.8, z) * CFrame.Angles(0, 0, math.pi / 2), sandDark, Enum.Material.Sand, "Cylinder")
+		part("CastleMid", Vector3.new(1.6, 4.2, 4.2), CFrame.new(x, yGround + 2.4, z) * CFrame.Angles(0, 0, math.pi / 2), sandDark, Enum.Material.Sand, "Cylinder")
+		part("CastleTop", Vector3.new(1.6, 2.6, 2.6), CFrame.new(x, yGround + 4.0, z) * CFrame.Angles(0, 0, math.pi / 2), sandDark, Enum.Material.Sand, "Cylinder")
+		part("CastleFlagPole", Vector3.new(0.14, 2.2, 0.14), CFrame.new(x, yGround + 5.9, z), Color3.fromRGB(110, 80, 50), Enum.Material.Wood)
+		part("CastleFlag", Vector3.new(0.05, 0.8, 1.2), CFrame.new(x, yGround + 6.6, z + 0.6), Color3.fromRGB(220, 40, 40), Enum.Material.Fabric)
+	end
+
+	local function cooler(x, z, yaw)
+		local base = CFrame.new(x, yGround, z) * CFrame.Angles(0, yaw, 0)
+		part("CoolerBody", Vector3.new(2.4, 1.4, 1.6), base * CFrame.new(0, 0.7, 0), Color3.fromRGB(35, 120, 230), Enum.Material.SmoothPlastic)
+		part("CoolerLid", Vector3.new(2.5, 0.25, 1.7), base * CFrame.new(0, 1.5, 0), Color3.fromRGB(245, 245, 245), Enum.Material.SmoothPlastic)
+	end
+
+	-- Red de voley playa: dos postes, red y pelota.
+	local function volleyNet(x, z, yaw)
+		local base = CFrame.new(x, yGround, z) * CFrame.Angles(0, yaw, 0)
+		for _, px in ipairs({ -6.5, 6.5 }) do
+			part("NetPost", Vector3.new(0.4, 8, 0.4), base * CFrame.new(px, 3.5, 0), Color3.fromRGB(145, 98, 52), Enum.Material.Wood)
+		end
+		local net = part("Net", Vector3.new(13, 2.6, 0.08), base * CFrame.new(0, 6.3, 0), Color3.fromRGB(245, 245, 245), Enum.Material.SmoothPlastic)
+		net.Transparency = 0.45
+		part("NetTop", Vector3.new(13, 0.22, 0.22), base * CFrame.new(0, 7.6, 0), Color3.fromRGB(245, 245, 245), Enum.Material.Fabric)
+	end
+
+	-- 1) Zonas de playa: sombrilla + reposeras + toalla + extras.
+	local clusters, attempts = 0, 0
+	while clusters < 34 and attempts < 900 do
+		attempts += 1
+		local x = rng:NextNumber(SAND_X_MIN + 40, SAND_X_MAX - 40)
+		local z = rng:NextNumber(SAND_Z_MIN + 40, SAND_Z_MAX - 40)
+		local trackDistance = distanceToTrack(x, z)
+		-- Mas probable cerca de la pista (se ven desde el kart), tambien alguna lejos.
+		local nearEnough = trackDistance < 120 or rng:NextNumber() < 0.25
+		if nearEnough and isFree(x, z, 10) then
+			clusters += 1
+			reserve(x, z, 10)
+			umbrella(x, z)
+			local facing = rng:NextNumber(0, math.pi * 2)
+			local loungerCount = rng:NextInteger(1, 2)
+			for k = 1, loungerCount do
+				local angle = facing + (k == 1 and -0.7 or 0.7) + math.pi / 2
+				local lx, lz = x + math.cos(angle) * 5.2, z + math.sin(angle) * 5.2
+				if isFree(lx, lz, 3.2) then
+					lounger(lx, lz, facing)
+					reserve(lx, lz, 3.2)
+				end
+			end
+			if rng:NextNumber() < 0.6 then
+				local tx, tz = x + rng:NextNumber(-8, 8), z + rng:NextNumber(-8, 8)
+				if isFree(tx, tz, 3.6) then towel(tx, tz, rng:NextNumber(0, math.pi)); reserve(tx, tz, 3.6) end
+			end
+			if rng:NextNumber() < 0.5 then
+				local bx, bz = x + rng:NextNumber(-9, 9), z + rng:NextNumber(-9, 9)
+				if isFree(bx, bz, 1.6) then beachBall(bx, bz); reserve(bx, bz, 1.6) end
+			end
+			if rng:NextNumber() < 0.4 then
+				local cx, cz = x + rng:NextNumber(-7, 7), z + rng:NextNumber(-7, 7)
+				if isFree(cx, cz, 2) then cooler(cx, cz, rng:NextNumber(0, math.pi)); reserve(cx, cz, 2) end
+			end
+		end
+	end
+
+	-- 2) Grupos de tablas de surf (2 a 4 tablas paralelas).
+	local racks, rackAttempts = 0, 0
+	while racks < 22 and rackAttempts < 700 do
+		rackAttempts += 1
+		local x = rng:NextNumber(SAND_X_MIN + 40, SAND_X_MAX - 40)
+		local z = rng:NextNumber(SAND_Z_MIN + 40, SAND_Z_MAX - 40)
+		if (distanceToTrack(x, z) < 120 or rng:NextNumber() < 0.3) and isFree(x, z, 6) then
+			racks += 1
+			reserve(x, z, 6)
+			local yaw = rng:NextNumber(0, math.pi * 2)
+			for k = 1, rng:NextInteger(2, 4) do
+				local off = (k - 2.5) * 2.4
+				surfboard(x + math.cos(yaw) * off, z + math.sin(yaw) * off, yaw + math.pi / 2 + rng:NextNumber(-0.15, 0.15))
+			end
+		end
+	end
+
+	-- 3) Castillos de arena, redes de voley y toallas sueltas.
+	local function scatter(total, radius, builder)
+		local made, tries = 0, 0
+		while made < total and tries < 500 do
+			tries += 1
+			local x = rng:NextNumber(SAND_X_MIN + 40, SAND_X_MAX - 40)
+			local z = rng:NextNumber(SAND_Z_MIN + 40, SAND_Z_MAX - 40)
+			if (distanceToTrack(x, z) < 130 or rng:NextNumber() < 0.3) and isFree(x, z, radius) then
+				made += 1
+				reserve(x, z, radius)
+				builder(x, z)
+			end
+		end
+	end
+	scatter(10, 4.5, sandcastle)
+	scatter(3, 9, function(x, z) volleyNet(x, z, rng:NextNumber(0, math.pi)) end)
+	scatter(14, 3.8, function(x, z) towel(x, z, rng:NextNumber(0, math.pi)) end)
+
+	-- 4) Orilla: arena mojada y espuma en el borde de la isla, y agua poco
+	--    profunda alrededor (el horizonte de mar abierto ya existe).
+	local wetSand = Color3.fromRGB(205, 182, 124)
+	local foamColor = Color3.fromRGB(245, 252, 255)
+	local shallow = Color3.fromRGB(55, 205, 230)
+	local width = SAND_X_MAX - SAND_X_MIN
+	local depth = SAND_Z_MAX - SAND_Z_MIN
+	local cx, cz = (SAND_X_MIN + SAND_X_MAX) / 2, (SAND_Z_MIN + SAND_Z_MAX) / 2
+	local edges = {
+		{ name = "North", pos = Vector3.new(cx, 0, SAND_Z_MIN), along = Vector3.new(width + 160, 0, 0), normal = Vector3.new(0, 0, -1) },
+		{ name = "South", pos = Vector3.new(cx, 0, SAND_Z_MAX), along = Vector3.new(width + 160, 0, 0), normal = Vector3.new(0, 0, 1) },
+		{ name = "West", pos = Vector3.new(SAND_X_MIN, 0, cz), along = Vector3.new(0, 0, depth), normal = Vector3.new(-1, 0, 0) },
+		{ name = "East", pos = Vector3.new(SAND_X_MAX, 0, cz), along = Vector3.new(0, 0, depth), normal = Vector3.new(1, 0, 0) },
+	}
+	for _, e in ipairs(edges) do
+		local horizontal = e.along.X ~= 0
+		local function strip(label, inward, thickness, y, color, material, transparency)
+			-- inward > 0: hacia dentro de la isla; < 0: hacia el mar.
+			local center = e.pos - e.normal * inward
+			local size = horizontal and Vector3.new(e.along.X, 0.06, thickness) or Vector3.new(thickness, 0.06, e.along.Z)
+			local strp = part("Shore" .. label .. e.name, size, CFrame.new(center.X, y, center.Z), color, material)
+			strp.Transparency = transparency or 0
+			return strp
+		end
+		strip("Wet", 8, 16, yGround + 0.012, wetSand, Enum.Material.Sand)
+		strip("Foam", 1.5, 3, yGround + 0.03, foamColor, Enum.Material.SmoothPlastic, 0.2)
+		strip("Shallow", -35, 70, yGround - 0.45, shallow, Enum.Material.SmoothPlastic, 0.2).Reflectance = 0.1
+	end
+end
+
 local function buildTestCourse()
 	if mapBuilt then return end
 	mapBuilt = true
 
 	configureBeachLighting()
 
+	-- Si el lugar trae la Baseplate gris de Studio, taparia la arena y el mar.
+	local studioBaseplate = Workspace:FindFirstChild("Baseplate")
+	if studioBaseplate and studioBaseplate:IsA("BasePart") then
+		studioBaseplate.Transparency = 1
+		for _, d in ipairs(studioBaseplate:GetDescendants()) do
+			if d:IsA("Decal") or d:IsA("Texture") then d.Transparency = 1 end
+		end
+	end
 
 	local course = Workspace:FindFirstChild("KartTestCourse") or Instance.new("Folder")
 	course.Name = "KartTestCourse"
@@ -1939,6 +2220,9 @@ local function buildTestCourse()
 		cpPart.CanQuery = false
 		cpPart:SetAttribute("CheckpointIndex", idx)
 	end
+
+	-- Decoracion de playa: siempre por fuera de las barandas.
+	buildBeachLife(course, railCenterline, yGround)
 end
 
 -- ==========================================================
