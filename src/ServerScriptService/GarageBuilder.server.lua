@@ -97,13 +97,13 @@ local function buildDisplayKart(name, center, bodyColor)
     piece("Chassis", Vector3.new(4.8,0.65,6.6), Vector3.new(0,0,0), bodyColor, Enum.Material.SmoothPlastic)
     piece("Nose", Vector3.new(3.2,0.38,1.8), Vector3.new(0,0.18,3.45), bodyColor, Enum.Material.SmoothPlastic)
     piece("RearWing", Vector3.new(5.4,0.25,0.65), Vector3.new(0,0.95,-2.7), steelLight, Enum.Material.Metal)
-    piece("Seat", Vector3.new(1.65,0.8,1.7), Vector3.new(0,0.68,-0.65), black, Enum.Material.Leather)
+    piece("Seat", Vector3.new(1.65,0.8,1.7), Vector3.new(0,0.68,-0.65), black, Enum.Material.SmoothPlastic)
     piece("SteeringColumn", Vector3.new(0.18,0.8,0.18), Vector3.new(0,0.75,1.15), steelLight, Enum.Material.Metal)
     piece("SteeringWheel", Vector3.new(1.15,0.16,0.16), Vector3.new(0,1.12,1.15), black, Enum.Material.Metal)
     for side=-1,1,2 do
         for axle=-1,1,2 do
             local wheel = piece("Wheel_"..side.."_"..axle, Vector3.new(1.25,1.25,0.8),
-                Vector3.new(side*2.55,-0.05,axle*2.15), black, Enum.Material.Rubber, Enum.PartType.Cylinder)
+                Vector3.new(side*2.55,-0.05,axle*2.15), black, Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
             wheel.Orientation = Vector3.new(0,0,90)
             local hub = piece("Hub_"..side.."_"..axle, Vector3.new(0.45,0.45,0.84),
                 Vector3.new(side*2.58,-0.05,axle*2.15), steelLight, Enum.Material.Metal, Enum.PartType.Cylinder)
@@ -252,7 +252,7 @@ for stack=1,2 do
     for tire=1,3 do
         local tyre=part("WorkshopTire_"..stack.."_"..tire,Vector3.new(2.2,0.8,2.2),
             Vector3.new(x-55,floorY+0.45+(tire-1)*0.78,z+39+(stack-1)*4),
-            Color3.fromRGB(24,26,29),Enum.Material.Rubber,nil,Enum.PartType.Cylinder)
+            Color3.fromRGB(24,26,29),Enum.Material.SmoothPlastic,nil,Enum.PartType.Cylinder)
         tyre.Orientation=Vector3.new(0,0,90)
     end
 end
