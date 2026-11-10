@@ -1224,7 +1224,7 @@ local function buildTestCourse()
 			local worldPos = linePos.Position
 			-- Deja libre el rectángulo de salida: la línea discontinua no debe
 			-- atravesar ni quedar coplanar con los cuadros de la bandera.
-			local insideStartGrid = math.abs(worldPos.X) < 4
+			local insideStartGrid = math.abs(worldPos.X - gantryX) < 4
 				and math.abs(worldPos.Z - 70) < trackWidth / 2 + 1
 			if not insideStartGrid then
 				local line = makePart(course, "DashLine", Vector3.new(0.7, 0.02, 6), linePos, C_WHITE)
@@ -1394,7 +1394,8 @@ local function buildTestCourse()
 	end
 
 	-- Arco de meta: el asset completo del usuario reemplaza los postes y el banner procedural.
-	local gantryX = 0
+	-- Centro exacto de la recta principal (entre X=80 y X=-65).
+	local gantryX = 7.5
 	local spanWidth = trackWidth + 6
 	local FINISH_STRUCTURE_ASSET_ID = 77625250062263
 	local finishAssetOk, finishAssetOrError = pcall(function()
@@ -1791,18 +1792,17 @@ local function buildTestCourse()
 		{ pos = Vector3.new(105, yGround, -245), tilt = 6, yaw = -45, scale = 1.0 },
 		{ pos = Vector3.new(175, yGround, -220), tilt = 8, yaw = 160, scale = 1.05 },
 		{ pos = Vector3.new(195, yGround, -130), tilt = -6, yaw = 210, scale = 1.15 },
-		{ pos = Vector3.new(195, yGround, -30), tilt = 7, yaw = -60, scale = 1.05 },
-		{ pos = Vector3.new(285, yGround, 70), tilt = -5, yaw = 30, scale = 1.1 },
+		-- Reubicadas al borde oriental: las posiciones anteriores caían sobre el asfalto.
+		{ pos = Vector3.new(350, yGround, -40), tilt = 7, yaw = -60, scale = 1.05 },
+		{ pos = Vector3.new(350, yGround, 30), tilt = -5, yaw = 30, scale = 1.1 },
 		{ pos = Vector3.new(280, yGround, 245), tilt = 6, yaw = -80, scale = 1.0 },
 		{ pos = Vector3.new(-35, yGround, 205), tilt = -6, yaw = 50, scale = 0.95 },
 	}
 	for _, p in ipairs(palmData) do
-		local spawned = false
 		if importedPalmTemplate then
-			spawned = spawnImportedPalm(p.pos, p.tilt, p.yaw, p.scale)
-		end
-		if not spawned then
-			spawnProceduralPalm(p.pos, p.tilt, p.yaw, p.scale)
+			spawnImportedPalm(p.pos, p.tilt, p.yaw, p.scale)
+		else
+			warn("[BLOXY-KART][PALM] Se omite la palmera: no se permite reemplazar el asset solicitado por una palmera antigua/procedural.")
 		end
 	end
 	-- Reposeras importadas desde el asset del usuario. Se carga una plantilla
@@ -1942,8 +1942,10 @@ local function buildTestCourse()
 
 	-- Dos rincones de playa en los claros interiores de arena.
 	-- Se mantienen separados del asfalto y de las barreras.
-	spawnBeachCluster(Vector3.new(45, yGround, 20), 18)
-	spawnBeachCluster(Vector3.new(48, yGround, -45), -22)
+	-- Estos dos puestos se trasladan al claro suroriental; las posiciones previas
+	-- quedaban demasiado cerca de la calzada.
+	spawnBeachCluster(Vector3.new(145, yGround, 260), 18)
+	spawnBeachCluster(Vector3.new(220, yGround, 260), -22)
 
 	-- Tablas de surf importadas desde el asset del usuario.
 	-- Se carga una sola plantilla y se clona para cada punto decorativo.
@@ -2043,15 +2045,16 @@ local function buildTestCourse()
 	local surfboardPlacements = {
 		-- Sector de playa oriental/suroriental.
 		-- Reubicadas hacia la playa exterior para despejar el nuevo bucle sureste.
-		{ offset = Vector3.new(265, 0, 180), rot = 30, lean = 12, scale = 1.00 },
-		{ offset = Vector3.new(275, 0, 155), rot = -20, lean = 18, scale = 0.96 },
-		{ offset = Vector3.new(280, 0, 130), rot = 45, lean = 8, scale = 1.04 },
-		{ offset = Vector3.new(285, 0, 185), rot = -35, lean = 15, scale = 0.92 },
-		{ offset = Vector3.new(255, 0, 205), rot = 18, lean = 10, scale = 1.02 },
+		-- Reubicadas fuera del circuito; antes varias tablas quedaban sobre el asfalto.
+		{ offset = Vector3.new(335, 0, 195), rot = 30, lean = 12, scale = 1.00 },
+		{ offset = Vector3.new(345, 0, 225), rot = -20, lean = 18, scale = 0.96 },
+		{ offset = Vector3.new(325, 0, 265), rot = 45, lean = 8, scale = 1.04 },
+		{ offset = Vector3.new(255, 0, 265), rot = -35, lean = 15, scale = 0.92 },
+		{ offset = Vector3.new(195, 0, 265), rot = 18, lean = 10, scale = 1.02 },
 		-- Costado oriental, visibles desde las curvas del lado derecho.
 		{ offset = Vector3.new(315, 0, -80), rot = 65, lean = 14, scale = 0.98 },
-		{ offset = Vector3.new(185, 0, -5), rot = -55, lean = 9, scale = 1.06 },
-		{ offset = Vector3.new(170, 0, -95), rot = 25, lean = 16, scale = 0.94 },
+		{ offset = Vector3.new(195, 0, 265), rot = -55, lean = 9, scale = 1.06 },
+		{ offset = Vector3.new(115, 0, 275), rot = 25, lean = 16, scale = 0.94 },
 		-- Sector norte y noroeste, junto a los claros de arena.
 		{ offset = Vector3.new(95, 0, -175), rot = -30, lean = 12, scale = 1.00 },
 		{ offset = Vector3.new(5, 0, -185), rot = 50, lean = 7, scale = 0.95 },
@@ -2123,6 +2126,7 @@ local function buildTestCourse()
 			or name:match("^Kerb_%d+_%d+$") ~= nil
 			or name:match("^Guardrail") ~= nil
 			or name == "ImportedFinishStructure"
+			or name:match("^FinishCheckeredTile_%d+_%d+$") ~= nil
 			or name == "Palm"
 			or name == "Palm_ProceduralFallback"
 			or name == "BeachLounger"
@@ -2148,6 +2152,29 @@ local function buildTestCourse()
 	local triggerSpan = trackWidth + 15
 
 	local finishCF = CFrame.lookAt(Vector3.new(gantryX, yGround + triggerHeight / 2, 70), Vector3.new(gantryX - 10, yGround + triggerHeight / 2, 70))
+	-- Banda visual ajedrezada: cruza la recta de lado a lado, centrada en su eje.
+	local finishTileIndex = 0
+	local finishTileWidth = trackWidth / 18
+	for row = 0, 1 do
+		for column = 0, 17 do
+			finishTileIndex += 1
+			local tileColor = ((row + column) % 2 == 0) and C_BLACK or C_WHITE
+			local tileX = gantryX - 0.5 + row
+			local tileZ = 70 - trackWidth / 2 + finishTileWidth * (column + 0.5)
+			local tile = makePart(
+				course,
+				("FinishCheckeredTile_%d_%d"):format(row + 1, column + 1),
+				Vector3.new(1.0, 0.045, finishTileWidth),
+				CFrame.new(tileX, yGround + 0.055, tileZ),
+				tileColor,
+				Enum.Material.SmoothPlastic
+			)
+			tile.CanCollide = false
+			tile.CanTouch = false
+			tile.CanQuery = false
+		end
+	end
+
 	local finishPart = makePart(checkpointsFolder, "FinishLine", Vector3.new(triggerSpan, triggerHeight, triggerThickness), finishCF, Color3.fromRGB(255, 255, 255))
 	finishPart.Transparency = debugTrans
 	finishPart.CanCollide = false
@@ -2197,8 +2224,10 @@ local function buildTestCourse()
 		cpPart:SetAttribute("CheckpointIndex", idx)
 	end
 
-	-- Decoracion de playa: siempre por fuera de las barandas.
-	buildBeachLife(course, railCenterline, yGround)
+	-- No se invoca buildBeachLife: esa rutina antigua generaba sombrillas,
+	-- toallas, pelotas, castillos, redes y reposeras procedurales que ya no forman
+	-- parte de la ambientación aprobada. Solo se instancian los cuatro assets
+	-- importados indicados por el usuario.
 end
 
 -- ==========================================================
