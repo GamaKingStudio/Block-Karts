@@ -21,6 +21,8 @@ local function part(name, size, position, color, material, parent, shape)
     p.Size = size
     if typeof(position) == "CFrame" then p.CFrame = position else p.Position = position end
     p.Anchored = true
+    p.CastShadow = true
+    p.CanCollide = true
     p.TopSurface = Enum.SurfaceType.Smooth
     p.BottomSurface = Enum.SurfaceType.Smooth
     p.Material = material or Enum.Material.Metal
@@ -37,6 +39,36 @@ local function neon(name, size, position, color, parent)
     light.Color, light.Brightness, light.Range = color, 1.15, 22
     light.Parent = p
     return p
+end
+
+local function buildDisplayKart(name, center, bodyColor)
+    local display = Instance.new("Model")
+    display.Name = name
+    display.Parent = model
+    local function piece(partName, size, offset, color, material, shape)
+        local p = part(partName, size, center + offset, color, material, display, shape)
+        p.CanCollide = false
+        p.CanTouch = false
+        p.CanQuery = false
+        return p
+    end
+    piece("Chassis", Vector3.new(4.8,0.65,6.6), Vector3.new(0,0,0), bodyColor, Enum.Material.SmoothPlastic)
+    piece("Nose", Vector3.new(3.2,0.38,1.8), Vector3.new(0,0.18,3.45), bodyColor, Enum.Material.SmoothPlastic)
+    piece("RearWing", Vector3.new(5.4,0.25,0.65), Vector3.new(0,0.95,-2.7), steelLight, Enum.Material.Metal)
+    piece("Seat", Vector3.new(1.65,0.8,1.7), Vector3.new(0,0.68,-0.65), black, Enum.Material.Leather)
+    piece("SteeringColumn", Vector3.new(0.18,0.8,0.18), Vector3.new(0,0.75,1.15), steelLight, Enum.Material.Metal)
+    piece("SteeringWheel", Vector3.new(1.15,0.16,0.16), Vector3.new(0,1.12,1.15), black, Enum.Material.Metal)
+    for side=-1,1,2 do
+        for axle=-1,1,2 do
+            local wheel = piece("Wheel_"..side.."_"..axle, Vector3.new(1.25,1.25,0.8),
+                Vector3.new(side*2.55,-0.05,axle*2.15), black, Enum.Material.Rubber, Enum.PartType.Cylinder)
+            wheel.Orientation = Vector3.new(0,0,90)
+            local hub = piece("Hub_"..side.."_"..axle, Vector3.new(0.45,0.45,0.84),
+                Vector3.new(side*2.58,-0.05,axle*2.15), steelLight, Enum.Material.Metal, Enum.PartType.Cylinder)
+            hub.Orientation = Vector3.new(0,0,90)
+        end
+    end
+    return display
 end
 
 local function sign(name, text, size, position, faceColor, textColor, parent, face)
