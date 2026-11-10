@@ -156,7 +156,7 @@ part("RightConcreteWall", Vector3.new(wallT, wallH, depth - wallT*2), Vector3.ne
 -- Fully closed corrugated-metal shutter on the front (+Z) wall.
 part("ExitGateFrameLeft", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX-gateWidth/2-1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
 part("ExitGateFrameRight", Vector3.new(3, wallH, 3), Vector3.new(gateCenterX+gateWidth/2+1.5, floorY+wallH/2, frontZ-1), yellow, Enum.Material.Metal, shell)
-part("ExitGateShutter", Vector3.new(gateWidth, wallH-4, 1.2), Vector3.new(gateCenterX, floorY+wallH/2, frontZ-2.2), Color3.fromRGB(35,37,40), Enum.Material.Metal, shell)
+part("ExitGateShutter", Vector3.new(gateWidth, wallH-4, 1.2), Vector3.new(gateCenterX, floorY+wallH/2, frontZ-2.2), Color3.fromRGB(35,37,40), Enum.Material.CorrodedMetal, shell)
 for i=1,22 do
  part("ExitShutterRib_"..i, Vector3.new(0.22,wallH-4,0.18),
   Vector3.new(gateCenterX-gateWidth/2+1+(i-1)*(gateWidth-2)/21,floorY+wallH/2,frontZ-2.9),
@@ -224,6 +224,8 @@ end
 
 -- LEFT (-X): two hydraulic lift bays and compact customization workshop.
 sign("WorkshopTitle","TALLER DE PERSONALIZACIÓN",Vector3.new(28,5,0.7),Vector3.new(x-43,floorY+16,z-5),black,yellow)
+neon("WorkshopAccent_Left",Vector3.new(0.35,12,1),Vector3.new(x-58,floorY+10,z+2),Color3.fromRGB(80,90,255))
+neon("WorkshopAccent_Back",Vector3.new(18,0.3,0.6),Vector3.new(x-42,floorY+13,z-12),Color3.fromRGB(190,55,255))
 for bay=1,2 do
  local bx=x-43+(bay-1)*19
  for _,sx in ipairs({-5,5}) do
@@ -231,7 +233,7 @@ for bay=1,2 do
  end
  part("LiftArm_"..bay,Vector3.new(13,0.7,1),Vector3.new(bx,floorY+3,z+4),Color3.fromRGB(0,120,215),Enum.Material.Metal)
  part("LiftPlatform_"..bay,Vector3.new(13,0.5,8),Vector3.new(bx,floorY+2,z+4),steel,Enum.Material.DiamondPlate)
- buildDisplayKart("WorkshopDisplayKart_"..bay,Vector3.new(bx,floorY+4.15,z+4),bay==1 and Color3.fromRGB(220,55,48) or Color3.fromRGB(35,135,220))
+ buildDisplayKart("WorkshopDisplayKart_"..bay,Vector3.new(bx,floorY+2.9,z+4),bay==1 and Color3.fromRGB(220,55,48) or Color3.fromRGB(35,135,220))
 end
 for station,zOff in ipairs({-35,0,35}) do
  local sx=x-49
@@ -314,6 +316,7 @@ sign("SpawnZoneTitle","ZONA DE REUNIÓN",Vector3.new(30,3.5,0.6),Vector3.new(x,f
 
 -- RIGHT (+X): four circular vehicle display plinths.
 sign("VehicleStoreTitle","TIENDA DE VEHÍCULOS",Vector3.new(30,5,0.7),Vector3.new(x+43,floorY+17,z-5),black,cyan)
+neon("VehicleStoreAccent",Vector3.new(0.35,13,1),Vector3.new(x+58,floorY+10,z-5),cyan)
 local displayIndex=0
 for _,zOff in ipairs({-43,-7,29,65}) do
  displayIndex+=1
@@ -323,7 +326,7 @@ for _,zOff in ipairs({-43,-7,29,65}) do
  local ring=part("DisplayNeonRing_"..displayIndex,Vector3.new(12.8,0.25,12.8),Vector3.new(px,floorY+1.18,pz),cyan,Enum.Material.Neon,nil,Enum.PartType.Cylinder)
  ring.Orientation=Vector3.new(0,0,90); ring.CanCollide=false
  local displayColors={Color3.fromRGB(225,55,48),Color3.fromRGB(35,135,220),Color3.fromRGB(235,180,35),Color3.fromRGB(60,190,115)}
- buildDisplayKart("ShowroomKart_"..displayIndex,Vector3.new(px,floorY+2.65,pz),displayColors[displayIndex])
+ buildDisplayKart("ShowroomKart_"..displayIndex,Vector3.new(px,floorY+1.75,pz),displayColors[displayIndex])
  sign("DisplayLabel_"..displayIndex,"KART "..displayIndex,Vector3.new(10,2,0.4),Vector3.new(px,floorY+3,pz-6.5),black,white)
 end
 -- Tool shelves and industrial storage in the rear/right corner.
