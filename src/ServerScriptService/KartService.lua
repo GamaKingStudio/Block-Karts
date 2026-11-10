@@ -3540,6 +3540,7 @@ local function returnPlayerToLobby(player)
   if raceHasStarted then roomTargetPlayers = #remaining end
   publishSelectionState()
  end
+ updateMatchmakingPads()
 
  local character = player.Character
  local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -3866,6 +3867,7 @@ Players.PlayerRemoving:Connect(function(player)
  activeKarts[player] = nil
  roomPlayers[player] = nil
  anotherRaceRequests[player] = nil
+ anotherRaceRequests = {}
  selectedCameras[player] = nil
  driverInputs[player] = nil
  raceData[player] = nil
