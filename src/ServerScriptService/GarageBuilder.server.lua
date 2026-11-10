@@ -154,7 +154,12 @@ Lighting.Brightness = 2.75
 Lighting.ExposureCompensation = -0.12
 Lighting.ClockTime = 13.6
 Lighting.GlobalShadows = true
-local atmosphere = Lighting:FindFirstChild("BloxyBeachAtmosphere") or Instance.new("Atmosphere")
+local atmosphere = Lighting:FindFirstChild("BloxyBeachAtmosphere")
+if atmosphere and not atmosphere:IsA("Atmosphere") then
+	atmosphere:Destroy()
+	atmosphere = nil
+end
+atmosphere = atmosphere or Instance.new("Atmosphere")
 atmosphere.Name = "BloxyBeachAtmosphere"
 atmosphere.Density = 0.055
 atmosphere.Glare = 0.015
