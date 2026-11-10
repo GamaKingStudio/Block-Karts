@@ -149,10 +149,10 @@ local rearZ = z - halfD + wallT / 2
 
 -- Restrained global lighting: the integrated garage lights do most of the work.
 -- Mantener luz de día en todo el circuito: este script corre junto al constructor de pista.
-Lighting.Ambient = Color3.fromRGB(150, 158, 170)
-Lighting.OutdoorAmbient = Color3.fromRGB(180, 190, 205)
-Lighting.Brightness = 3
-Lighting.ExposureCompensation = 0.12
+Lighting.Ambient = Color3.fromRGB(165, 175, 190)
+Lighting.OutdoorAmbient = Color3.fromRGB(205, 215, 228)
+Lighting.Brightness = 3.6
+Lighting.ExposureCompensation = 0.2
 Lighting.ClockTime = 13.6
 Lighting.GlobalShadows = true
 local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
@@ -187,6 +187,41 @@ for i = 1, 18 do
     part("ShutterSlat_"..i, Vector3.new(gateWidth - 1, 0.12, 0.08),
         Vector3.new(x, floorY + 3 + i * 1.2, frontZ - 2.62), C.wall, Enum.Material.Metal, shell).CanCollide = false
 end
+
+-- Vinilo de clausura cruzado sobre la cortina metálica.
+local tapeSurfaceZ = frontZ - 2.72
+for index, angle in ipairs({-31, 31}) do
+    local tape = part("UndergroundClosureTape_"..index, Vector3.new(40, 1.55, 0.14),
+        CFrame.new(x, floorY + wallHeight/2, tapeSurfaceZ) * CFrame.Angles(0, 0, math.rad(angle)),
+        Color3.fromRGB(220, 42, 48), Enum.Material.SmoothPlastic, shell)
+    tape.CanCollide = false
+    tape.CanTouch = false
+    tape.CanQuery = false
+end
+local closurePlate = part("UndergroundGarageVinyl", Vector3.new(22, 4.2, 0.3),
+    Vector3.new(x, floorY + wallHeight/2, tapeSurfaceZ - 0.16),
+    C.graphite, Enum.Material.SmoothPlastic, shell)
+closurePlate.CanCollide = false
+closurePlate.CanTouch = false
+closurePlate.CanQuery = false
+local closureGui = Instance.new("SurfaceGui")
+closureGui.Name = "UndergroundGarageDisplay"
+closureGui.Face = Enum.NormalId.Front
+closureGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+closureGui.PixelsPerStud = 35
+closureGui.LightInfluence = 0
+closureGui.Parent = closurePlate
+local closureText = Instance.new("TextLabel")
+closureText.Name = "UndergroundGarageText"
+closureText.Size = UDim2.fromScale(1, 1)
+closureText.BackgroundColor3 = C.graphite
+closureText.BackgroundTransparency = 0.05
+closureText.BorderSizePixel = 0
+closureText.Text = "UNDERGROUND GARAGE"
+closureText.TextColor3 = Color3.fromRGB(255, 235, 190)
+closureText.TextScaled = true
+closureText.Font = Enum.Font.GothamBlack
+closureText.Parent = closureGui
 wallSign("ExitGateSign", "TRACK ACCESS", "SALIDA A PISTA", Vector3.new(25, 3.5, 0.7),
     Vector3.new(x, floorY + wallHeight - 3.2, frontZ - 3), C.amber, Vector3.new(x, floorY + 12, z))
 
