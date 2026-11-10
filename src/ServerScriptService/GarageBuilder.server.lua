@@ -148,16 +148,20 @@ local rearZ = z - halfD + wallT / 2
 
 -- Restrained global lighting: the integrated garage lights do most of the work.
 -- Mantener luz de día en todo el circuito: este script corre junto al constructor de pista.
-Lighting.Ambient = Color3.fromRGB(165, 175, 190)
-Lighting.OutdoorAmbient = Color3.fromRGB(205, 215, 228)
-Lighting.Brightness = 3.6
-Lighting.ExposureCompensation = 0.2
+Lighting.Ambient = Color3.fromRGB(145, 153, 165)
+Lighting.OutdoorAmbient = Color3.fromRGB(170, 180, 194)
+Lighting.Brightness = 2.75
+Lighting.ExposureCompensation = -0.12
 Lighting.ClockTime = 13.6
 Lighting.GlobalShadows = true
-local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-atmosphere.Density = 0.025
-atmosphere.Offset = 0
-atmosphere.Color = Color3.fromRGB(180, 194, 208)
+local atmosphere = Lighting:FindFirstChild("BloxyBeachAtmosphere") or Instance.new("Atmosphere")
+atmosphere.Name = "BloxyBeachAtmosphere"
+atmosphere.Density = 0.055
+atmosphere.Glare = 0.015
+atmosphere.Haze = 0.2
+atmosphere.Offset = 0.05
+atmosphere.Color = Color3.fromRGB(199, 225, 255)
+atmosphere.Decay = Color3.fromRGB(112, 151, 185)
 atmosphere.Parent = Lighting
 
 -- Closed concrete shell and clean polished floor.
