@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+print("[KARTSERVICE][DIAG] source=feature/garage-lobby post-53eac28 | diagnostic=2026-11-10")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
@@ -4111,7 +4112,10 @@ RunService.Heartbeat:Connect(function(deltaTime)
 	end
 end)
 
-buildTestCourse()
+local courseBuildOk, courseBuildError = xpcall(buildTestCourse, debug.traceback)
+if not courseBuildOk then
+	warn("[KARTSERVICE][buildTestCourse] ERROR: " .. tostring(courseBuildError))
+end
 hookCheckpoints()
 
 local function setupLobbyPlayer(player, spawnIndex)
