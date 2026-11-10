@@ -359,16 +359,16 @@ end
 -- ==========================================================
 local function configureBeachLighting()
 	Lighting.ClockTime = 13.6
-	Lighting.Brightness = 3.6
-	Lighting.ExposureCompensation = 0.2
-	Lighting.Ambient = Color3.fromRGB(165, 175, 190)
-	Lighting.OutdoorAmbient = Color3.fromRGB(205, 215, 228)
+	Lighting.Brightness = 2.75
+	Lighting.ExposureCompensation = -0.12
+	Lighting.Ambient = Color3.fromRGB(145, 153, 165)
+	Lighting.OutdoorAmbient = Color3.fromRGB(170, 180, 194)
 	Lighting.GeographicLatitude = 18
 	Lighting.ShadowSoftness = 0.7
-	Lighting.EnvironmentDiffuseScale = 0.4
-	Lighting.EnvironmentSpecularScale = 0.55
-	Lighting.ColorShift_Top = Color3.fromRGB(255, 247, 232)
-	Lighting.ColorShift_Bottom = Color3.fromRGB(225, 239, 250)
+	Lighting.EnvironmentDiffuseScale = 0.32
+	Lighting.EnvironmentSpecularScale = 0.28
+	Lighting.ColorShift_Top = Color3.fromRGB(255, 247, 235)
+	Lighting.ColorShift_Bottom = Color3.fromRGB(220, 230, 240)
 
 	local function getEffect(className, name)
 		local effect = Lighting:FindFirstChild(name)
@@ -387,24 +387,24 @@ local function configureBeachLighting()
 	local atmosphere = getEffect("Atmosphere", "BloxyBeachAtmosphere")
 	atmosphere.Color = Color3.fromRGB(199, 225, 255)
 	atmosphere.Decay = Color3.fromRGB(112, 151, 185)
-	atmosphere.Density = 0.07
-	atmosphere.Glare = 0.04
-	atmosphere.Haze = 0.3
+	atmosphere.Density = 0.055
+	atmosphere.Glare = 0.015
+	atmosphere.Haze = 0.2
 	atmosphere.Offset = 0.05
 
 	local colorCorrection = getEffect("ColorCorrectionEffect", "BloxyBeachColor")
-	colorCorrection.Brightness = 0.035
-	colorCorrection.Contrast = 0.025
-	colorCorrection.Saturation = 0.12
-	colorCorrection.TintColor = Color3.fromRGB(255, 248, 235)
+	colorCorrection.Brightness = -0.015
+	colorCorrection.Contrast = 0.05
+	colorCorrection.Saturation = 0.025
+	colorCorrection.TintColor = Color3.fromRGB(250, 247, 239)
 
 	local bloom = getEffect("BloomEffect", "BloxyBeachBloom")
-	bloom.Intensity = 0.1
-	bloom.Size = 22
-	bloom.Threshold = 1.25
+	bloom.Intensity = 0.035
+	bloom.Size = 18
+	bloom.Threshold = 1.55
 
 	local sunRays = getEffect("SunRaysEffect", "BloxyBeachSunRays")
-	sunRays.Intensity = 0.025
+	sunRays.Intensity = 0.012
 	sunRays.Spread = 0.72
 
 	local terrain = Workspace:FindFirstChildOfClass("Terrain")
@@ -1105,7 +1105,7 @@ local function buildTestCourse()
 	local yWaterShallow = 0.35
 	local yWaterDeep = 0.20
 
-	local C_SAND = Color3.fromRGB(240, 218, 158)
+	local C_SAND = Color3.fromRGB(228, 207, 158)
 	local C_WATER_SHALLOW = Color3.fromRGB(55, 205, 230)
 	local C_WATER_DEEP = Color3.fromRGB(28, 125, 205)
 	local C_FOAM = Color3.fromRGB(245, 252, 255)
@@ -1197,6 +1197,50 @@ local function buildTestCourse()
 	spawnCabana(-85, -145, 10)
 	spawnCabana(-55, -145, -5)
 	spawnCabana(-25, -145, 0)
+
+	-- Cuatro casetas de cambio estilo playa californiana, juntas y alineadas.
+	-- Se mantienen fuera del trazado y de la fila de kioscos existente.
+	local function spawnChangingCabin(index, x, z, paintColor, trimColor)
+		local base = CFrame.new(x, yGround, z)
+		local function cabinPart(label, size, offset, color, material)
+			local p = makePart(course, ("ChangingCabin_%d_%s"):format(index, label),
+				size, base * CFrame.new(offset), color, material)
+			p.CanCollide = false
+			p.CanTouch = false
+			p.CanQuery = false
+			return p
+		end
+		cabinPart("Deck", Vector3.new(9.4, 0.35, 8.8), Vector3.new(0, 0.18, 0), C_WOOD_LIGHT, Enum.Material.WoodPlanks)
+		cabinPart("LeftWall", Vector3.new(0.35, 7.1, 8.2), Vector3.new(-4.45, 3.8, 0), paintColor, Enum.Material.SmoothPlastic)
+		cabinPart("RightWall", Vector3.new(0.35, 7.1, 8.2), Vector3.new(4.45, 3.8, 0), paintColor, Enum.Material.SmoothPlastic)
+		cabinPart("BackWall", Vector3.new(8.8, 7.1, 0.35), Vector3.new(0, 3.8, -4.1), paintColor, Enum.Material.SmoothPlastic)
+		cabinPart("FrontLeft", Vector3.new(2.65, 7.1, 0.35), Vector3.new(-3.1, 3.8, 4.1), paintColor, Enum.Material.SmoothPlastic)
+		cabinPart("FrontRight", Vector3.new(2.65, 7.1, 0.35), Vector3.new(3.1, 3.8, 4.1), paintColor, Enum.Material.SmoothPlastic)
+		cabinPart("FrontHeader", Vector3.new(3.55, 1.35, 0.4), Vector3.new(0, 6.65, 4.1), trimColor, Enum.Material.WoodPlanks)
+		cabinPart("Door", Vector3.new(3.15, 5.55, 0.18), Vector3.new(0, 2.95, 4.22), trimColor, Enum.Material.WoodPlanks)
+		cabinPart("DoorHandle", Vector3.new(0.12, 0.45, 0.12), Vector3.new(1.1, 2.9, 4.34), C_DARKWOOD, Enum.Material.Metal)
+		cabinPart("Roof", Vector3.new(9.8, 0.55, 9.4), Vector3.new(0, 7.65, 0), trimColor, Enum.Material.WoodPlanks)
+		cabinPart("Sign", Vector3.new(4.7, 0.65, 0.22), Vector3.new(0, 7.0, 4.42), C_WHITE, Enum.Material.SmoothPlastic)
+		for slat = -1, 1 do
+			cabinPart("Vent_" .. slat, Vector3.new(0.12, 0.12, 0.12),
+				Vector3.new(slat * 0.55, 6.1, 4.34), C_DARKWOOD, Enum.Material.Wood)
+		end
+	end
+	local changingCabinColors = {
+		{ Color3.fromRGB(65, 178, 190), Color3.fromRGB(245, 238, 215) },
+		{ Color3.fromRGB(235, 105, 100), Color3.fromRGB(250, 224, 190) },
+		{ Color3.fromRGB(245, 195, 75), Color3.fromRGB(75, 125, 145) },
+		{ Color3.fromRGB(75, 135, 205), Color3.fromRGB(245, 238, 215) },
+	}
+	for i, x in ipairs({ -96, -85, -74, -63 }) do
+		spawnChangingCabin(i, x, -185, changingCabinColors[i][1], changingCabinColors[i][2])
+	end
+	local changingWalkway = makePart(course, "ChangingCabinsBoardwalk",
+		Vector3.new(46, 0.22, 3.2), CFrame.new(-79.5, yGround + 0.12, -178.2),
+		C_WOOD_LIGHT, Enum.Material.WoodPlanks)
+	changingWalkway.CanCollide = false
+	changingWalkway.CanTouch = false
+	changingWalkway.CanQuery = false
 
 	for tier = 1, 3 do
 		-- Desplazar toda la grada 8 studs hacia atrás para separarla
@@ -2030,6 +2074,9 @@ local function buildTestCourse()
 	-- quedaban demasiado cerca de la calzada.
 	spawnBeachCluster(Vector3.new(145, yGround, 260), 18)
 	spawnBeachCluster(Vector3.new(220, yGround, 260), -22)
+	-- Nuevos rincones de reposeras en la arena amplia del sector central-norte.
+	spawnBeachCluster(Vector3.new(80, yGround, -180), 12)
+	spawnBeachCluster(Vector3.new(155, yGround, -180), -18)
 
 	-- Tablas de surf importadas desde el asset del usuario.
 	-- Se carga una sola plantilla y se clona para cada punto decorativo.
@@ -2217,6 +2264,9 @@ local function buildTestCourse()
 		{ offset = Vector3.new(95, 0, -175), rot = -30, lean = 12, scale = 1.00 },
 		{ offset = Vector3.new(5, 0, -185), rot = 50, lean = 7, scale = 0.95 },
 		{ offset = Vector3.new(-85, 0, -175), rot = -65, lean = 15, scale = 1.03 },
+		-- Tablas adicionales junto a las nuevas zonas de descanso del sector central.
+		{ offset = Vector3.new(35, 0, -195), rot = 24, lean = 12, scale = 1.00 },
+		{ offset = Vector3.new(115, 0, -195), rot = -32, lean = 16, scale = 0.98 },
 		-- Sector sur, repartidas para que el atrezo se lea desde distintos tramos.
 		{ offset = Vector3.new(315, 0, 255), rot = -15, lean = 11, scale = 0.97 },
 		{ offset = Vector3.new(-35, 0, 175), rot = 40, lean = 17, scale = 1.05 },
