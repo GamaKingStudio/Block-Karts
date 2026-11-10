@@ -85,7 +85,7 @@ local x, y, z = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
 
 -- Underground lighting requested by the garage blueprint.
 local Lighting = game:GetService("Lighting")
-Lighting.Technology = Enum.Technology.Future
+-- Technology is configured in Studio; server scripts cannot write Lighting.Technology.
 Lighting.Ambient = Color3.fromRGB(25, 28, 35)
 Lighting.OutdoorAmbient = Color3.fromRGB(10, 12, 16)
 Lighting.Brightness = 0.5
