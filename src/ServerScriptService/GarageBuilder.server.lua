@@ -86,17 +86,17 @@ local x, y, z = GARAGE_ORIGIN.X, GARAGE_ORIGIN.Y, GARAGE_ORIGIN.Z
 -- Underground lighting requested by the garage blueprint.
 local Lighting = game:GetService("Lighting")
 -- Technology is configured in Studio; server scripts cannot write Lighting.Technology.
-Lighting.Ambient = Color3.fromRGB(25, 28, 35)
-Lighting.OutdoorAmbient = Color3.fromRGB(10, 12, 16)
-Lighting.Brightness = 0.5
-Lighting.ClockTime = 0
+Lighting.Ambient = Color3.fromRGB(100, 105, 115)
+Lighting.OutdoorAmbient = Color3.fromRGB(85, 90, 100)
+Lighting.Brightness = 2
+Lighting.ClockTime = 14
 Lighting.GlobalShadows = true
 local bloom=Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect")
-bloom.Intensity=0.65; bloom.Size=24; bloom.Threshold=0.85; bloom.Parent=Lighting
+bloom.Intensity=0.25; bloom.Size=18; bloom.Threshold=0.9; bloom.Parent=Lighting
 local correction=Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect")
-correction.Contrast=0.1; correction.Saturation=0.05; correction.TintColor=Color3.fromRGB(245,250,255); correction.Parent=Lighting
+correction.Contrast=0.05; correction.Saturation=0.05; correction.TintColor=Color3.fromRGB(255,255,255); correction.Parent=Lighting
 local atmosphere=Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-atmosphere.Density=0.3; atmosphere.Offset=0; atmosphere.Color=Color3.fromRGB(80,90,105); atmosphere.Parent=Lighting
+atmosphere.Density=0.08; atmosphere.Offset=0; atmosphere.Color=Color3.fromRGB(150,160,175); atmosphere.Parent=Lighting
 local width, depth = 120, 160
 local halfW, halfD = width/2, depth/2
 local floorY = y + 2.25
@@ -296,9 +296,9 @@ for _, zOff in ipairs({-42,0,42}) do
         local lamp = neon("CeilingLamp_"..xOff.."_"..zOff, Vector3.new(12,0.35,2.5),
             Vector3.new(x+xOff,ceilingY-3.2,z+zOff), white)
         local light = lamp:FindFirstChildOfClass("PointLight")
-        if light then light.Brightness, light.Range = 1.5, 28 end
+        if light then light.Brightness, light.Range = 2.5, 42 end
         local spot=Instance.new("SpotLight")
-        spot.Angle=80; spot.Brightness=2; spot.Range=40
+        spot.Angle=90; spot.Brightness=3; spot.Range=55
         spot.Color=Color3.fromRGB(220,235,255)
         spot.Face=Enum.NormalId.Bottom
         spot.Parent=lamp
