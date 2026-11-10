@@ -158,6 +158,7 @@ local countdownToken = 0
 local roomPlayers = {}
 local roomTargetPlayers = 0
 local anotherRaceRequests = {}
+local roomFinishTimes = {}
 local cpuKart = nil
 local cpuRace = nil
 
@@ -225,6 +226,7 @@ local function tryStartRace()
 
  raceInProgress = true
  raceHasStarted = false
+ roomFinishTimes = {}
  countdownToken += 1
  local token = countdownToken
  for _, p in ipairs(list) do
@@ -3018,12 +3020,12 @@ local function onCheckpointTouched(hitPart, triggerPart)
                 pData.RaceCompleted = true
                 local totalTime = now - (pData.RaceStartTime > 0 and pData.RaceStartTime or now)
                 pData.FinishTime = totalTime
+                roomFinishTimes[player] = totalTime
                 local referenceLap = cpuRace and (cpuRace.ghostDuration or cpuRace.estimatedLapDuration)
                 local referenceTime = referenceLap and referenceLap * (KartConfig.TOTAL_LAPS or 3) or math.huge
                 local earlierHumans = 0
-                for otherPlayer, otherData in pairs(raceData) do
-                    if otherPlayer ~= player and roomPlayers[otherPlayer] and otherData.RaceCompleted
-                        and otherData.FinishTime and otherData.FinishTime < totalTime then
+                for otherPlayer, otherFinishTime in pairs(roomFinishTimes) do
+                    if otherPlayer ~= player and otherFinishTime < totalTime then
                         earlierHumans += 1
                     end
                 end
@@ -3531,8 +3533,10 @@ local function returnPlayerToLobby(player)
   raceInProgress = false
   raceHasStarted = false
   anotherRaceRequests = {}
+  roomFinishTimes = {}
   countdownToken += 1
  else
+  anotherRaceRequests = {}
   if raceHasStarted then roomTargetPlayers = #remaining end
   publishSelectionState()
  end
@@ -3608,6 +3612,7 @@ anotherRaceRemote.OnServerEvent:Connect(function(player)
  end
 
  anotherRaceRequests = {}
+ roomFinishTimes = {}
  for _, participant in ipairs(playersInRoom) do
   local participantKart = activeKarts[participant]
   finishCruiseStates[participant] = nil
@@ -3880,6 +3885,7 @@ Players.PlayerRemoving:Connect(function(player)
   raceInProgress = false
   raceHasStarted = false
   anotherRaceRequests = {}
+  roomFinishTimes = {}
   countdownToken += 1
  elseif raceHasStarted then
   roomTargetPlayers = #remaining
