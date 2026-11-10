@@ -270,6 +270,7 @@ local function tryStartRace()
 
   raceHasStarted = true
   for _, p in ipairs(currentPlayers) do
+   local k = activeKarts[p]
    local d = raceData[p]
    if d then
     d.LapStartTime = os.clock()
