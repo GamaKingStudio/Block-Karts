@@ -3807,9 +3807,18 @@ local function returnPlayerToLobby(player)
  if character and humanoid and root then
   humanoid.Sit = false
   pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
-  local garage = Workspace:FindFirstChild("BlockKartsGarage")
-  local lobbySpawn = garage and garage:FindFirstChild("LobbySpawn", true)
-  local targetCFrame = lobbySpawn and (lobbySpawn.CFrame + Vector3.new(0, 4, 0)) or GARAGE_SPAWN_CFRAME
+  local lobby = Workspace:FindFirstChild("BlockKartsLobby")
+  local lobbySpawn = lobby and lobby:FindFirstChild("LobbySpawn", true)
+  local respawnLocation = player.RespawnLocation
+  local targetSpawn = lobbySpawn or respawnLocation
+  local targetCFrame
+  if targetSpawn and targetSpawn:IsA("BasePart") then
+   targetCFrame = targetSpawn.CFrame + Vector3.new(0, 4, 0)
+   print("[RETURN] Destino confirmado en BlockKartsLobby/RespawnLocation:", targetSpawn:GetFullName())
+  else
+   targetCFrame = GARAGE_SPAWN_CFRAME
+   warn("[RETURN] No se encontró LobbySpawn ni RespawnLocation; se usa el CFrame de respaldo:", targetCFrame.Position)
+  end
   root.AssemblyLinearVelocity = Vector3.zero
   root.AssemblyAngularVelocity = Vector3.zero
   character:PivotTo(targetCFrame)
@@ -3833,6 +3842,37 @@ local function returnPlayerToLobby(player)
  end
  returnedToLobbyRemote:FireClient(player)
  print(("[RACE] %s volvió al lobby."):format(player.Name))
+end
+
+-- Comando de prueba disponible únicamente en Roblox Studio.
+-- No requiere terminar una carrera: ejecuta la misma rutina de retorno.
+if RunService:IsStudio() then
+ Players.PlayerAdded:Connect(function(player)
+  player.Chatted:Connect(function(message)
+   if message:lower() ~= "!testlobbyreturn" then return end
+   if player:GetAttribute("InRaceRoom") == true then
+    warn("[RETURN][TEST] No se ejecutó: el jugador ya figura dentro de una sala.")
+    return
+   end
+   print("[RETURN][TEST] Ejecutando retorno de prueba para", player.Name)
+   roomPlayers[player] = true
+   player:SetAttribute("InRaceRoom", true)
+   returnPlayerToLobby(player)
+  end)
+ end)
+ for _, player in ipairs(Players:GetPlayers()) do
+  player.Chatted:Connect(function(message)
+   if message:lower() ~= "!testlobbyreturn" then return end
+   if player:GetAttribute("InRaceRoom") == true then
+    warn("[RETURN][TEST] No se ejecutó: el jugador ya figura dentro de una sala.")
+    return
+   end
+   print("[RETURN][TEST] Ejecutando retorno de prueba para", player.Name)
+   roomPlayers[player] = true
+   player:SetAttribute("InRaceRoom", true)
+   returnPlayerToLobby(player)
+  end)
+ end
 end
 
 returnToLobbyRemote.OnServerEvent:Connect(function(player)
