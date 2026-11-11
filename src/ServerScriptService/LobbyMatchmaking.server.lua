@@ -148,7 +148,7 @@ local function launch(modeId, group, courseId)
 	for _, plr in ipairs(alive) do
 		QueueState:FireClient(plr, { state = "starting", mode = modeId, label = mode.label, course = courseId })
 	end
-	print(string.format("[LOBBY][START] modo=%s humanos=%d cpus=%d", modeId, #alive, mode.cpus))
+	print(string.format("[LOBBY][START] modo=%s pista=%s humanos=%d cpus=%d", modeId, courseId, #alive, mode.cpus))
 	startEvent:Fire({
 		mode = modeId,
 		players = alive,
