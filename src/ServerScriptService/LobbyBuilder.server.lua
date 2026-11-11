@@ -246,23 +246,98 @@ end
 -- ---------------------------------------------------------------------------
 -- 5) PLAZAS DE PARQUEO + AUTOS ABANDONADOS
 -- ---------------------------------------------------------------------------
-local carColors = {
-	Color3.fromRGB(120, 45, 45), Color3.fromRGB(45, 75, 115), Color3.fromRGB(95, 95, 65),
-	Color3.fromRGB(150, 150, 150), Color3.fromRGB(60, 95, 70), Color3.fromRGB(110, 80, 45),
-}
+-- El garage usa el mismo kart importado que el vehículo de carrera.
+-- Cada unidad recibe un color de carrocería único; cristales y ruedas conservan su acabado.
+local InsertService = game:GetService("InsertService")
+local DISPLAY_KART_ASSET_ID = 77833935930373
+local displayKartTemplate = nil
+local displayKartLoadOk, displayKartLoadResult = pcall(function()
+	return InsertService:LoadAsset(DISPLAY_KART_ASSET_ID)
+end)
 
-local function parkedCar(cf, color)
-	P(bays, "CarBody", Vector3.new(9, 1.6, 4.4), cf * CFrame.new(0, 1.6, 0), color, Enum.Material.Metal)
-	P(bays, "CarCabin", Vector3.new(4.6, 1.4, 3.9), cf * CFrame.new(-0.4, 3.1, 0),
-		color:Lerp(Color3.new(0, 0, 0), 0.2), Enum.Material.Metal)
-	P(bays, "CarGlass", Vector3.new(4.7, 0.9, 4.0), cf * CFrame.new(-0.4, 3.15, 0),
-		Color3.fromRGB(25, 35, 45), Enum.Material.SmoothPlastic)
-	for _, sx in ipairs({ -3, 3 }) do
-		for _, sz in ipairs({ -2.2, 2.2 }) do
-			P(bays, "CarWheel", Vector3.new(0.9, 2.1, 2.1), cf * CFrame.new(sx, 1.05, sz) * rotX90,
-				C.black, Enum.Material.SmoothPlastic, CYL)
+if displayKartLoadOk and displayKartLoadResult then
+	local sourceModel = displayKartLoadResult:IsA("Model") and displayKartLoadResult
+		or displayKartLoadResult:FindFirstChildWhichIsA("Model", true)
+	if sourceModel then
+		displayKartTemplate = sourceModel:Clone()
+		displayKartTemplate.Name = "DisplayKartTemplate"
+	else
+		warn("[LOBBY][DISPLAY-KART] El asset no contiene un Model.")
+	end
+	displayKartLoadResult:Destroy()
+else
+	warn(("[LOBBY][DISPLAY-KART] No se pudo cargar el asset %d: %s"):format(
+		DISPLAY_KART_ASSET_ID, tostring(displayKartLoadResult)
+	))
+end
+
+local displayCarIndex = 0
+local function parkedCar(localX, z, side)
+	if not displayKartTemplate then
+		return
+	end
+
+	displayCarIndex += 1
+	local kart = displayKartTemplate:Clone()
+	kart.Name = ("DisplayKart_%02d"):format(displayCarIndex)
+
+	local bounds = kart:GetBoundingBox()
+	local sourceSize = bounds
+	local size = select(2, kart:GetBoundingBox())
+	if size.X <= 0 or size.Y <= 0 or size.Z <= 0 then
+		kart:Destroy()
+		warn("[LOBBY][DISPLAY-KART] Se omitió un modelo con dimensiones inválidas.")
+		return
+	end
+
+	-- El asset tiene el largo sobre X y el ancho sobre Z, igual que las plazas.
+	local targetWidth, targetLength, targetHeight = 5.8, 10.5, 4.2
+	local scale = math.min(targetWidth / size.Z, targetLength / size.X, targetHeight / size.Y)
+	if scale <= 0 or scale >= 20 then
+		kart:Destroy()
+		warn("[LOBBY][DISPLAY-KART] Escala inválida; se omitió esta unidad.")
+		return
+	end
+	kart:ScaleTo(kart:GetScale() * scale)
+
+	local _, scaledSize = kart:GetBoundingBox()
+	local pivotOffset = kart:GetBoundingBox():ToObjectSpace(kart:GetPivot())
+	local facing = (side == -1) and 0 or math.pi
+	local targetBounds = toWorld(
+		CFrame.new(localX, scaledSize.Y / 2 + 0.12, z)
+			* CFrame.Angles(0, facing, 0)
+	)
+	kart:PivotTo(targetBounds * pivotOffset)
+
+	-- Tono único por unidad, manteniendo transparentes cristales y oscuros neumáticos.
+	local bodyColor = Color3.fromHSV(((displayCarIndex - 1) * 0.61803398875) % 1, 0.78, 0.92)
+	for _, part in ipairs(kart:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local partName = string.lower(part.Name)
+			local preserveFinish =
+				string.find(partName, "wheel", 1, true)
+				or string.find(partName, "rueda", 1, true)
+				or string.find(partName, "tire", 1, true)
+				or string.find(partName, "neumatic", 1, true)
+				or string.find(partName, "glass", 1, true)
+				or string.find(partName, "cristal", 1, true)
+				or string.find(partName, "window", 1, true)
+				or string.find(partName, "ventana", 1, true)
+				or string.find(partName, "windshield", 1, true)
+				or string.find(partName, "light", 1, true)
+				or string.find(partName, "lamp", 1, true)
+				or string.find(partName, "rim", 1, true)
+				or string.find(partName, "llanta", 1, true)
+			if not preserveFinish then
+				part.Color = bodyColor
+			end
+			part.Anchored = true
+			part.CanCollide = false
+			part.CanTouch = false
 		end
 	end
+
+	kart.Parent = bays
 end
 
 for _, side in ipairs({ -1, 1 }) do
@@ -270,17 +345,22 @@ for _, side in ipairs({ -1, 1 }) do
 	for z = -70, 70, 10 do
 		P(bays, "BayLine", Vector3.new(18, 0.05, 0.4), Vector3.new(side * 49, 0.03, z), C.line, Enum.Material.SmoothPlastic)
 	end
-	-- Topes y autos en el centro de cada plaza
+	-- Topes y autos de exhibición en plazas alternadas.
 	for k = 0, 13 do
 		local z = -65 + k * 10
 		P(bays, "WheelStop", Vector3.new(0.6, 0.4, 6), Vector3.new(side * 56.5, 0.2, z), Color3.fromRGB(160, 160, 160))
 		if rng:NextNumber() < 0.45 then
-			local flip = (rng:NextInteger(0, 1) == 1) and CFrame.Angles(0, math.pi, 0) or CFrame.new()
-			local cf = CFrame.new(side * 49, 0, z)
-				* CFrame.Angles(0, math.rad(rng:NextNumber(-3, 3)), 0) * flip
-			parkedCar(cf, carColors[rng:NextInteger(1, #carColors)])
+			local localX = side * 49
+			parkedCar(localX, z, side)
 		end
 	end
+end
+
+if displayKartTemplate then
+	displayKartTemplate:Destroy()
+	print(("[LOBBY][DISPLAY-KART] Autos de exhibición cargados desde %d; unidades=%d."):format(
+		DISPLAY_KART_ASSET_ID, displayCarIndex
+	))
 end
 
 -- ---------------------------------------------------------------------------
@@ -325,7 +405,7 @@ sign(exitSign, Enum.NormalId.Front, "SALIDA CERRADA", Color3.fromRGB(255, 255, 2
 --    Se elimina por completo el anillo/plataforma central anterior.
 -- ---------------------------------------------------------------------------
 local PAD_X = W / 2 - 18
-local PAD_Z = { -48, -16, 16, 48 }
+local PAD_Z = { -35, -5, 25, 55 }
 local PAD_LABELS = { "SOLO vs CPU", "2 JUGADORES", "3 JUGADORES", "4 JUGADORES" }
 local PAD_COLORS = { C.cyan, C.pink, C.yellow, Color3.fromRGB(90, 230, 120) }
 
