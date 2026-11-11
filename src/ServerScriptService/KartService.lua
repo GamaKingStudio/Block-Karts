@@ -12,6 +12,7 @@ local DIAGNOSTICS_ENABLED = false
 local DIAGNOSTIC_INTERVAL = 2
 local COURSE_SURFACE_Y = 1.0
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
+local Leaderboards = require(game:GetService("ServerScriptService"):WaitForChild("Leaderboards"))
 
 -- ==========================================================
 -- GESTIÓN DE EVENTOS REMOTOS
@@ -3193,6 +3194,7 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			if isBest then
 				pData.BestLapTime = lapTime
                 saveBestLap(player, lapTime)
+                Leaderboards.SubmitLap(player, lapTime)
 			end
             -- Guarda la vuelta 1 y activa el fantasma para la segunda vuelta.
             if pData.CurrentLap == 1 and cpuRace and not cpuRace.ghostSamples then
@@ -3273,7 +3275,10 @@ local function onCheckpointTouched(hitPart, triggerPart)
                 local finalPosition = 1 + earlierHumans + (referenceTime < totalTime and 1 or 0)
                 local resultText = finalPosition == 1 and "VICTORIA" or ("PUESTO " .. tostring(finalPosition))
 
-                if finalPosition == 1 then saveRaceWin(player) end
+                if finalPosition == 1 then
+                    saveRaceWin(player)
+                    Leaderboards.AddWin(player)
+                end
                 player:SetAttribute("RaceResult", resultText)
                 player:SetAttribute("RaceFinalPosition", finalPosition)
                 player:SetAttribute("RaceBestLapTime", pData.BestLapTime or 0)
@@ -3422,7 +3427,7 @@ end)
 -- ==========================================================
 -- 4. GESTIÓN Y SPAWN DEL PILOTO
 -- ==========================================================
-local GARAGE_SPAWN_CFRAME = CFrame.new(520, 6.5, 12) * CFrame.Angles(0, math.rad(180), 0)
+local GARAGE_SPAWN_CFRAME = CFrame.new(520, 5.1, 62)
 
 local function placeCharacterInGarage(player, character)
 	local humanoid = character:WaitForChild("Humanoid", 10)
@@ -3454,6 +3459,8 @@ local function placeCharacterInGarage(player, character)
 		warn("[GARAGE] No se encontró BlockKartsGarage; no se pudo ubicar al jugador.")
 		return
 	end
+	local lobbySpawn = garage:FindFirstChild("LobbySpawn", true)
+	local lobbySpawnCFrame = lobbySpawn and (lobbySpawn.CFrame + Vector3.new(0, 4, 0)) or GARAGE_SPAWN_CFRAME
 	-- El lobby es el spawn por defecto. Libera el estado de asiento y
 	-- teletransporta el modelo completo, no solo el HumanoidRootPart.
 	player:SetAttribute("InGarage", true)
@@ -3463,7 +3470,7 @@ local function placeCharacterInGarage(player, character)
 	pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.AssemblyAngularVelocity = Vector3.zero
-	character:PivotTo(GARAGE_SPAWN_CFRAME)
+	character:PivotTo(lobbySpawnCFrame)
 
 	-- Reafirma la posición después de que Roblox termine de desmontar al
 	-- personaje del asiento que acaba de ser destruido.
@@ -3792,9 +3799,8 @@ local function returnPlayerToLobby(player)
   humanoid.Sit = false
   pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
   local garage = Workspace:FindFirstChild("BlockKartsGarage")
-  local locator = garage and garage:FindFirstChild("GarageLocator", true)
-  local targetCFrame = locator and (CFrame.new(locator.Position + Vector3.new(0, 1.25, 0))
-   * CFrame.Angles(0, math.rad(180), 0)) or GARAGE_SPAWN_CFRAME
+  local lobbySpawn = garage and garage:FindFirstChild("LobbySpawn", true)
+  local targetCFrame = lobbySpawn and (lobbySpawn.CFrame + Vector3.new(0, 4, 0)) or GARAGE_SPAWN_CFRAME
   root.AssemblyLinearVelocity = Vector3.zero
   root.AssemblyAngularVelocity = Vector3.zero
   character:PivotTo(targetCFrame)
@@ -3960,6 +3966,37 @@ local function enterMatchmakingRoom(player, padIndex)
  ))
 end
 
+
+-- Nuevo lobby: reutiliza el flujo existente de KartService para crear karts,
+-- sentar pilotos y esperar su selección de cámara. La pista no se modifica.
+local lobbyStartRace = ServerStorage:WaitForChild("LobbyStartRace")
+lobbyStartRace.Event:Connect(function(info)
+	if typeof(info) ~= "table" or typeof(info.players) ~= "table" then return end
+	local targetPlayers = math.clamp(math.floor(tonumber(info.humans) or #info.players), 1, 4)
+	local validPlayers = {}
+	for _, participant in ipairs(info.players) do
+		if participant and participant.Parent == Players and participant:GetAttribute("InGarage") == true
+			and not activeKarts[participant] and not roomPlayers[participant] then
+			table.insert(validPlayers, participant)
+		end
+	end
+	if #validPlayers ~= targetPlayers then
+		warn(("[LOBBY][KARTSERVICE] Inicio cancelado: jugadores válidos %d/%d."):format(#validPlayers, targetPlayers))
+		return
+	end
+	if raceInProgress or roomTargetPlayers > 0 or roomPreparing then
+		warn("[LOBBY][KARTSERVICE] Inicio rechazado: KartService ya tiene una sala activa.")
+		return
+	end
+	print(("[LOBBY][KARTSERVICE] Integrando modo=%s humanos=%d CPU=%d"):format(
+		tostring(info.mode), targetPlayers, tonumber(info.cpus) or 0
+	))
+	for _, participant in ipairs(validPlayers) do
+		enterMatchmakingRoom(participant, targetPlayers)
+	end
+end)
+
+
 local function isPlayerStandingOnPad(player, pad)
  local character = player.Character
  local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -4041,83 +4078,7 @@ local function beginMatchmakingEntry(player, pad, padIndex)
  end)
 end
 
-task.spawn(function()
- local boundGarage = nil
- local boundPads = {}
- local lastPadByPlayer = {}
- local allPadsLogged = false
-
- -- El constructor puede reemplazar BlockKartsGarage después de iniciar este
- -- servicio. Buscamos el modelo y sus pads continuamente, no una sola vez.
- while true do
-  local garage = Workspace:FindFirstChild("BlockKartsGarage")
-  if garage ~= boundGarage then
-   boundGarage = garage
-   boundPads = {}
-   lastPadByPlayer = {}
-   allPadsLogged = false
-   if garage then
-    print("[MATCHMAKING] Detectado garage nuevo; conectando sus plataformas.")
-   end
-  end
-
-  if garage then
-   local connectedCount = 0
-   local padNames = {"RoomEntryPad_1vCPU", "MatchmakingPad_2", "MatchmakingPad_3", "MatchmakingPad_4"}
-   for index, padName in ipairs(padNames) do
-    local pad = garage:FindFirstChild(padName)
-    if pad and pad:IsA("BasePart") then
-     connectedCount += 1
-     if boundPads[index] ~= pad then
-      boundPads[index] = pad
-      pad.CanTouch = true
-      pad.Touched:Connect(function(hit)
-       local character = hit and hit:FindFirstAncestorOfClass("Model")
-       local player = character and Players:GetPlayerFromCharacter(character)
-       if not player then return end
-       print(("[MATCHMAKING][TOUCH] %s tocó %s"):format(player.Name, pad.Name))
-       beginMatchmakingEntry(player, pad,
-        pad:GetAttribute("RequiredPlayers") or pad:GetAttribute("PadIndex") or index)
-      end)
-      print("[MATCHMAKING] Conectada plataforma " .. padName)
-     end
-    else
-     boundPads[index] = nil
-    end
-   end
-
-   if connectedCount == 4 and not allPadsLogged then
-    allPadsLogged = true
-    print("[MATCHMAKING] Las 4 plataformas del garage actual están conectadas.")
-   end
-
-   for _, player in ipairs(Players:GetPlayers()) do
-    local standingPad, standingIndex = nil, nil
-    for index = 1, 4 do
-     local pad = boundPads[index]
-     if pad and pad.Parent == garage and isPlayerStandingOnPad(player, pad) then
-      standingPad, standingIndex = pad, index
-      break
-     end
-    end
-
-    if standingPad then
-     if lastPadByPlayer[player] ~= standingPad then
-      lastPadByPlayer[player] = standingPad
-      print(("[MATCHMAKING][PROXIMITY] %s detectado sobre %s; InGarage=%s"):format(
-       player.Name, standingPad.Name, tostring(player:GetAttribute("InGarage"))))
-      beginMatchmakingEntry(player, standingPad,
-       standingPad:GetAttribute("RequiredPlayers") or standingPad:GetAttribute("PadIndex") or standingIndex)
-     end
-    else
-     lastPadByPlayer[player] = nil
-    end
-   end
-  end
-
-  task.wait(0.15)
- end
-end)
+-- Matchmaking anterior por pads desactivado; ahora lo gestiona LobbyMatchmaking.
 
 RunService.Heartbeat:Connect(function(dt)
  -- Piloto automático después de terminar: reproduce el recorrido de la primera vuelta.
