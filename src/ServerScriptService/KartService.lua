@@ -2730,6 +2730,8 @@ local function createKart(player, spawnIndex)
 				Rueda_Delantera_Izq = true,
 				Rueda_Trasera_Der = true,
 				Rueda_Trasera_Izq = true,
+				Wheel_FL_Black = true, Wheel_FR_Black = true,
+				Wheel_RL_Black = true, Wheel_RR_Black = true,
 			}
 			local lowestWheelY = math.huge
 			for _, wheelPart in ipairs(importedKart:GetDescendants()) do
@@ -2756,7 +2758,8 @@ local function createKart(player, spawnIndex)
 			-- Alinea el VehicleSeat invisible con el asiento real del modelo nuevo.
 			-- Se rehace su soldadura para que el avatar quede sentado en el cojín,
 			-- independientemente del pivote y las proporciones del asset.
-			local visualSeat = importedKart:FindFirstChild("Equipamiento_Asiento", true)
+			local visualSeat = importedKart:FindFirstChild("Seat_Base_Dark", true)
+				or importedKart:FindFirstChild("Equipamiento_Asiento", true)
 			if visualSeat and visualSeat:IsA("BasePart") then
 				if seatWeld and seatWeld.Parent then seatWeld:Destroy() end
 				seat.CFrame = visualSeat.CFrame
@@ -2776,7 +2779,7 @@ local function createKart(player, spawnIndex)
 					 tostring(seat.Size)
 				))
 			else
-				warn("[CUSTOM-KART-SEAT-ALIGN] No se encontró Equipamiento_Asiento; se conserva el asiento base.")
+				warn("[CUSTOM-KART-SEAT-ALIGN] No se encontró Seat_Base_Dark/Equipamiento_Asiento; se conserva el asiento base.")
 			end
 			-- Diagnóstico visual: registra la orientación real de cada neumático
 			-- respecto del chasis, sin alterar la geometría ni el manejo.
@@ -2785,6 +2788,8 @@ local function createKart(player, spawnIndex)
 				Rueda_Delantera_Izq = true,
 				Rueda_Trasera_Der = true,
 				Rueda_Trasera_Izq = true,
+				Wheel_FL_Black = true, Wheel_FR_Black = true,
+				Wheel_RL_Black = true, Wheel_RR_Black = true,
 			}
 			print(("[CUSTOM-KART-WHEEL-DIAG] bounds=(%.2f, %.2f, %.2f) scale=%.5f"):format(
 				orientedBounds.X, orientedBounds.Y, orientedBounds.Z, scale
@@ -2838,6 +2843,12 @@ local function createKart(player, spawnIndex)
 				Rueda_Delantera_Izq = true,
 				Rueda_Trasera_Der = true,
 				Rueda_Trasera_Izq = true,
+				Wheel_FL_Black = true, Wheel_FR_Black = true,
+				Wheel_RL_Black = true, Wheel_RR_Black = true,
+			}
+			local frontWheelNames = {
+				Rueda_Delantera_Der = true, Rueda_Delantera_Izq = true,
+				Wheel_FL_Black = true, Wheel_FR_Black = true,
 			}
 			for _, part in ipairs(importedKart:GetDescendants()) do
 				if part:IsA("BasePart") then
@@ -2914,8 +2925,7 @@ local function createKart(player, spawnIndex)
 						end
 					end
 
-					local isFrontWheel = part.Name == "Rueda_Delantera_Der"
-						or part.Name == "Rueda_Delantera_Izq"
+					local isFrontWheel = frontWheelNames[part.Name] == true
 
 					if kartWheelNames[name] then
 						-- Cada rueda cuelga de un "cubo" invisible con los ejes del chasis:
@@ -2986,13 +2996,14 @@ local function createKart(player, spawnIndex)
 			end
 			-- Anclajes invisibles para conservar el humo de derrape trasero.
 			for _, wheel in ipairs({
-				{ name = "Wheel_RearL", source = "Rueda_Trasera_Izq", offset = Vector3.new(-1.65, -0.15, 2.0) },
-				{ name = "Wheel_RearR", source = "Rueda_Trasera_Der", offset = Vector3.new(1.65, -0.15, 2.0) },
+				{ name = "Wheel_RearL", source = "Wheel_RL_Black", fallback = "Rueda_Trasera_Izq", offset = Vector3.new(-1.65, -0.15, 2.0) },
+				{ name = "Wheel_RearR", source = "Wheel_RR_Black", fallback = "Rueda_Trasera_Der", offset = Vector3.new(1.65, -0.15, 2.0) },
 			}) do
 				-- El humo sale del punto de contacto de la rueda trasera real
 				-- (antes salia del centro del kart, tapado por la carroceria).
 				local markerOffset = wheel.offset
 				local sourceWheel = importedKart:FindFirstChild(wheel.source, true)
+					or importedKart:FindFirstChild(wheel.fallback or "", true)
 				if sourceWheel and sourceWheel:IsA("BasePart") then
 					markerOffset = chassis.CFrame:PointToObjectSpace(sourceWheel.Position)
 						- Vector3.new(0, estimateWheelRadius(sourceWheel) * 0.85, 0)
