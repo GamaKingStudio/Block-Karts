@@ -4259,9 +4259,10 @@ lobbyStartRace.Event:Connect(function(info)
 		end
 		activeCourseId = requestedCourse
 		hookCheckpoints()
+		print(("[COURSE][ACTIVE] %s (%s)"):format(requestedCourse, Courses[requestedCourse].displayName))
 	end
-	print(("[LOBBY][KARTSERVICE] Integrando modo=%s humanos=%d CPU=%d"):format(
-		tostring(info.mode), targetPlayers, tonumber(info.cpus) or 0
+	print(("[LOBBY][KARTSERVICE] Integrando modo=%s pista=%s humanos=%d CPU=%d"):format(
+		tostring(info.mode), requestedCourse, targetPlayers, tonumber(info.cpus) or 0
 	))
 	for _, participant in ipairs(validPlayers) do
 		participant:SetAttribute("SelectedCourse", requestedCourse)
