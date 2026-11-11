@@ -12,6 +12,7 @@ local DIAGNOSTICS_ENABLED = false
 local DIAGNOSTIC_INTERVAL = 2
 local COURSE_SURFACE_Y = 1.0
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
+local Courses = require(ReplicatedStorage:WaitForChild("Courses"))
 local Leaderboards = require(game:GetService("ServerScriptService"):WaitForChild("Leaderboards"))
 
 -- ==========================================================
@@ -71,7 +72,8 @@ end
 
 local activeKarts = {}
 local driverInputs = {}
-local mapBuilt = false
+local activeCourseId = "Beach"
+local activeCheckpointCount = 26
 local raceData = {}
 local ghostRecords = {}
 local selectedCameras = {}
@@ -1081,9 +1083,8 @@ local function buildBeachLife(course, centerline, yGround)
 end
 
 local function buildTestCourse()
-	if mapBuilt then return end
-	mapBuilt = true
-
+	activeCourseId = "Beach"
+	activeCheckpointCount = 26
 	configureBeachLighting()
 
 	-- Si el lugar trae la Baseplate gris de Studio, taparia la arena y el mar.
@@ -1098,9 +1099,8 @@ local function buildTestCourse()
 	local course = Workspace:FindFirstChild("KartTestCourse") or Instance.new("Folder")
 	course.Name = "KartTestCourse"
 	course.Parent = Workspace
-	for _, child in ipairs(course:GetChildren()) do
-		if child:GetAttribute("GeneratedByKartService") == true then child:Destroy() end
-	end
+	for _, child in ipairs(course:GetChildren()) do child:Destroy() end
+	course:SetAttribute("CourseId", "Beach")
 
 	local yGround = COURSE_SURFACE_Y
 	local yWaterShallow = -0.35
@@ -1311,41 +1311,9 @@ local function buildTestCourse()
 
 	-- Beach Resort ampliado: se conserva la recta de salida y el sector norte,
 	-- y se añade un bucle exterior al sureste con curvas rápidas y una zona técnica.
-	local trackWidth = 45
-	-- Centro exacto de la recta principal (entre X=80 y X=-65).
-	-- Se declara antes de generar las líneas de pista que lo usan.
+	local trackWidth = Courses.Beach.trackWidth
 	local gantryX = 7.5
-	local waypoints = {
-		Vector3.new(80, yGround + 0.02, 70),
-		Vector3.new(-65, yGround + 0.02, 70),
-		Vector3.new(-115, yGround + 0.02, 40),
-		Vector3.new(-115, yGround + 0.02, -50),
-		Vector3.new(-80, yGround + 0.02, -95),
-		Vector3.new(-50, yGround + 0.02, -95),
-		Vector3.new(-50, yGround + 0.02, -15),
-		Vector3.new(-25, yGround + 0.02, 10),
-		Vector3.new(10, yGround + 0.02, -15),
-		Vector3.new(10, yGround + 0.02, -85),
-		Vector3.new(45, yGround + 0.02, -105),
-		-- El sector este se desplaza hacia fuera para dejar espacio entre las calzadas.
-		Vector3.new(185, yGround + 0.02, -65),
-		Vector3.new(225, yGround + 0.02, -10),
-		Vector3.new(225, yGround + 0.02, 35),
-		Vector3.new(270, yGround + 0.02, 45),
-		Vector3.new(305, yGround + 0.02, 85),
-		Vector3.new(315, yGround + 0.02, 135),
-		Vector3.new(285, yGround + 0.02, 180),
-		Vector3.new(135, yGround + 0.02, 205),
-		Vector3.new(75, yGround + 0.02, 205),
-		Vector3.new(35, yGround + 0.02, 175),
-		Vector3.new(25, yGround + 0.02, 130),
-		Vector3.new(75, yGround + 0.02, 125),
-		Vector3.new(130, yGround + 0.02, 145),
-		Vector3.new(165, yGround + 0.02, 100),
-		Vector3.new(160, yGround + 0.02, 10),
-		Vector3.new(80, yGround + 0.02, 0),
-		Vector3.new(80, yGround + 0.02, 70),
-	}
+	local waypoints = Courses.Beach.waypoints
 
 	for i = 1, #waypoints do
 		local corner = makePart(course, "CornerHub_" .. i, Vector3.new(0.04, trackWidth, trackWidth), CFrame.new(waypoints[i]) * CFrame.Angles(0, 0, math.pi / 2), C_ASPHALT, Enum.Material.Asphalt, "Cylinder")
@@ -2396,9 +2364,8 @@ local function buildTestCourse()
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
 	checkpointsFolder.Name = "CourseCheckpoints"
 	checkpointsFolder.Parent = Workspace
-	for _, child in ipairs(checkpointsFolder:GetChildren()) do
-		if child.Name == "FinishLine" or child.Name:match("^Checkpoint_%d+$") then child:Destroy() end
-	end
+	for _, child in ipairs(checkpointsFolder:GetChildren()) do child:Destroy() end
+	activeCheckpointCount = 26
 
 	local debugTrans = KartConfig.DEBUG_CHECKPOINTS and 0.75 or 1
 	local triggerHeight = 15
@@ -2485,6 +2452,216 @@ local function buildTestCourse()
 end
 
 -- ==========================================================
+-- JUNGLE DEEP: geometría base, bordillos, barandas y checkpoints.
+-- La decoración del bosque se añadirá después de validar esta fase.
+-- ==========================================================
+local function buildJungleCourse()
+	activeCourseId = "Forest"
+	local definition = Courses.Forest
+	local waypoints = definition.waypoints
+	local trackWidth = definition.trackWidth
+	local yGround = COURSE_SURFACE_Y
+	local course = Workspace:FindFirstChild("KartTestCourse") or Instance.new("Folder")
+	course.Name = "KartTestCourse"
+	course.Parent = Workspace
+	for _, child in ipairs(course:GetChildren()) do child:Destroy() end
+	course:SetAttribute("CourseId", "Forest")
+
+	local baseplate = Workspace:FindFirstChild("Baseplate")
+	if baseplate and baseplate:IsA("BasePart") then baseplate.Transparency = 1 end
+
+	Lighting.ClockTime = 16.5
+	Lighting.Brightness = 2.4
+	Lighting.Ambient = Color3.fromRGB(100, 122, 105)
+	Lighting.OutdoorAmbient = Color3.fromRGB(125, 145, 126)
+	local atmosphere = Lighting:FindFirstChild("BloxyBeachAtmosphere")
+	if atmosphere and atmosphere:IsA("Atmosphere") then
+		atmosphere.Color = Color3.fromRGB(165, 195, 164)
+		atmosphere.Decay = Color3.fromRGB(75, 105, 83)
+		atmosphere.Density = 0.28
+		atmosphere.Haze = 1.2
+	end
+	local colorCorrection = Lighting:FindFirstChild("BloxyBeachColor")
+	if colorCorrection and colorCorrection:IsA("ColorCorrectionEffect") then
+		colorCorrection.TintColor = Color3.fromRGB(218, 239, 211)
+		colorCorrection.Saturation = -0.04
+		colorCorrection.Contrast = 0.04
+	end
+
+	makePart(course, "ForestGround", Vector3.new(640, 3, 390),
+		CFrame.new(0, yGround - 1.5, 0), Color3.fromRGB(64, 105, 61), Enum.Material.Grass)
+
+	local centerline = {}
+	for i = 1, #waypoints - 1 do
+		centerline[i] = { x = waypoints[i].X, z = waypoints[i].Z }
+	end
+
+	for i = 1, #waypoints - 1 do
+		local a, b = waypoints[i], waypoints[i + 1]
+		local delta = b - a
+		local length = delta.Magnitude
+		local midpoint = (a + b) * 0.5
+		local roadCF = CFrame.lookAt(midpoint, b)
+		local road = makePart(course, "RoadSeg_" .. i, Vector3.new(trackWidth, 0.05, length),
+			roadCF, Color3.fromRGB(61, 65, 63), Enum.Material.Asphalt)
+		road.CanCollide = false
+		road.CanTouch = false
+		local hub = makePart(course, "CornerHub_" .. i,
+			Vector3.new(0.06, trackWidth, trackWidth),
+			CFrame.new(a) * CFrame.Angles(0, 0, math.pi / 2),
+			Color3.fromRGB(61, 65, 63), Enum.Material.Asphalt, "Cylinder")
+		hub.CanCollide = false
+		hub.CanTouch = false
+	end
+
+	-- Bordillos rojo/blanco siguiendo el mismo offset seguro de la pista.
+	local curbWidth, curbHeight, curbOffset = 1.4, 0.14, trackWidth / 2 + 0.7
+	local curbColors = { Color3.fromRGB(210, 42, 42), Color3.fromRGB(245, 245, 240) }
+	for sideIndex, side in ipairs({ -1, 1 }) do
+		local tileIndex = 0
+		for _, chain in ipairs(computeGuardrailChains(centerline, curbOffset, side)) do
+			local cumulative = { 0 }
+			for i = 2, #chain do
+				local dx, dz = chain[i].x - chain[i-1].x, chain[i].z - chain[i-1].z
+				cumulative[i] = cumulative[i-1] + math.sqrt(dx*dx + dz*dz)
+			end
+			local total = cumulative[#cumulative]
+			local count = math.max(1, math.ceil(total / 2))
+			local tileLength = total / count
+			local seg = 1
+			for tile = 1, count do
+				tileIndex += 1
+				local distance = (tile - 0.5) * tileLength
+				while seg < #chain - 1 and cumulative[seg+1] < distance do seg += 1 end
+				local a, b = chain[seg], chain[seg+1]
+				local span = cumulative[seg+1] - cumulative[seg]
+				local alpha = span > 0 and (distance - cumulative[seg]) / span or 0
+				local pos = Vector3.new(a.x + (b.x-a.x)*alpha, yGround + 0.12,
+					a.z + (b.z-a.z)*alpha)
+				local dir = Vector3.new(b.x-a.x, 0, b.z-a.z)
+				if dir.Magnitude < 0.001 then continue end
+				local tilePart = makePart(course, ("ForestKerb_%d_%d"):format(sideIndex, tileIndex),
+					Vector3.new(curbWidth, curbHeight, math.max(0.1, tileLength - 0.02)),
+					CFrame.lookAt(pos, pos + dir.Unit), curbColors[((tileIndex-1)%2)+1],
+					Enum.Material.SmoothPlastic)
+				tilePart.CanCollide = false
+				tilePart.CanTouch = false
+				tilePart.CanQuery = false
+			end
+		end
+	end
+
+	-- Barandas exteriores a 20 studs del eje; no se genera divisoria central.
+	local railOffset = 20
+	for sideIndex, side in ipairs({ -1, 1 }) do
+		local railIndex = 0
+		for _, chain in ipairs(computeGuardrailChains(centerline, railOffset, side)) do
+			local distanceSincePost = 999
+			for i = 1, #chain - 1 do
+				local a, b = chain[i], chain[i+1]
+				local dx, dz = b.x-a.x, b.z-a.z
+				local length = math.sqrt(dx*dx + dz*dz)
+				if length < 0.05 then continue end
+				local direction = Vector3.new(dx, 0, dz)
+				local midpoint = Vector3.new((a.x+b.x)/2, yGround + 1.35, (a.z+b.z)/2)
+				for level = 0, 1 do
+					local beam = makePart(course, ("ForestRailBeam_%d_%d_%d"):format(sideIndex, railIndex, level),
+						Vector3.new(0.28, 0.28, length + 0.08),
+						CFrame.lookAt(midpoint + Vector3.new(0, level * 0.75, 0),
+							midpoint + direction + Vector3.new(0, level * 0.75, 0)),
+						Color3.fromRGB(83, 91, 76), Enum.Material.Wood)
+					beam.CanCollide = true
+				end
+				distanceSincePost += length
+				if distanceSincePost >= 8 then
+					railIndex += 1
+					local post = makePart(course, ("ForestRailPost_%d_%d"):format(sideIndex, railIndex),
+						Vector3.new(0.42, 1.9, 0.42),
+						CFrame.new(midpoint.X, yGround + 0.95, midpoint.Z),
+						Color3.fromRGB(73, 78, 67), Enum.Material.Wood)
+					post.CanCollide = true
+					distanceSincePost = 0
+				end
+			end
+		end
+	end
+
+	-- Meta en el waypoint 1 y checkpoints equidistantes a lo largo de la vuelta.
+	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
+	checkpointsFolder.Name = "CourseCheckpoints"
+	checkpointsFolder.Parent = Workspace
+	for _, child in ipairs(checkpointsFolder:GetChildren()) do child:Destroy() end
+	local triggerHeight, triggerSpan = 15, trackWidth + 15
+	local finish = waypoints[1]
+	local nextPoint = waypoints[2]
+	local finishCF = CFrame.lookAt(Vector3.new(finish.X, yGround + triggerHeight/2, finish.Z),
+		Vector3.new(nextPoint.X, yGround + triggerHeight/2, nextPoint.Z))
+	local finishPart = makePart(checkpointsFolder, "FinishLine",
+		Vector3.new(triggerSpan, triggerHeight, 3), finishCF, Color3.new(1,1,1))
+	finishPart.Transparency = KartConfig.DEBUG_CHECKPOINTS and 0.75 or 1
+	finishPart.CanCollide = false
+	finishPart.CanTouch = true
+	finishPart.CanQuery = false
+	finishPart:SetAttribute("CheckpointIndex", 0)
+
+	local finishTiles = 0
+	local tileWidth = trackWidth / 18
+	for row = 0, 1 do
+		for col = 0, 17 do
+			finishTiles += 1
+			local tile = makePart(course, ("ForestFinishTile_%d"):format(finishTiles),
+				Vector3.new(1, 0.045, tileWidth),
+				CFrame.new(finish.X - 0.5 + row, yGround + 0.055,
+					finish.Z - trackWidth/2 + tileWidth*(col+0.5)),
+				((row + col) % 2 == 0) and Color3.fromRGB(28, 30, 31) or Color3.fromRGB(245,245,245),
+				Enum.Material.SmoothPlastic)
+			tile.CanCollide = false
+			tile.CanTouch = false
+			tile.CanQuery = false
+		end
+	end
+
+	local segmentLengths, totalLength = {}, 0
+	for i = 1, #waypoints - 1 do
+		local length = (waypoints[i+1] - waypoints[i]).Magnitude
+		segmentLengths[i] = length
+		totalLength += length
+	end
+	local checkpointCount = math.max(1, math.floor(totalLength / 60))
+	activeCheckpointCount = checkpointCount
+	local function pointAtDistance(distance)
+		local walked = 0
+		for i, length in ipairs(segmentLengths) do
+			if distance <= walked + length or i == #segmentLengths then
+				local alpha = math.clamp((distance - walked) / math.max(length, 0.001), 0, 1)
+				local a, b = waypoints[i], waypoints[i+1]
+				local point = a:Lerp(b, alpha)
+				local direction = (b - a).Unit
+				return point, direction
+			end
+			walked += length
+		end
+		return waypoints[#waypoints], (waypoints[#waypoints] - waypoints[#waypoints-1]).Unit
+	end
+	local debugTrans = KartConfig.DEBUG_CHECKPOINTS and 0.75 or 1
+	for index = 1, checkpointCount do
+		local distance = totalLength * index / (checkpointCount + 1)
+		local point, direction = pointAtDistance(distance)
+		local cpCF = CFrame.lookAt(Vector3.new(point.X, yGround + triggerHeight/2, point.Z),
+			Vector3.new(point.X + direction.X, yGround + triggerHeight/2, point.Z + direction.Z))
+		local cp = makePart(checkpointsFolder, "Checkpoint_" .. index,
+			Vector3.new(triggerSpan, triggerHeight, 5), cpCF, Color3.fromRGB(0, 170, 255))
+		cp.Transparency = debugTrans
+		cp.CanCollide = false
+		cp.CanTouch = true
+		cp.CanQuery = false
+		cp:SetAttribute("CheckpointIndex", index)
+	end
+	print(("[COURSE][FOREST] Jungle Deep listo: %d waypoints, %.1f studs, %d checkpoints."):format(
+		#waypoints, totalLength, activeCheckpointCount))
+end
+
+-- ==========================================================
 -- 2. ENSAMBLAJE ROBUSTO DEL KART
 -- ==========================================================
 local function weldTo(root, part)
@@ -2536,11 +2713,30 @@ local function createKart(player, spawnIndex)
 	model:SetAttribute("OwnerUserId", player.UserId)
 	model.Parent = kartsFolder
 
-	local startX = 45 + (spawnIndex - 1) * 12
-	local startZ = 70
-	local spawnCFrame = CFrame.lookAt(
-		Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),		Vector3.new(startX - 10, COURSE_SURFACE_Y + 1.8, startZ)
-	)
+	local spawnCFrame
+	if activeCourseId == "Forest" then
+		local slot = tonumber(spawnIndex) or 1
+		local startX, startZ
+		if slot <= 0 then
+			startX, startZ = -190, 140.2
+		else
+			local row = (slot - 1) % 2
+			local column = math.floor((slot - 1) / 2)
+			startX = -158 + column * 12
+			startZ = 140.2 + (row == 0 and -7 or 7)
+		end
+		spawnCFrame = CFrame.lookAt(
+			Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
+			Vector3.new(startX + 10, COURSE_SURFACE_Y + 1.8, startZ)
+		)
+	else
+		local startX = 45 + (spawnIndex - 1) * 12
+		local startZ = 70
+		spawnCFrame = CFrame.lookAt(
+			Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
+			Vector3.new(startX - 10, COURSE_SURFACE_Y + 1.8, startZ)
+		)
+	end
 
 	local chassis = makePart(model, "Chassis", Vector3.new(4.8, 0.4, 6.4), spawnCFrame, Color3.fromRGB(25, 27, 30), Enum.Material.Metal)
 	chassis.Anchored = false	chassis.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
@@ -3123,7 +3319,6 @@ end
 -- ==========================================================
 -- 3. VALIDACIÓN DE CARRERA Y CHECKPOINTS (BACKEND)
 -- ==========================================================
-local TOTAL_INTERMEDIATE_CHECKPOINTS = 26
 
 local function initPlayerRaceData(player, spawnCFrame)
 	player:SetAttribute("RaceLap", 1)
@@ -3131,7 +3326,7 @@ local function initPlayerRaceData(player, spawnCFrame)
 	raceData[player] = {
 		CurrentLap = 1,
 		NextCheckpoint = 1,
-		TotalCheckpoints = TOTAL_INTERMEDIATE_CHECKPOINTS,
+		TotalCheckpoints = activeCheckpointCount,
 		LastValidCFrame = spawnCFrame,
 		LapStartTime = 0.0,
 		BestLapTime = nil,
@@ -3330,7 +3525,7 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			pData.LastTriggerIndex = 0
 			pData.LapStartTime = now
 			pData.LastValidCFrame = triggerPart.CFrame
-			checkpointPassedRemote:FireClient(player, 0, TOTAL_INTERMEDIATE_CHECKPOINTS)
+			checkpointPassedRemote:FireClient(player, 0, pData.TotalCheckpoints)
 		end
 		return
 	end
@@ -3362,9 +3557,9 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			pData.LastValidCFrame = part.CFrame
 			pData.NextCheckpoint = index + 1
 			player:SetAttribute("RaceCheckpoint", index)
-			checkpointPassedRemote:FireClient(player, index, TOTAL_INTERMEDIATE_CHECKPOINTS)
+			checkpointPassedRemote:FireClient(player, index, pData.TotalCheckpoints)
 			print(("[RACE-CHECKPOINT] %s: %d/%d, vuelta %d"):format(
-				player.Name, index, TOTAL_INTERMEDIATE_CHECKPOINTS, pData.CurrentLap
+				player.Name, index, pData.TotalCheckpoints, pData.CurrentLap
 			))
 		end
 
@@ -3378,7 +3573,7 @@ local function onCheckpointTouched(hitPart, triggerPart)
 			acceptCheckpoint(queuedIndex, queuedPart)
 		end
 
-		if pData.NextCheckpoint > TOTAL_INTERMEDIATE_CHECKPOINTS then
+		if pData.NextCheckpoint > pData.TotalCheckpoints then
 			pData.CanFinishLap = true
 			print(("[RACE-CHECKPOINT] %s completó la secuencia; puede cruzar meta."):format(player.Name))
 		end
@@ -3702,7 +3897,7 @@ local function createCpuOpponent(player)
  local route = {}
  local finish = folder:FindFirstChild("FinishLine")
  if finish then table.insert(route, finish.Position) end
- for i = 1, TOTAL_INTERMEDIATE_CHECKPOINTS do
+ for i = 1, activeCheckpointCount do
   local cp = folder:FindFirstChild("Checkpoint_" .. i)
   if cp then table.insert(route, cp.Position) end
  end
@@ -4036,6 +4231,16 @@ end
 local lobbyStartRace = ServerStorage:WaitForChild("LobbyStartRace")
 lobbyStartRace.Event:Connect(function(info)
 	if typeof(info) ~= "table" or typeof(info.players) ~= "table" then return end
+	local requestedCourse = info.course == "Forest" and "Forest" or "Beach"
+	if requestedCourse ~= activeCourseId then
+		if requestedCourse == "Forest" then
+			buildJungleCourse()
+		else
+			buildTestCourse()
+		end
+		activeCourseId = requestedCourse
+		hookCheckpoints()
+	end
 	local targetPlayers = math.clamp(math.floor(tonumber(info.humans) or #info.players), 1, 4)
 	local validPlayers = {}
 	for _, participant in ipairs(info.players) do
@@ -4056,6 +4261,7 @@ lobbyStartRace.Event:Connect(function(info)
 		tostring(info.mode), targetPlayers, tonumber(info.cpus) or 0
 	))
 	for _, participant in ipairs(validPlayers) do
+		participant:SetAttribute("SelectedCourse", requestedCourse)
 		enterMatchmakingRoom(participant, targetPlayers)
 	end
 end)
