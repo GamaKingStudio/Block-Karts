@@ -3427,7 +3427,7 @@ end)
 -- ==========================================================
 -- 4. GESTIÓN Y SPAWN DEL PILOTO
 -- ==========================================================
-local GARAGE_SPAWN_CFRAME = CFrame.new(520, 5.1, 62)
+local GARAGE_SPAWN_CFRAME = CFrame.new(650, 5.1, 62)
 
 local function placeCharacterInGarage(player, character)
 	local humanoid = character:WaitForChild("Humanoid", 10)
@@ -3845,34 +3845,28 @@ local function returnPlayerToLobby(player)
 end
 
 -- Comando de prueba disponible únicamente en Roblox Studio.
--- No requiere terminar una carrera: ejecuta la misma rutina de retorno.
+-- TextChatCommand funciona con el sistema de chat moderno de Roblox.
 if RunService:IsStudio() then
- Players.PlayerAdded:Connect(function(player)
-  player.Chatted:Connect(function(message)
-   if message:lower() ~= "!testlobbyreturn" then return end
-   if player:GetAttribute("InRaceRoom") == true then
-    warn("[RETURN][TEST] No se ejecutó: el jugador ya figura dentro de una sala.")
-    return
-   end
-   print("[RETURN][TEST] Ejecutando retorno de prueba para", player.Name)
-   roomPlayers[player] = true
-   player:SetAttribute("InRaceRoom", true)
-   returnPlayerToLobby(player)
-  end)
- end)
- for _, player in ipairs(Players:GetPlayers()) do
-  player.Chatted:Connect(function(message)
-   if message:lower() ~= "!testlobbyreturn" then return end
-   if player:GetAttribute("InRaceRoom") == true then
-    warn("[RETURN][TEST] No se ejecutó: el jugador ya figura dentro de una sala.")
-    return
-   end
-   print("[RETURN][TEST] Ejecutando retorno de prueba para", player.Name)
-   roomPlayers[player] = true
-   player:SetAttribute("InRaceRoom", true)
-   returnPlayerToLobby(player)
-  end)
+ local TextChatService = game:GetService("TextChatService")
+ local testCommand = TextChatService:FindFirstChild("TestLobbyReturnCommand")
+ if not testCommand then
+  testCommand = Instance.new("TextChatCommand")
+  testCommand.Name = "TestLobbyReturnCommand"
+  testCommand.PrimaryAlias = "/testlobbyreturn"
+  testCommand.Parent = TextChatService
  end
+ testCommand.Triggered:Connect(function(textSource)
+  local player = textSource and Players:GetPlayerByUserId(textSource.UserId)
+  if not player then return end
+  if player:GetAttribute("InRaceRoom") == true then
+   warn("[RETURN][TEST] No se ejecutó: el jugador ya figura dentro de una sala.")
+   return
+  end
+  print("[RETURN][TEST] Comando moderno recibido para", player.Name)
+  roomPlayers[player] = true
+  player:SetAttribute("InRaceRoom", true)
+  returnPlayerToLobby(player)
+ end)
 end
 
 returnToLobbyRemote.OnServerEvent:Connect(function(player)
