@@ -2722,12 +2722,15 @@ local function createKart(player, spawnIndex)
 		else
 			local row = (slot - 1) % 2
 			local column = math.floor((slot - 1) / 2)
-			startX = -147.6 + column * 12
-			startZ = 140.2 + (row == 0 and -7 or 7)
+			local grid = Courses.Forest.start
+			startX = grid.x - grid.rowSpacing / 2 + column * grid.rowSpacing
+			startZ = grid.z + (row == 0 and -grid.rowOffset or grid.rowOffset)
 		end
+		local heading = Courses.Forest.start
 		spawnCFrame = CFrame.lookAt(
 			Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
-			Vector3.new(startX + 10, COURSE_SURFACE_Y + 1.8, startZ)
+			Vector3.new(startX + heading.headingX * 10, COURSE_SURFACE_Y + 1.8,
+				startZ + heading.headingZ * 10)
 		)
 	else
 		local startX = 45 + (spawnIndex - 1) * 12
