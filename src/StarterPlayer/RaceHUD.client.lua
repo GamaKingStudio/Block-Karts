@@ -449,7 +449,8 @@ local function drawTrack()
  end
 
  -- Meta: la pista cruza la recta principal en X=0, Z=70.
- local finishCenter = mapPosition(mapPoints[1])
+ local finishPoint = currentMapCourse.finish or currentMapCourse.waypoints[1]
+ local finishCenter = mapPosition(Vector2.new(finishPoint.X, finishPoint.Z))
  local finishLine = Instance.new("Frame")
  finishLine.Name = "MiniMapFinishLine"
  finishLine.AnchorPoint = Vector2.new(0.5, 0.5)
