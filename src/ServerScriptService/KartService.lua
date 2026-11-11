@@ -2817,6 +2817,8 @@ local function createKart(player, spawnIndex)
 					or wheelPart.Name == "Rueda_Delantera_Izq"
 					or wheelPart.Name == "Rueda_Trasera_Der"
 					or wheelPart.Name == "Rueda_Trasera_Izq"
+					or wheelPart.Name == "Wheel_FL_Black"
+					or wheelPart.Name == "Wheel_RL_Black"
 				) then
 					local wheelLocalPosition = chassis.CFrame:PointToObjectSpace(wheelPart.Position)
 					if wheelLocalPosition.X < 0 then
