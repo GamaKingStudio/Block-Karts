@@ -2722,7 +2722,7 @@ local function createKart(player, spawnIndex)
 		else
 			local row = (slot - 1) % 2
 			local column = math.floor((slot - 1) / 2)
-			startX = -158 + column * 12
+			startX = -147.6 + column * 12
 			startZ = 140.2 + (row == 0 and -7 or 7)
 		end
 		spawnCFrame = CFrame.lookAt(
