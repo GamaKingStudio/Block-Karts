@@ -84,6 +84,9 @@ local function text(parent, props)
 	return l
 end
 
+local selectedCourse = "Beach"
+local queuedCourse = "Beach"
+
 local MODE_LIST = {
 	{ id = "cpu", title = "SOLO vs CPU", desc = "Carrera inmediata contra 1 CPU", color = CYAN },
 	{ id = "p2", title = "2 JUGADORES", desc = "Espera a 2 pilotos reales", color = PINK },
@@ -109,7 +112,7 @@ local popup = Instance.new("Frame")
 popup.Name = "Popup"
 popup.AnchorPoint = Vector2.new(0.5, 0.5)
 popup.Position = UDim2.fromScale(0.5, 0.5)
-popup.Size = UDim2.fromOffset(440, 420)
+popup.Size = UDim2.fromOffset(440, 500)
 popup.BackgroundColor3 = BG
 popup.Visible = false
 popup.Parent = gui
@@ -121,14 +124,46 @@ popupScale.Parent = popup
 
 text(popup, {
 	Position = UDim2.fromOffset(20, 14), Size = UDim2.new(1, -80, 0, 44),
-	Text = "ELIGE TU CARRERA", TextSize = 30, Font = Enum.Font.GothamBlack,
+	Text = "ELIGE PISTA Y MODO", TextSize = 27, Font = Enum.Font.GothamBlack,
 	TextXAlignment = Enum.TextXAlignment.Left,
 })
 text(popup, {
 	Position = UDim2.fromOffset(20, 58), Size = UDim2.new(1, -40, 0, 22),
-	Text = "La carrera empieza cuando la sala esté completa", TextSize = 15,
+	Text = "Primero elige el circuito y luego cuántos pilotos competirán", TextSize = 14,
 	TextColor3 = GRAY, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left,
 })
+
+-- Selector de circuito: el curso queda asociado a la cola que se elija después.
+local courseButtons = {}
+local function makeCourseButton(courseId, title, x, accent)
+	local b = Instance.new("TextButton")
+	b.Name = "Course_" .. courseId
+	b.Size = UDim2.fromOffset(194, 52)
+	b.Position = UDim2.fromOffset(x, 92)
+	b.BackgroundColor3 = PANEL
+	b.Text = title
+	b.TextColor3 = accent
+	b.Font = Enum.Font.GothamBlack
+	b.TextSize = 18
+	b.AutoButtonColor = false
+	b.Parent = popup
+	corner(b, 10)
+	local outline = stroke(b, accent, 1.5)
+	courseButtons[courseId] = { button = b, outline = outline }
+	b.MouseButton1Click:Connect(function()
+		selectedCourse = courseId
+		for id, entry in pairs(courseButtons) do
+			local selected = id == selectedCourse
+			entry.button.BackgroundColor3 = selected and PANEL_HOVER or PANEL
+			entry.outline.Thickness = selected and 3 or 1.5
+		end
+	end)
+end
+
+makeCourseButton("Beach", "BEACH RESORT", 20, CYAN)
+makeCourseButton("Forest", "JUNGLE DEEP", 226, GREEN)
+courseButtons.Beach.button.BackgroundColor3 = PANEL_HOVER
+courseButtons.Beach.outline.Thickness = 3
 
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.fromOffset(36, 36)
@@ -142,7 +177,7 @@ closeBtn.Parent = popup
 corner(closeBtn, 8)
 
 local messageLabel = text(popup, {
-	Position = UDim2.fromOffset(20, 380), Size = UDim2.new(1, -40, 0, 28),
+	Position = UDim2.fromOffset(20, 462), Size = UDim2.new(1, -40, 0, 28),
 	Text = "", TextSize = 15, TextColor3 = Color3.fromRGB(255, 120, 120),
 })
 
@@ -152,8 +187,8 @@ for i, m in ipairs(MODE_LIST) do
 	b.Name = "Mode_" .. m.id
 	b.AutoButtonColor = false
 	b.Text = ""
-	b.Size = UDim2.new(1, -40, 0, 62)
-	b.Position = UDim2.fromOffset(20, 92 + (i - 1) * 72)
+	b.Size = UDim2.new(1, -40, 0, 54)
+	b.Position = UDim2.fromOffset(20, 158 + (i - 1) * 64)
 	b.BackgroundColor3 = PANEL
 	b.Parent = popup
 	corner(b, 10)
@@ -282,7 +317,7 @@ local function refresh()
 	local showStatus = queued ~= nil and not starting
 	status.Visible = showStatus
 	if showStatus then
-		statusTitle.Text = MODE_LABEL[queued] or "SALA"
+		statusTitle.Text = (MODE_LABEL[queued] or "SALA") .. "  ·  " .. (queuedCourse == "Forest" and "JUNGLE DEEP" or "BEACH RESORT")
 		if qState == "countdown" then
 			statusLine.Text = "Sala completa. ¡Prepárate!"
 		else
@@ -304,7 +339,7 @@ end
 for _, m in ipairs(MODE_LIST) do
 	modeButtons[m.id].MouseButton1Click:Connect(function()
 		message = ""
-		JoinQueue:FireServer(m.id)
+		JoinQueue:FireServer(m.id, selectedCourse)
 	end)
 end
 
@@ -329,17 +364,20 @@ QueueState.OnClientEvent:Connect(function(data)
 	local st = data.state
 	if st == "waiting" then
 		queued, qState = data.mode, "waiting"
+		queuedCourse = data.course or queuedCourse
 		current, target, seconds = data.current or 0, data.target or 0, 0
 		starting = false
 		message = ""
 	elseif st == "countdown" then
 		queued, qState = data.mode, "countdown"
+		queuedCourse = data.course or queuedCourse
 		current, target, seconds = data.current or 0, data.target or 0, data.seconds or 0
 		starting = false
 		countdownTitle.Text = "LA CARRERA EMPIEZA EN"
 		countdownNumber.Text = tostring(seconds)
 		pulse()
 	elseif st == "starting" then
+		queuedCourse = data.course or queuedCourse
 		queued, qState = nil, "idle"
 		starting = true
 		suppress = true
