@@ -390,7 +390,7 @@ local function configureBeachLighting()
 	atmosphere.Decay = Color3.fromRGB(112, 151, 185)
 	atmosphere.Density = 0.055
 	atmosphere.Glare = 0.015
-	atmosphere.Haze = 0.2
+	atmosphere.Haze = 0.55
 	atmosphere.Offset = 0.05
 
 	local colorCorrection = getEffect("ColorCorrectionEffect", "BloxyBeachColor")
@@ -1103,8 +1103,8 @@ local function buildTestCourse()
 	end
 
 	local yGround = COURSE_SURFACE_Y
-	local yWaterShallow = 0.35
-	local yWaterDeep = 0.20
+	local yWaterShallow = -0.35
+	local yWaterDeep = -0.50
 
 	local C_SAND = Color3.fromRGB(228, 207, 158)
 	local C_WATER_SHALLOW = Color3.fromRGB(55, 205, 230)
