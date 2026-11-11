@@ -23,6 +23,7 @@
 			-- info.cpus    : cuántas CPU crear (1 en modo solo, 0 en los demás)
 			-- info.humans  : cuántos humanos hay
 			-- info.mode    : "cpu" | "p2" | "p3" | "p4"
+			-- info.course  : "Beach" | "Forest"
 			-- ... aquí tu código que lleva a los jugadores a la pista y empieza la carrera
 		end)
 ]]
