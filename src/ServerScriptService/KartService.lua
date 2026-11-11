@@ -3819,6 +3819,10 @@ local function returnPlayerToLobby(player)
    targetCFrame = GARAGE_SPAWN_CFRAME
    warn("[RETURN] No se encontró LobbySpawn ni RespawnLocation; se usa el CFrame de respaldo:", targetCFrame.Position)
   end
+  -- El servidor toma la propiedad física del avatar para evitar que el
+  -- cliente siga simulando el personaje en la posición anterior de la pista.
+  local assemblyRoot = root.AssemblyRootPart or root
+  pcall(function() assemblyRoot:SetNetworkOwner(nil) end)
   root.AssemblyLinearVelocity = Vector3.zero
   root.AssemblyAngularVelocity = Vector3.zero
   character:PivotTo(targetCFrame)
@@ -3830,9 +3834,22 @@ local function returnPlayerToLobby(player)
    root.AssemblyAngularVelocity = Vector3.zero
    character:PivotTo(targetCFrame)
    root.CFrame = targetCFrame
+   pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+   RunService.Heartbeat:Wait()
+   local finalDistance = (root.Position - targetCFrame.Position).Magnitude
+   if finalDistance > 8 then
+    warn(("[GARAGE][RETURN] Posición reescrita por física/cliente (%.1f studs); reintentando"):format(finalDistance))
+    pcall(function() assemblyRoot:SetNetworkOwner(nil) end)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    character:PivotTo(targetCFrame)
+    root.CFrame = targetCFrame
+    RunService.Heartbeat:Wait()
+   end
    pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Running) end)
-   print(("[GARAGE][RETURN] %s teletransportado a garage: target=%s actual=%s locator=%s"):format(
-    player.Name, tostring(targetCFrame.Position), tostring(root.Position), tostring(targetSpawn ~= nil)
+   print(("[GARAGE][RETURN] %s teletransportado a garage: target=%s actual=%s distanciaFinal=%.2f locator=%s"):format(
+    player.Name, tostring(targetCFrame.Position), tostring(root.Position),
+    (root.Position - targetCFrame.Position).Magnitude, tostring(targetSpawn ~= nil)
    ))
   else
    warn(("[GARAGE][RETURN] No se pudo confirmar el personaje de %s después del traslado."):format(player.Name))
