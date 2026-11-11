@@ -2570,36 +2570,95 @@ local function buildJungleCourse()
 		end
 	end
 
-	-- Barandas exteriores a 20 studs del eje; no se genera divisoria central.
+	-- Barandas con la misma construcción robusta de Beach Resort:
+	-- postes frecuentes, dos vigas visibles y colisión invisible continua.
+	-- Jungle Deep no necesita divisoria central; solo sus dos bordes exteriores.
 	local railOffset = 20
+	local forestPostSpacing = 4.5
+	local forestPostWidth = 0.42
+	local forestPostHeight = 2.3
+	local forestBeamColor = Color3.fromRGB(83, 91, 76)
+	local forestPostColor = Color3.fromRGB(55, 66, 53)
+	local forestBeamThickness = 0.32
+	local forestBeamHeight = 0.28
+	local railJobs = {}
 	for sideIndex, side in ipairs({ -1, 1 }) do
-		local railIndex = 0
-		for _, chain in ipairs(computeGuardrailChains(centerline, railOffset, side)) do
-			local distanceSincePost = 999
-			for i = 1, #chain - 1 do
-				local a, b = chain[i], chain[i+1]
-				local dx, dz = b.x-a.x, b.z-a.z
-				local length = math.sqrt(dx*dx + dz*dz)
-				if length < 0.05 then continue end
-				local direction = Vector3.new(dx, 0, dz)
-				local midpoint = Vector3.new((a.x+b.x)/2, yGround + 1.35, (a.z+b.z)/2)
-				for level = 0, 1 do
-					local beam = makePart(course, ("ForestRailBeam_%d_%d_%d"):format(sideIndex, railIndex, level),
-						Vector3.new(0.28, 0.28, length + 0.08),
-						CFrame.lookAt(midpoint + Vector3.new(0, level * 0.75, 0),
-							midpoint + direction + Vector3.new(0, level * 0.75, 0)),
-						Color3.fromRGB(83, 91, 76), Enum.Material.Wood)
-					beam.CanCollide = true
+		for chainIndex, chain in ipairs(computeGuardrailChains(centerline, railOffset, side)) do
+			railJobs[#railJobs + 1] = {
+				sideIndex = sideIndex,
+				chainIndex = chainIndex,
+				chain = chain,
+			}
+		end
+	end
+
+	for _, job in ipairs(railJobs) do
+		local sideIndex, chainIndex, chain = job.sideIndex, job.chainIndex, job.chain
+		local cumulative = { 0 }
+		for k = 2, #chain do
+			local dx = chain[k].x - chain[k - 1].x
+			local dz = chain[k].z - chain[k - 1].z
+			cumulative[k] = cumulative[k - 1] + math.sqrt(dx * dx + dz * dz)
+		end
+		local total = cumulative[#chain]
+		if total > 0.5 then
+			-- Distribución por distancia real: los soportes no se separan en curvas.
+			local postCount = math.max(1, math.ceil(total / forestPostSpacing))
+			local segIndex = 1
+			for postIndex = 0, postCount do
+				local distance = total * postIndex / postCount
+				while segIndex < #chain - 1 and cumulative[segIndex + 1] < distance do
+					segIndex += 1
 				end
-				distanceSincePost += length
-				if distanceSincePost >= 8 then
-					railIndex += 1
-					local post = makePart(course, ("ForestRailPost_%d_%d"):format(sideIndex, railIndex),
-						Vector3.new(0.42, 2.3, 0.42),
-						CFrame.new(midpoint.X, yGround + 1.15, midpoint.Z),
-						Color3.fromRGB(73, 78, 67), Enum.Material.Wood)
-					post.CanCollide = true
-					distanceSincePost = 0
+				local p1, p2 = chain[segIndex], chain[segIndex + 1]
+				local segLength = cumulative[segIndex + 1] - cumulative[segIndex]
+				local alpha = segLength > 0.001 and math.clamp(
+					(distance - cumulative[segIndex]) / segLength, 0, 1
+				) or 0
+				local px = p1.x + (p2.x - p1.x) * alpha
+				local pz = p1.z + (p2.z - p1.z) * alpha
+				local postDirection = Vector3.new(p2.x - p1.x, 0, p2.z - p1.z)
+				postDirection = postDirection.Magnitude > 0.001
+					and postDirection.Unit or Vector3.new(0, 0, -1)
+				local post = makePart(course,
+					("ForestRailPost_%d_%d_%d"):format(sideIndex, chainIndex, postIndex),
+					Vector3.new(forestPostWidth, forestPostHeight, forestPostWidth),
+					CFrame.new(px, yGround + forestPostHeight / 2, pz)
+						* CFrame.lookAt(Vector3.zero, postDirection),
+					forestPostColor, Enum.Material.Metal)
+				post.CanTouch = false
+			end
+
+			-- Doble viga continua visual y collider invisible solapado entre tramos.
+			for k = 1, #chain - 1 do
+				local a = Vector3.new(chain[k].x, 0, chain[k].z)
+				local b = Vector3.new(chain[k + 1].x, 0, chain[k + 1].z)
+				local segment = b - a
+				local length = segment.Magnitude
+				if length > 0.3 then
+					local direction = segment.Unit
+					local mid = (a + b) / 2
+					for railIndex, railY in ipairs({ 1.05, 1.58 }) do
+						local rail = makePart(course,
+							("ForestRailBeam_%d_%d_%d_%d"):format(
+								sideIndex, chainIndex, k, railIndex),
+							Vector3.new(forestBeamThickness, forestBeamHeight, length + 0.08),
+							CFrame.new(mid.X, yGround + railY, mid.Z)
+								* CFrame.lookAt(Vector3.zero, direction),
+							forestBeamColor, Enum.Material.Metal)
+						rail.CanTouch = false
+					end
+
+					local collisionBarrier = makePart(course,
+						("ForestRailCollision_%d_%d_%d"):format(sideIndex, chainIndex, k),
+						Vector3.new(0.9, 3.2, length + 0.45),
+						CFrame.new(mid.X, yGround + 1.65, mid.Z)
+							* CFrame.lookAt(Vector3.zero, direction),
+						forestBeamColor, Enum.Material.SmoothPlastic)
+					collisionBarrier.Transparency = 1
+					collisionBarrier.CanCollide = true
+					collisionBarrier.CanTouch = false
+					collisionBarrier.CanQuery = false
 				end
 			end
 		end
