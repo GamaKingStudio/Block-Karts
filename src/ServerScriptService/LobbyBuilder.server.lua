@@ -34,20 +34,20 @@ local MODEL_NAME = "BlockKartsGarage"
 local rng = Random.new(1337)          -- semilla fija: el garage siempre sale igual
 
 local C = {
-	floor = Color3.fromRGB(58, 58, 63),
-	wall = Color3.fromRGB(118, 118, 122),
-	wallDark = Color3.fromRGB(88, 88, 94),
-	ceiling = Color3.fromRGB(80, 80, 86),
-	concrete = Color3.fromRGB(135, 135, 140),
-	beam = Color3.fromRGB(70, 70, 76),
-	yellow = Color3.fromRGB(240, 190, 20),
-	black = Color3.fromRGB(25, 25, 28),
-	pink = Color3.fromRGB(255, 60, 160),
-	cyan = Color3.fromRGB(0, 220, 255),
-	line = Color3.fromRGB(205, 205, 195),
+	floor = Color3.fromRGB(43, 46, 52),
+	wall = Color3.fromRGB(65, 69, 76),
+	wallDark = Color3.fromRGB(31, 34, 40),
+	ceiling = Color3.fromRGB(37, 40, 46),
+	concrete = Color3.fromRGB(48, 52, 59),
+	beam = Color3.fromRGB(24, 28, 34),
+	yellow = Color3.fromRGB(245, 185, 35),
+	black = Color3.fromRGB(16, 19, 24),
+	pink = Color3.fromRGB(255, 92, 120),
+	cyan = Color3.fromRGB(40, 220, 255),
+	line = Color3.fromRGB(150, 164, 178),
 }
 
-print("[LOBBY][BOOT] Construyendo garage subterráneo...")
+print("[LOBBY][BOOT] Construyendo BLOCK KARTS RACING HQ...")
 
 -- ---------------------------------------------------------------------------
 -- LIMPIEZA
@@ -183,44 +183,28 @@ for _, x in ipairs({ -65, 65 }) do
 end
 
 -- ---------------------------------------------------------------------------
--- 3) LUCES FLUORESCENTES (algunas muertas, algunas parpadean)
+-- 3) ILUMINACIÓN DE RACING HQ: líneas limpias, luz blanca y acentos cyan
 -- ---------------------------------------------------------------------------
-local flickers = {}
-local idx = 0
-for _, z in ipairs({ -60, -40, -20, 0, 20, 40, 60 }) do
-	for _, x in ipairs({ -40, -20, 0, 20, 40 }) do
-		idx += 1
-		local dead = (idx % 11 == 0)
-		local flicker = (not dead) and (idx % 7 == 0)
-		local f = P(lights, "Fixture_" .. idx, Vector3.new(8, 0.3, 1.2), Vector3.new(x, H - 1.7, z),
-			dead and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(255, 244, 214),
-			dead and Enum.Material.SmoothPlastic or Enum.Material.Neon)
-		if (not dead) and (idx % 2 == 1 or flicker) then
-			local l = Instance.new("PointLight")
-			l.Brightness = 0.9
-			l.Range = 30
-			l.Color = Color3.fromRGB(255, 236, 200)
-			l.Shadows = false
-			l.Parent = f
-			if flicker then
-				table.insert(flickers, { part = f, light = l })
-			end
-		end
+local lightIndex = 0
+for _, z in ipairs({ -60, -35, -10, 15, 40, 65 }) do
+	for _, x in ipairs({ -58, -29, 0, 29, 58 }) do
+		lightIndex += 1
+		local fixture = P(lights, "CeilingLight_" .. lightIndex,
+			Vector3.new(10, 0.28, 1.4), Vector3.new(x, H - 1.65, z),
+			Color3.fromRGB(224, 239, 250), Enum.Material.Neon)
+		local glow = Instance.new("PointLight")
+		glow.Color = Color3.fromRGB(205, 230, 255)
+		glow.Brightness = 1.15
+		glow.Range = 34
+		glow.Shadows = false
+		glow.Parent = fixture
 	end
 end
-
-task.spawn(function()
-	while model.Parent do
-		for _, f in ipairs(flickers) do
-			if math.random() < 0.15 then
-				local isOn = f.part.Material == Enum.Material.Neon
-				f.part.Material = isOn and Enum.Material.SmoothPlastic or Enum.Material.Neon
-				f.light.Enabled = not isOn
-			end
-		end
-		task.wait(0.12)
-	end
-end)
+for _, z in ipairs({ -42, 42 }) do
+	local strip = P(lights, "CyanCeilingStrip", Vector3.new(150, 0.12, 0.35),
+		Vector3.new(0, H - 1.3, z), C.cyan, Enum.Material.Neon)
+	strip.CanCollide = false
+end
 
 -- ---------------------------------------------------------------------------
 -- 4) PILARES con bandas amarillo/negro y numeración
@@ -244,16 +228,15 @@ for _, x in ipairs({ -W / 2 + 9, W / 2 - 9 }) do
 end
 
 -- ---------------------------------------------------------------------------
--- 5) PLAZAS DE PARQUEO
---    Se conservan las líneas y topes; no se generan vehículos decorativos.
+-- 5) GUÍAS DE CIRCULACIÓN: carriles perimetrales discretos
 -- ---------------------------------------------------------------------------
 for _, side in ipairs({ -1, 1 }) do
-	for z = -70, 70, 10 do
-		P(bays, "BayLine", Vector3.new(18, 0.05, 0.4), Vector3.new(side * 49, 0.03, z), C.line, Enum.Material.SmoothPlastic)
-	end
-	for k = 0, 13 do
-		local z = -65 + k * 10
-		P(bays, "WheelStop", Vector3.new(0.6, 0.4, 6), Vector3.new(side * 56.5, 0.2, z), Color3.fromRGB(160, 160, 160))
+	local x = side * 72
+	P(bays, "ServiceLaneLine", Vector3.new(0.22, 0.04, 132),
+		Vector3.new(x, 0.025, 0), Color3.fromRGB(105, 119, 132), Enum.Material.SmoothPlastic)
+	for _, z in ipairs({ -66, 66 }) do
+		P(bays, "LaneEndMark", Vector3.new(8, 0.04, 0.22),
+			Vector3.new(x, 0.03, z), C.yellow, Enum.Material.SmoothPlastic)
 	end
 end
 
@@ -295,56 +278,144 @@ local exitSign = P(structure, "ExitSign", Vector3.new(10, 1.8, 0.4), Vector3.new
 sign(exitSign, Enum.NormalId.Front, "SALIDA CERRADA", Color3.fromRGB(255, 255, 255))
 
 -- ---------------------------------------------------------------------------
--- 9) MATCHMAKING: CUATRO PLATAFORMAS ALINEADAS JUNTO A LA PARED ESTE
---    Se elimina por completo el anillo/plataforma central anterior.
+-- 9) RACING HQ: MATCHMAKING CENTRAL ENTRE LOS PILARES LATERALES
 -- ---------------------------------------------------------------------------
-local PAD_X = W / 2 - 18
-local PAD_Z = { -35, -5, 25, 55 }
-local PAD_LABELS = { "SOLO vs CPU", "2 JUGADORES", "3 JUGADORES", "4 JUGADORES" }
-local PAD_COLORS = { C.cyan, C.pink, C.yellow, Color3.fromRGB(90, 230, 120) }
+local PAD_X = { -10, 10, -10, 10 }
+local PAD_Z = { -17, -17, 1, 1 }
+local PAD_LABELS = { "SOLO  /  CPU", "DUO  /  2 PILOTOS", "TRÍO  /  3 PILOTOS", "SQUAD  /  4 PILOTOS" }
+local PAD_COLORS = { C.cyan, Color3.fromRGB(255, 166, 55), C.pink, Color3.fromRGB(105, 235, 145) }
+local PAD_NAMES = { "RoomEntryPad_1vCPU", "MatchmakingPad_2", "MatchmakingPad_3", "MatchmakingPad_4" }
 
--- Panel vertical de orientación en la pared; su cara interior mira hacia -X.
-local wallPanel = P(zoneFolder, "MatchmakingWallPanel", Vector3.new(0.6, 13, 78),
-	Vector3.new(W / 2 - 0.7, 10, 0), Color3.fromRGB(14, 14, 22), Enum.Material.Metal)
-sign(wallPanel, Enum.NormalId.Left, "ELIGE TU CARRERA", C.cyan, C.pink)
+-- Isla central baja: organiza la zona sin crear pilares ni bloquear la vista.
+P(zoneFolder, "RaceDeck", Vector3.new(39, 0.5, 43), Vector3.new(0, 0.05, -8),
+	Color3.fromRGB(27, 31, 39), Enum.Material.Metal)
+for _, x in ipairs({ -19.2, 19.2 }) do
+	P(zoneFolder, "RaceDeckSideTrim", Vector3.new(0.22, 0.18, 43),
+		Vector3.new(x, 0.38, -8), C.cyan, Enum.Material.Neon)
+end
+for _, z in ipairs({ -29.2, 13.2 }) do
+	P(zoneFolder, "RaceDeckEndTrim", Vector3.new(39, 0.18, 0.22),
+		Vector3.new(0, 0.38, z), C.cyan, Enum.Material.Neon)
+end
+local deckTitle = P(zoneFolder, "RaceDeckTitle", Vector3.new(24, 0.08, 2.8),
+	Vector3.new(0, 0.42, -30.5), Color3.fromRGB(18, 22, 29), Enum.Material.SmoothPlastic,
+	{ CanCollide = false })
+sign(deckTitle, Enum.NormalId.Top, "SELECT  YOUR  RACE", C.cyan, nil)
 
 for i = 1, 4 do
-	local z = PAD_Z[i]
-	local accent = PAD_COLORS[i]
-	local pad = P(zoneFolder, "MatchmakingPad_" .. i, Vector3.new(13, 0.45, 13),
-		Vector3.new(PAD_X, 0.25, z), Color3.fromRGB(27, 29, 38), Enum.Material.Metal)
+	local x, z, accent = PAD_X[i], PAD_Z[i], PAD_COLORS[i]
+	local pad = P(zoneFolder, PAD_NAMES[i], Vector3.new(13.5, 0.48, 13.5),
+		Vector3.new(x, 0.55, z), Color3.fromRGB(37, 42, 51), Enum.Material.Metal)
 	pad:SetAttribute("MatchmakingMode", ({ "cpu", "p2", "p3", "p4" })[i])
 
-	-- Borde luminoso alrededor de cada plataforma.
-	P(zoneFolder, "PadEdge_" .. i .. "_A", Vector3.new(13.2, 0.16, 0.35),
-		Vector3.new(PAD_X, 0.55, z - 6.4), accent, Enum.Material.Neon)
-	P(zoneFolder, "PadEdge_" .. i .. "_B", Vector3.new(13.2, 0.16, 0.35),
-		Vector3.new(PAD_X, 0.55, z + 6.4), accent, Enum.Material.Neon)
-	P(zoneFolder, "PadEdge_" .. i .. "_C", Vector3.new(0.35, 0.16, 13.2),
-		Vector3.new(PAD_X - 6.4, 0.55, z), accent, Enum.Material.Neon)
-	P(zoneFolder, "PadEdge_" .. i .. "_D", Vector3.new(0.35, 0.16, 13.2),
-		Vector3.new(PAD_X + 6.4, 0.55, z), accent, Enum.Material.Neon)
+	-- Contorno luminoso integrado al piso.
+	for edge = 1, 4 do
+		local size, offset
+		if edge <= 2 then
+			size = Vector3.new(13.7, 0.12, 0.22)
+			offset = Vector3.new(0, 0.31, edge == 1 and -6.7 or 6.7)
+		else
+			size = Vector3.new(0.22, 0.12, 13.7)
+			offset = Vector3.new(edge == 3 and -6.7 or 6.7, 0.31, 0)
+		end
+		P(zoneFolder, "Pad_" .. i .. "_Edge_" .. edge, size,
+			Vector3.new(x, 0.55, z) + offset, accent, Enum.Material.Neon)
+	end
 
-	local labelPart = P(zoneFolder, "PadLabel_" .. i, Vector3.new(10, 0.06, 3),
-		Vector3.new(PAD_X, 0.57, z), Color3.fromRGB(18, 18, 24), Enum.Material.SmoothPlastic,
+	local floorLabel = P(zoneFolder, "PadFloorLabel_" .. i, Vector3.new(10.8, 0.07, 2.5),
+		Vector3.new(x, 0.84, z + 3.8), Color3.fromRGB(18, 22, 29), Enum.Material.SmoothPlastic,
 		{ CanCollide = false })
-	sign(labelPart, Enum.NormalId.Top, PAD_LABELS[i], accent, nil)
+	sign(floorLabel, Enum.NormalId.Top, PAD_LABELS[i], accent, nil)
 
-	local number = P(zoneFolder, "PadNumber_" .. i, Vector3.new(2.2, 0.08, 2.2),
-		Vector3.new(PAD_X, 0.58, z - 4.1), accent, Enum.Material.Neon,
-		{ CanCollide = false })
-	sign(number, Enum.NormalId.Top, string.format("%02d", i), Color3.fromRGB(15, 15, 20))
+	local number = P(zoneFolder, "PadNumber_" .. i, Vector3.new(2.8, 0.08, 2.8),
+		Vector3.new(x, 0.85, z - 3.6), accent, Enum.Material.Neon, { CanCollide = false })
+	sign(number, Enum.NormalId.Top, string.format("%02d", i), Color3.fromRGB(14, 18, 24), nil)
+
+	-- Marcador de cola que KartService actualiza en tiempo real.
+	local queueGui = Instance.new("BillboardGui")
+	queueGui.Name = "QueueStatus"
+	queueGui.Size = UDim2.fromOffset(150, 42)
+	queueGui.StudsOffset = Vector3.new(0, 3.2, 0)
+	queueGui.AlwaysOnTop = true
+	queueGui.LightInfluence = 0
+	queueGui.Parent = pad
+	local stencil = Instance.new("Frame")
+	stencil.Name = "StencilPanel"
+	stencil.Size = UDim2.fromScale(1, 1)
+	stencil.BackgroundColor3 = Color3.fromRGB(12, 17, 24)
+	stencil.BackgroundTransparency = 0.12
+	stencil.BorderSizePixel = 0
+	stencil.Parent = queueGui
+	local count = Instance.new("TextLabel")
+	count.Name = "QueueCount"
+	count.Size = UDim2.fromScale(1, 1)
+	count.BackgroundTransparency = 1
+	count.Text = "0/" .. tostring(i)
+	count.TextColor3 = accent
+	count.TextScaled = true
+	count.Font = Enum.Font.GothamBold
+	count.Parent = stencil
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = accent
+	stroke.Thickness = 1.5
+	stroke.Parent = stencil
 end
 
--- Una única zona invisible cubre las cuatro plataformas para conservar
--- el popup actual y la lógica de cola sin modificar el cliente ni KartService.
-local zone = P(zoneFolder, "MatchmakingZone", Vector3.new(24, 14, 112),
-	Vector3.new(PAD_X, 7, 0), C.cyan, Enum.Material.SmoothPlastic,
+local zone = P(zoneFolder, "MatchmakingZone", Vector3.new(43, 14, 49),
+	Vector3.new(0, 7, -8), C.cyan, Enum.Material.SmoothPlastic,
 	{ Transparency = 1, CanCollide = false, CanTouch = false, CanQuery = false })
 CollectionService:AddTag(zone, "MatchmakingZone")
 
 -- ---------------------------------------------------------------------------
--- 10) PARED NORTE: TABLEROS DE LÍDERES
+-- 9B) KART LAB Y KART SHOP: DOS ZONAS LATERALES DE EXHIBICIÓN
+-- ---------------------------------------------------------------------------
+local function wallPanel(parent, name, x, z, title, accent)
+	local panel = P(parent, name, Vector3.new(0.5, 8, 22), Vector3.new(x, 5, z),
+		Color3.fromRGB(18, 22, 29), Enum.Material.Metal)
+	sign(panel, Enum.NormalId.Left, title, accent, nil)
+	P(parent, name .. "_Header", Vector3.new(0.55, 0.3, 22),
+		Vector3.new(x, 9.2, z), accent, Enum.Material.Neon)
+end
+
+-- KART LAB (izquierda): bancos de trabajo, armarios y plataformas de personalización.
+wallPanel(props, "KartLabPanel", -77, -5, "KART  LAB", C.cyan)
+for i, z in ipairs({ -28, -5, 18 }) do
+	P(props, "LabWorkbench_" .. i, Vector3.new(17, 2, 5),
+		Vector3.new(-56, 1.2, z), Color3.fromRGB(37, 43, 51), Enum.Material.Metal)
+	P(props, "LabWorkbenchTop_" .. i, Vector3.new(17.2, 0.22, 5.2),
+		Vector3.new(-56, 2.25, z), Color3.fromRGB(91, 105, 118), Enum.Material.DiamondPlate)
+	P(props, "LabWorkbenchLight_" .. i, Vector3.new(13, 0.12, 0.25),
+		Vector3.new(-56, 2.42, z - 2.35), C.cyan, Enum.Material.Neon)
+	for tire = 1, 2 do
+		local tirePart = P(props, "LabTire_" .. i .. "_" .. tire, Vector3.new(2.4, 1.1, 2.4),
+			CFrame.new(-64 + tire * 2.4, 0.65, z + 4) * flat,
+			Color3.fromRGB(20, 23, 28), Enum.Material.Rubber, CYL)
+		tirePart.CanCollide = false
+	end
+end
+P(props, "LabToolCabinet", Vector3.new(7, 7, 5), Vector3.new(-75, 3.5, 34),
+	Color3.fromRGB(45, 55, 65), Enum.Material.Metal)
+P(props, "LabCabinetStripe", Vector3.new(7.1, 0.45, 5.1), Vector3.new(-75, 4, 34),
+	C.cyan, Enum.Material.Neon)
+
+-- KART SHOP (derecha): pedestales limpios, sin autos decorativos falsos.
+wallPanel(props, "KartShopPanel", 77, -5, "KART  SHOP", Color3.fromRGB(255, 166, 55))
+for i, z in ipairs({ -28, -5, 18 }) do
+	local accent = ({ C.cyan, Color3.fromRGB(255, 166, 55), C.pink })[i]
+	P(props, "ShopDisplay_" .. i, Vector3.new(17, 0.8, 11),
+		Vector3.new(56, 0.55, z), Color3.fromRGB(30, 35, 44), Enum.Material.Metal)
+	P(props, "ShopDisplayTrim_" .. i, Vector3.new(16.5, 0.14, 0.25),
+		Vector3.new(56, 1.02, z - 5.2), accent, Enum.Material.Neon)
+	P(props, "ShopDisplayBack_" .. i, Vector3.new(0.35, 5, 11),
+		Vector3.new(64.5, 3.2, z), Color3.fromRGB(48, 55, 65), Enum.Material.Metal)
+end
+P(props, "ShopCounter", Vector3.new(13, 2.4, 5), Vector3.new(55, 1.35, 37),
+	Color3.fromRGB(31, 37, 46), Enum.Material.Metal)
+P(props, "ShopCounterTop", Vector3.new(13.2, 0.18, 5.2), Vector3.new(55, 2.65, 37),
+	Color3.fromRGB(255, 166, 55), Enum.Material.Neon)
+
+-- ---------------------------------------------------------------------------
+-- 10) PARED NORTE: HALL OF FAME Y TABLEROS DE LÍDERES
 -- ---------------------------------------------------------------------------
 local BOARD_SIZE = Vector3.new(36, 14, 0.6)
 local BOARD_Y = 9
@@ -407,5 +478,5 @@ for _, plr in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(assignSpawn)
 
-print(string.format("[LOBBY][BUILD] Garage subterráneo listo en %s (%dx%dx%d). Pilares: %d. Zona matchmaking activa.",
-	tostring(ORIGIN), W, D, H, pillarNumber))
+print(string.format("[LOBBY][BUILD] BLOCK KARTS RACING HQ listo en %s (%dx%dx%d). Matchmaking central 1-4, Kart Lab, Kart Shop y Hall of Fame.",
+	tostring(ORIGIN), W, D, H))
