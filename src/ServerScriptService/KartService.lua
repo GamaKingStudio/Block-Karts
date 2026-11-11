@@ -4232,15 +4232,6 @@ local lobbyStartRace = ServerStorage:WaitForChild("LobbyStartRace")
 lobbyStartRace.Event:Connect(function(info)
 	if typeof(info) ~= "table" or typeof(info.players) ~= "table" then return end
 	local requestedCourse = info.course == "Forest" and "Forest" or "Beach"
-	if requestedCourse ~= activeCourseId then
-		if requestedCourse == "Forest" then
-			buildJungleCourse()
-		else
-			buildTestCourse()
-		end
-		activeCourseId = requestedCourse
-		hookCheckpoints()
-	end
 	local targetPlayers = math.clamp(math.floor(tonumber(info.humans) or #info.players), 1, 4)
 	local validPlayers = {}
 	for _, participant in ipairs(info.players) do
@@ -4256,6 +4247,15 @@ lobbyStartRace.Event:Connect(function(info)
 	if raceInProgress or roomTargetPlayers > 0 or roomPreparing then
 		warn("[LOBBY][KARTSERVICE] Inicio rechazado: KartService ya tiene una sala activa.")
 		return
+	end
+	if requestedCourse ~= activeCourseId then
+		if requestedCourse == "Forest" then
+			buildJungleCourse()
+		else
+			buildTestCourse()
+		end
+		activeCourseId = requestedCourse
+		hookCheckpoints()
 	end
 	print(("[LOBBY][KARTSERVICE] Integrando modo=%s humanos=%d CPU=%d"):format(
 		tostring(info.mode), targetPlayers, tonumber(info.cpus) or 0
