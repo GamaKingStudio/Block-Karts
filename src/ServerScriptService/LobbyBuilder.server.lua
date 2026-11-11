@@ -168,7 +168,8 @@ P(structure, "StripeSouth", Vector3.new(W, 0.6, 0.35), Vector3.new(0, 4, D / 2 -
 -- ---------------------------------------------------------------------------
 -- 2) TECHO: vigas, tuberías, ductos
 -- ---------------------------------------------------------------------------
-for z = -70, 70, 20 do
+for z = -50, 70, 20 do
+	-- Se deja libre el tramo norte para que nada tape los tableros.
 	P(structure, "Beam", Vector3.new(W, 1.6, 2), Vector3.new(0, H - 0.8, z), C.beam)
 end
 
@@ -176,7 +177,7 @@ for _, x in ipairs({ -27, 27 }) do
 	P(structure, "Pipe", Vector3.new(D, 1.2, 1.2), CFrame.new(x, H - 3, 0) * rotX90,
 		Color3.fromRGB(70, 75, 80), Enum.Material.Metal, CYL)
 end
-for _, x in ipairs({ -36, 36 }) do
+for _, x in ipairs({ -65, 65 }) do
 	P(structure, "Duct", Vector3.new(3, 2, D - 4), Vector3.new(x, H - 3.2, 0),
 		Color3.fromRGB(140, 145, 150), Enum.Material.Metal)
 end
@@ -225,25 +226,19 @@ end)
 -- 4) PILARES con bandas amarillo/negro y numeración
 -- ---------------------------------------------------------------------------
 local pillarNumber = 0
-for _, x in ipairs({ -45, -15, 15, 45 }) do
+for _, x in ipairs({ -W / 2 + 9, W / 2 - 9 }) do
 	for _, z in ipairs({ -50, -20, 10, 40, 70 }) do
-		-- No poner pilares dentro de la zona de matchmaking
-		local insideZone = math.abs(x) <= 15 and z >= -35 and z <= 5
-		if not insideZone then
-			pillarNumber += 1
-			local p = P(pillars, "Pillar_" .. pillarNumber, Vector3.new(4, H, 4), Vector3.new(x, H / 2, z), C.concrete)
-			-- Bandas de advertencia en la base
-			for i = 0, 3 do
-				P(pillars, "PillarBand", Vector3.new(4.2, 0.8, 4.2), Vector3.new(x, 0.4 + i * 0.8, z),
-					(i % 2 == 0) and C.yellow or C.black, Enum.Material.SmoothPlastic)
-			end
-			-- Capitel oscuro arriba
-			P(pillars, "PillarCap", Vector3.new(5, 1, 5), Vector3.new(x, H - 0.5, z), C.wallDark)
-			-- Número del pilar en las 4 caras
-			local label = string.format("P-%02d", pillarNumber)
-			for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right }) do
-				sign(p, face, label, C.yellow, nil, UDim2.fromScale(0, 0.55), UDim2.fromScale(1, 0.1))
-			end
+		-- Solo pilares perimetrales: el centro queda completamente despejado.
+		pillarNumber += 1
+		local p = P(pillars, "Pillar_" .. pillarNumber, Vector3.new(4, H, 4), Vector3.new(x, H / 2, z), C.concrete)
+		for i = 0, 3 do
+			P(pillars, "PillarBand", Vector3.new(4.2, 0.8, 4.2), Vector3.new(x, 0.4 + i * 0.8, z),
+				(i % 2 == 0) and C.yellow or C.black, Enum.Material.SmoothPlastic)
+		end
+		P(pillars, "PillarCap", Vector3.new(5, 1, 5), Vector3.new(x, H - 0.5, z), C.wallDark)
+		local label = string.format("P-%02d", pillarNumber)
+		for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right }) do
+			sign(p, face, label, C.yellow, nil, UDim2.fromScale(0, 0.55), UDim2.fromScale(1, 0.1))
 		end
 	end
 end
@@ -289,22 +284,8 @@ for _, side in ipairs({ -1, 1 }) do
 end
 
 -- ---------------------------------------------------------------------------
--- 6) SUCIEDAD: manchas de aceite y charcos
+-- 6) PISO LIMPIO: sin manchas circulares ni charcos decorativos
 -- ---------------------------------------------------------------------------
-for i = 1, 14 do
-	local x = rng:NextNumber(-34, 34)
-	local z = rng:NextNumber(-70, 70)
-	local nearZone = math.abs(x) < 20 and z > -36 and z < 6
-	if not nearZone then
-		local d = rng:NextNumber(3, 8)
-		local puddle = (i % 4 == 0)
-		P(props, puddle and "Puddle" or "OilStain", Vector3.new(0.06, d, d),
-			CFrame.new(x, 0.04, z) * flat,
-			puddle and Color3.fromRGB(40, 55, 70) or Color3.fromRGB(28, 28, 30),
-			Enum.Material.SmoothPlastic,
-			{ Shape = Enum.PartType.Cylinder, Reflectance = puddle and 0.35 or 0.1 })
-	end
-end
 
 -- ---------------------------------------------------------------------------
 -- 7) PROPS: barriles y cajas en las esquinas
@@ -391,19 +372,19 @@ CollectionService:AddTag(zone, "MatchmakingZone")
 -- ---------------------------------------------------------------------------
 -- 10) PARED NORTE: TABLEROS DE LÍDERES
 -- ---------------------------------------------------------------------------
-local BOARD_SIZE = Vector3.new(36, 16, 0.6)
-local BOARD_Y = 10
+local BOARD_SIZE = Vector3.new(36, 14, 0.6)
+local BOARD_Y = 9
 local BOARD_Z = -D / 2 + 0.5
 
 local function buildBoard(name, x, kind, title, accent)
-	P(boardsFolder, name .. "Frame", Vector3.new(37, 17, 0.4), Vector3.new(x, BOARD_Y, BOARD_Z - 0.1),
+	P(boardsFolder, name .. "Frame", Vector3.new(37, 15, 0.4), Vector3.new(x, BOARD_Y, BOARD_Z - 0.1),
 		Color3.fromRGB(20, 20, 26), Enum.Material.Metal)
 	local board = P(boardsFolder, name, BOARD_SIZE, Vector3.new(x, BOARD_Y, BOARD_Z + 0.2),
 		Color3.fromRGB(12, 12, 18), Enum.Material.SmoothPlastic)
 	-- Marco neón
-	P(boardsFolder, name .. "TrimTop", Vector3.new(37.4, 0.4, 0.5), Vector3.new(x, BOARD_Y + 8.7, BOARD_Z + 0.2), accent, Enum.Material.Neon)
-	P(boardsFolder, name .. "TrimBottom", Vector3.new(37.4, 0.4, 0.5), Vector3.new(x, BOARD_Y - 8.7, BOARD_Z + 0.2), accent, Enum.Material.Neon)
-	P(boardsFolder, name .. "TrimLeft", Vector3.new(0.4, 17.4, 0.5), Vector3.new(x - 18.7, BOARD_Y, BOARD_Z + 0.2), accent, Enum.Material.Neon)
+	P(boardsFolder, name .. "TrimTop", Vector3.new(37.4, 0.4, 0.5), Vector3.new(x, BOARD_Y + 7.7, BOARD_Z + 0.2), accent, Enum.Material.Neon)
+	P(boardsFolder, name .. "TrimBottom", Vector3.new(37.4, 0.4, 0.5), Vector3.new(x, BOARD_Y - 7.7, BOARD_Z + 0.2), accent, Enum.Material.Neon)
+	P(boardsFolder, name .. "TrimLeft", Vector3.new(0.4, 15.4, 0.5), Vector3.new(x - 18.7, BOARD_Y, BOARD_Z + 0.2), accent, Enum.Material.Neon)
 	P(boardsFolder, name .. "TrimRight", Vector3.new(0.4, 17.4, 0.5), Vector3.new(x + 18.7, BOARD_Y, BOARD_Z + 0.2), accent, Enum.Material.Neon)
 	local glow = Instance.new("PointLight")
 	glow.Color = accent
