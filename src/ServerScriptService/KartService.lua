@@ -2677,6 +2677,14 @@ local function createKart(player, spawnIndex)
 				end
 			end
 			assert(#initialParts > 0, "El modelo importado no contiene piezas BasePart")
+			print(("[CUSTOM-KART-ASSET-DIAG] asset=%d parts=%d bounds=%s"):format(
+				CUSTOM_KART_ASSET_ID, #initialParts, tostring(importedKart:GetBoundingBox())
+			))
+			for _, sourcePart in ipairs(initialParts) do
+				print(("[CUSTOM-KART-ASSET-PART] name=%s class=%s size=%s color=%s"):format(
+					sourcePart.Name, sourcePart.ClassName, tostring(sourcePart.Size), tostring(sourcePart.Color)
+				))
+			end
 
 			-- El asset original tiene la trompa hacia su X local negativo.
 			-- El chasis de carrera apunta hacia su Z local negativo (LookVector).
