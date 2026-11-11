@@ -2762,7 +2762,10 @@ local function createKart(player, spawnIndex)
 				or importedKart:FindFirstChild("Equipamiento_Asiento", true)
 			if visualSeat and visualSeat:IsA("BasePart") then
 				if seatWeld and seatWeld.Parent then seatWeld:Destroy() end
-				seat.CFrame = visualSeat.CFrame
+				-- Solo copiamos la posición del cojín. La orientación debe venir
+				-- del chasis: la malla Seat_Base_Dark tiene ejes propios y puede
+				-- estar girada, lo que sentaba al avatar mirando hacia atrás.
+				seat.CFrame = CFrame.new(visualSeat.Position) * chassis.CFrame.Rotation
 				seat.Size = Vector3.new(
 					math.clamp(visualSeat.Size.X * 0.78, 1.2, 2.1),
 					0.4,
