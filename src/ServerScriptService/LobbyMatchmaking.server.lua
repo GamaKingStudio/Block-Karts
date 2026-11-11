@@ -77,7 +77,7 @@ end
 -- ---------------------------------------------------------------------------
 local queues = {}
 for modeId in pairs(MODES) do
-	queues[modeId] = { players = {}, state = "idle", seconds = 0, token = 0 }
+	queues[modeId] = { players = {}, state = "idle", seconds = 0, token = 0, course = nil }
 end
 local lastJoin = {}
 
@@ -106,6 +106,7 @@ local function broadcast(modeId)
 			current = #q.players,
 			target = mode.humans,
 			seconds = q.seconds,
+			course = q.course,
 		})
 	end
 end
@@ -120,6 +121,7 @@ local function removeFromQueues(player)
 				q.token += 1
 				q.state = "idle"
 				q.seconds = 0
+				q.course = nil
 			elseif q.state == "countdown" and #q.players < mode.humans then
 				-- Se fue alguien: se cancela la cuenta y la sala sigue esperando
 				q.token += 1
@@ -132,7 +134,7 @@ local function removeFromQueues(player)
 	end
 end
 
-local function launch(modeId, group)
+local function launch(modeId, group, courseId)
 	local mode = MODES[modeId]
 	local alive = {}
 	for _, plr in ipairs(group) do
@@ -144,7 +146,7 @@ local function launch(modeId, group)
 		return
 	end
 	for _, plr in ipairs(alive) do
-		QueueState:FireClient(plr, { state = "starting", mode = modeId, label = mode.label })
+		QueueState:FireClient(plr, { state = "starting", mode = modeId, label = mode.label, course = courseId })
 	end
 	print(string.format("[LOBBY][START] modo=%s humanos=%d cpus=%d", modeId, #alive, mode.cpus))
 	startEvent:Fire({
@@ -152,11 +154,13 @@ local function launch(modeId, group)
 		players = alive,
 		humans = #alive,
 		cpus = mode.cpus,
+		course = courseId,
 	})
 end
 
 local function runCountdown(modeId)
 	local q, mode = queues[modeId], MODES[modeId]
+	local courseId = q.course or "Beach"
 	q.token += 1
 	local myToken = q.token
 	q.state = "countdown"
@@ -183,18 +187,20 @@ local function runCountdown(modeId)
 	q.players = {}
 	q.state = "idle"
 	q.seconds = 0
-	launch(modeId, group)
+	q.course = nil
+	launch(modeId, group, courseId)
 end
 
 -- ---------------------------------------------------------------------------
 -- Eventos del cliente
 -- ---------------------------------------------------------------------------
-JoinQueue.OnServerEvent:Connect(function(player, modeId)
+JoinQueue.OnServerEvent:Connect(function(player, modeId, requestedCourse)
 	if type(modeId) ~= "string" then
 		return
 	end
 	local mode = MODES[modeId]
-	if not mode then
+	local courseId = requestedCourse == "Forest" and "Forest" or (requestedCourse == "Beach" and "Beach" or nil)
+	if not mode or not courseId then
 		return
 	end
 
@@ -220,6 +226,13 @@ JoinQueue.OnServerEvent:Connect(function(player, modeId)
 	end
 
 	local q = queues[modeId]
+	if #q.players > 0 and q.course ~= courseId then
+		QueueState:FireClient(player, {
+			state = "rejected",
+			message = "Esa sala ya eligió otra pista. Intenta cuando quede libre.",
+		})
+		return
+	end
 	if table.find(q.players, player) then
 		return
 	end
@@ -233,6 +246,7 @@ JoinQueue.OnServerEvent:Connect(function(player, modeId)
 
 	removeFromQueues(player) -- sale de cualquier otra cola
 	table.insert(q.players, player)
+	q.course = courseId
 	if q.state == "idle" then
 		q.state = "waiting"
 	end
