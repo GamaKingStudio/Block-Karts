@@ -2655,6 +2655,7 @@ local function createKart(player, spawnIndex)
 	-- Solo las ruedas delanteras usan articulaciones orientables.
 	-- Las traseras permanecen soldadas al chasis.
 	local kartWheelMotors = {}
+			local kartWheelSpinMotors = {}
 
 	local loadOk, loadResult = pcall(function()
 		return InsertService:LoadAsset(CUSTOM_KART_ASSET_ID)
@@ -2716,9 +2717,7 @@ local function createKart(player, spawnIndex)
 			-- Centramos la caja geométrica (no el pivote arbitrario del asset)
 			-- sobre el chasis y conservamos la orientación ya corregida.
 			local scaledBoundsCFrame = importedKart:GetBoundingBox()
-			local targetBoundsCFrame = spawnCFrame
-				* CFrame.Angles(0, math.rad(-90), 0)
-				* CFrame.new(0, 0.75, 0)
+			local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
 			local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
 			importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
 
@@ -2959,6 +2958,7 @@ local function createKart(player, spawnIndex)
 						spinMotor.C1 = part.CFrame:ToObjectSpace(hubCFrame)
 						spinMotor:SetAttribute("WheelRadius", estimateWheelRadius(part))
 						spinMotor.Parent = hub
+						table.insert(kartWheelSpinMotors, spinMotor)
 
 						if isFrontWheel then
 							-- Direccion: gira el cubo sobre el eje vertical del kart.
@@ -3086,6 +3086,8 @@ local function createKart(player, spawnIndex)
 		spawnCFrame = spawnCFrame,
 		networkOwner = "auto",
 		wheelMotors = kartWheelMotors or {},
+		wheelSpinMotors = kartWheelSpinMotors or {},
+		wheelSpinAngles = {},
 		nextDiagnosticAt = 0,
 		lastDiagnosticPosition = spawnCFrame.Position,
 	}
@@ -4226,6 +4228,14 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		-- Dirección visual: las ruedas traseras no tienen articulación y quedan fijas.
 		-- Invertimos el signo para que la orientación visible coincida con A/D.
 		local frontWheelAngle = math.rad(28) * steering
+		for index, spinMotor in ipairs(kart.wheelSpinMotors or {}) do
+			if spinMotor.Parent then
+				local radius = math.max(spinMotor:GetAttribute("WheelRadius") or 1, 0.25)
+				local angle = (kart.wheelSpinAngles[index] or 0) - (forwardSpeed / radius) * deltaTime
+				kart.wheelSpinAngles[index] = angle % (math.pi * 2)
+				spinMotor.Transform = CFrame.Angles(angle, 0, 0)
+			end
+		end
 		for _, wheelMotor in ipairs(kart.wheelMotors or {}) do
 			if wheelMotor.Parent then
 				wheelMotor.Transform = CFrame.Angles(0, frontWheelAngle, 0)
