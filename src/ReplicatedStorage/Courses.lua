@@ -8,6 +8,7 @@ local Courses = {
 		displayName = "Beach Resort",
 		trackWidth = 45,
 		checkpointCount = 26,
+		finish = Vector3.new(7.5, Y, 70),
 		waypoints = {
 			Vector3.new(80, Y, 70), Vector3.new(-65, Y, 70),
 			Vector3.new(-115, Y, 40), Vector3.new(-115, Y, -50),
@@ -31,6 +32,7 @@ local Courses = {
 		displayName = "Jungle Deep",
 		trackWidth = 30,
 		checkpointCount = 32,
+		finish = Vector3.new(89.9, Y, 140.2),
 		start = { x = -150, z = 140.2, headingX = 1, headingZ = 0 },
 		waypoints = {
 			Vector3.new(89.9, Y, 140.2),
