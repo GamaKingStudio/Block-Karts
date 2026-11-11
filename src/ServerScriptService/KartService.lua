@@ -2717,7 +2717,7 @@ local function createKart(player, spawnIndex)
 			-- Centramos la caja geométrica (no el pivote arbitrario del asset)
 			-- sobre el chasis y conservamos la orientación ya corregida.
 			local scaledBoundsCFrame = importedKart:GetBoundingBox()
-			local targetBoundsCFrame = spawnCFrame * CFrame.new(0, 0.75, 0)
+			local targetBoundsCFrame = spawnCFrame * CFrame.Angles(0, math.rad(180), 0) * CFrame.new(0, 0.75, 0)
 			local pivotOffset = scaledBoundsCFrame:ToObjectSpace(importedKart:GetPivot())
 			importedKart:PivotTo(targetBoundsCFrame * pivotOffset)
 
