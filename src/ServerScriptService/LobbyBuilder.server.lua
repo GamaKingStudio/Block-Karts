@@ -385,7 +385,7 @@ local function buildBoard(name, x, kind, title, accent)
 	P(boardsFolder, name .. "TrimTop", Vector3.new(37.4, 0.4, 0.5), Vector3.new(x, BOARD_Y + 7.7, BOARD_Z + 0.2), accent, Enum.Material.Neon)
 	P(boardsFolder, name .. "TrimBottom", Vector3.new(37.4, 0.4, 0.5), Vector3.new(x, BOARD_Y - 7.7, BOARD_Z + 0.2), accent, Enum.Material.Neon)
 	P(boardsFolder, name .. "TrimLeft", Vector3.new(0.4, 15.4, 0.5), Vector3.new(x - 18.7, BOARD_Y, BOARD_Z + 0.2), accent, Enum.Material.Neon)
-	P(boardsFolder, name .. "TrimRight", Vector3.new(0.4, 17.4, 0.5), Vector3.new(x + 18.7, BOARD_Y, BOARD_Z + 0.2), accent, Enum.Material.Neon)
+	P(boardsFolder, name .. "TrimRight", Vector3.new(0.4, 15.4, 0.5), Vector3.new(x + 18.7, BOARD_Y, BOARD_Z + 0.2), accent, Enum.Material.Neon)
 	local glow = Instance.new("PointLight")
 	glow.Color = accent
 	glow.Brightness = 1.2
