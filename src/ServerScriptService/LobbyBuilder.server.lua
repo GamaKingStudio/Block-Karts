@@ -383,7 +383,7 @@ end
 
 -- Una única zona invisible cubre las cuatro plataformas para conservar
 -- el popup actual y la lógica de cola sin modificar el cliente ni KartService.
-local zone = P(zoneFolder, "MatchmakingZone", Vector3.new(24, 14, 72),
+local zone = P(zoneFolder, "MatchmakingZone", Vector3.new(24, 14, 112),
 	Vector3.new(PAD_X, 7, 0), C.cyan, Enum.Material.SmoothPlastic,
 	{ Transparency = 1, CanCollide = false, CanTouch = false, CanQuery = false })
 CollectionService:AddTag(zone, "MatchmakingZone")
