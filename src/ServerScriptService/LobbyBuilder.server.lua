@@ -281,9 +281,7 @@ local function parkedCar(localX, z, side)
 	local kart = displayKartTemplate:Clone()
 	kart.Name = ("DisplayKart_%02d"):format(displayCarIndex)
 
-	local bounds = kart:GetBoundingBox()
-	local sourceSize = bounds
-	local size = select(2, kart:GetBoundingBox())
+	local _, size = kart:GetBoundingBox()
 	if size.X <= 0 or size.Y <= 0 or size.Z <= 0 then
 		kart:Destroy()
 		warn("[LOBBY][DISPLAY-KART] Se omitió un modelo con dimensiones inválidas.")
@@ -301,8 +299,10 @@ local function parkedCar(localX, z, side)
 	kart:ScaleTo(kart:GetScale() * scale)
 
 	local _, scaledSize = kart:GetBoundingBox()
-	local pivotOffset = kart:GetBoundingBox():ToObjectSpace(kart:GetPivot())
-	local facing = (side == -1) and 0 or math.pi
+	local scaledBoundsCFrame = kart:GetBoundingBox()
+	local pivotOffset = scaledBoundsCFrame:ToObjectSpace(kart:GetPivot())
+	-- La trompa del asset apunta hacia -X: cada fila mira hacia el pasillo central.
+	local facing = (side == -1) and math.pi or 0
 	local targetBounds = toWorld(
 		CFrame.new(localX, scaledSize.Y / 2 + 0.12, z)
 			* CFrame.Angles(0, facing, 0)
