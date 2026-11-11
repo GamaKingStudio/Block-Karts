@@ -2705,32 +2705,6 @@ local function createKart(player, spawnIndex)
 			assert(scale > 0 and scale < 20, "La escala calculada no es válida")
 			importedKart:ScaleTo(importedKart:GetScale() * scale)
 
-			-- Alinea el VehicleSeat invisible con el asiento real del modelo nuevo.
-			-- Se rehace su soldadura para que el avatar quede sentado en el cojín,
-			-- independientemente del pivote y las proporciones del asset.
-			local visualSeat = importedKart:FindFirstChild("Equipamiento_Asiento", true)
-			if visualSeat and visualSeat:IsA("BasePart") then
-				if seatWeld and seatWeld.Parent then seatWeld:Destroy() end
-				seat.CFrame = visualSeat.CFrame
-				seat.Size = Vector3.new(
-					math.clamp(visualSeat.Size.X * 0.78, 1.2, 2.1),
-					0.4,
-					math.clamp(visualSeat.Size.Z * 0.78, 1.0, 1.8)
-				)
-				seatWeld = Instance.new("WeldConstraint")
-				seatWeld.Name = "DriverSeatAlignmentWeld"
-				seatWeld.Part0 = chassis
-				seatWeld.Part1 = seat
-				seatWeld.Parent = chassis
-				print(("[CUSTOM-KART-SEAT-ALIGN] source=%s localOffset=%s seatSize=%s"):format(
-					visualSeat:GetFullName(),
-					 tostring(chassis.CFrame:PointToObjectSpace(seat.Position)),
-					 tostring(seat.Size)
-				))
-			else
-				warn("[CUSTOM-KART-SEAT-ALIGN] No se encontró Equipamiento_Asiento; se conserva el asiento base.")
-			end
-
 			-- Centramos la caja geométrica (no el pivote arbitrario del asset)
 			-- sobre el chasis y conservamos la orientación ya corregida.
 			local scaledBoundsCFrame = importedKart:GetBoundingBox()
@@ -2771,6 +2745,31 @@ local function createKart(player, spawnIndex)
 				warn("[CUSTOM-KART-GROUND] No se encontraron las cuatro ruedas por nombre; se conserva la altura anterior.")
 			end
 
+			-- Alinea el VehicleSeat invisible con el asiento real del modelo nuevo.
+			-- Se rehace su soldadura para que el avatar quede sentado en el cojín,
+			-- independientemente del pivote y las proporciones del asset.
+			local visualSeat = importedKart:FindFirstChild("Equipamiento_Asiento", true)
+			if visualSeat and visualSeat:IsA("BasePart") then
+				if seatWeld and seatWeld.Parent then seatWeld:Destroy() end
+				seat.CFrame = visualSeat.CFrame
+				seat.Size = Vector3.new(
+					math.clamp(visualSeat.Size.X * 0.78, 1.2, 2.1),
+					0.4,
+					math.clamp(visualSeat.Size.Z * 0.78, 1.0, 1.8)
+				)
+				seatWeld = Instance.new("WeldConstraint")
+				seatWeld.Name = "DriverSeatAlignmentWeld"
+				seatWeld.Part0 = chassis
+				seatWeld.Part1 = seat
+				seatWeld.Parent = chassis
+				print(("[CUSTOM-KART-SEAT-ALIGN] source=%s localOffset=%s seatSize=%s"):format(
+					visualSeat:GetFullName(),
+					 tostring(chassis.CFrame:PointToObjectSpace(seat.Position)),
+					 tostring(seat.Size)
+				))
+			else
+				warn("[CUSTOM-KART-SEAT-ALIGN] No se encontró Equipamiento_Asiento; se conserva el asiento base.")
+			end
 			-- Diagnóstico visual: registra la orientación real de cada neumático
 			-- respecto del chasis, sin alterar la geometría ni el manejo.
 			local wheelDiagnosticNames = {
