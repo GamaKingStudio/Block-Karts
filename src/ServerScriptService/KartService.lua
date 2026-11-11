@@ -4248,8 +4248,8 @@ local function enterMatchmakingRoom(player, padIndex)
 end
 
 
--- Nuevo lobby: reutiliza el flujo existente de KartService para crear karts,
--- sentar pilotos y esperar su selección de cámara. La pista no se modifica.
+-- Nuevo lobby: activa la pista elegida por la sala y reutiliza el flujo existente
+-- de KartService para crear karts, sentar pilotos y esperar la selección de cámara.
 local lobbyStartRace = ServerStorage:WaitForChild("LobbyStartRace")
 lobbyStartRace.Event:Connect(function(info)
 	if typeof(info) ~= "table" or typeof(info.players) ~= "table" then return end
