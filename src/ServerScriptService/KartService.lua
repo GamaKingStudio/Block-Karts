@@ -2514,6 +2514,25 @@ local function buildJungleCourse()
 		hub.CanTouch = false
 	end
 
+	-- Cuatro cajones de parrilla en dos filas escalonadas sobre la recta inferior.
+	local grid = definition.start
+	for slot = 1, 4 do
+		local row = (slot - 1) % 2
+		local column = math.floor((slot - 1) / 2)
+		local x = grid.x - grid.rowSpacing / 2 + column * grid.rowSpacing
+		local z = grid.z + (row == 0 and -grid.rowOffset or grid.rowOffset)
+		for side = -1, 1, 2 do
+			local cross = makePart(course, ("ForestGridCross_%d_%d"):format(slot, side),
+				Vector3.new(0.18, 0.025, 7.2), CFrame.new(x + side * 4, yGround + 0.035, z),
+				Color3.fromRGB(235, 238, 232), Enum.Material.SmoothPlastic)
+			cross.CanCollide = false
+			local edge = makePart(course, ("ForestGridEdge_%d_%d"):format(slot, side),
+				Vector3.new(8.2, 0.025, 0.18), CFrame.new(x, yGround + 0.035, z + side * 3.6),
+				Color3.fromRGB(235, 238, 232), Enum.Material.SmoothPlastic)
+			edge.CanCollide = false
+		end
+	end
+
 	-- Bordillos rojo/blanco siguiendo el mismo offset seguro de la pista.
 	local curbWidth, curbHeight, curbOffset = 1.4, 0.14, trackWidth / 2 + 0.7
 	local curbColors = { Color3.fromRGB(210, 42, 42), Color3.fromRGB(245, 245, 240) }
