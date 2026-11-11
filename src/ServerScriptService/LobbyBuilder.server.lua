@@ -27,7 +27,7 @@ local Leaderboards = require(ServerScriptService:WaitForChild("Leaderboards"))
 -- CONFIGURACIÓN
 -- ---------------------------------------------------------------------------
 local ORIGIN = Vector3.new(520, 1, 0) -- centro del piso (misma zona del garage anterior)
-local W, D, H = 120, 160, 20          -- ancho (X), largo (Z), alto (Y)
+local W, D, H = 180, 160, 20          -- garage ampliado: 180 studs de ancho, 160 de largo, 20 de alto
 local REMOVE_OLD_GARAGE = true        -- borra Workspace.BlockKartsGarage si existe
 local MODEL_NAME = "BlockKartsGarage"
 
@@ -340,56 +340,51 @@ local exitSign = P(structure, "ExitSign", Vector3.new(10, 1.8, 0.4), Vector3.new
 sign(exitSign, Enum.NormalId.Front, "SALIDA CERRADA", Color3.fromRGB(255, 255, 255))
 
 -- ---------------------------------------------------------------------------
--- 9) ZONA DE MATCHMAKING (centro del garage, hacia el norte)
+-- 9) MATCHMAKING: CUATRO PLATAFORMAS ALINEADAS JUNTO A LA PARED ESTE
+--    Se elimina por completo el anillo/plataforma central anterior.
 -- ---------------------------------------------------------------------------
-local ZONE_CENTER = Vector3.new(0, 0, -15)
+local PAD_X = W / 2 - 18
+local PAD_Z = { -48, -16, 16, 48 }
+local PAD_LABELS = { "SOLO vs CPU", "2 JUGADORES", "3 JUGADORES", "4 JUGADORES" }
+local PAD_COLORS = { C.cyan, C.pink, C.yellow, Color3.fromRGB(90, 230, 120) }
 
-local zoneFloor = P(zoneFolder, "ZoneFloor", Vector3.new(30, 0.3, 30), ZONE_CENTER + Vector3.new(0, 0.15, 0),
-	Color3.fromRGB(30, 30, 38), Enum.Material.Metal)
+-- Panel vertical de orientación en la pared; su cara interior mira hacia -X.
+local wallPanel = P(zoneFolder, "MatchmakingWallPanel", Vector3.new(0.6, 13, 78),
+	Vector3.new(W / 2 - 0.7, 10, 0), Color3.fromRGB(14, 14, 22), Enum.Material.Metal)
+sign(wallPanel, Enum.NormalId.Left, "ELIGE TU CARRERA", C.cyan, C.pink)
 
--- Bordes neón
-P(zoneFolder, "EdgeN", Vector3.new(30, 0.15, 0.8), ZONE_CENTER + Vector3.new(0, 0.37, -14.6), C.cyan, Enum.Material.Neon)
-P(zoneFolder, "EdgeS", Vector3.new(30, 0.15, 0.8), ZONE_CENTER + Vector3.new(0, 0.37, 14.6), C.cyan, Enum.Material.Neon)
-P(zoneFolder, "EdgeW", Vector3.new(0.8, 0.15, 30), ZONE_CENTER + Vector3.new(-14.6, 0.37, 0), C.pink, Enum.Material.Neon)
-P(zoneFolder, "EdgeE", Vector3.new(0.8, 0.15, 30), ZONE_CENTER + Vector3.new(14.6, 0.37, 0), C.pink, Enum.Material.Neon)
+for i = 1, 4 do
+	local z = PAD_Z[i]
+	local accent = PAD_COLORS[i]
+	local pad = P(zoneFolder, "MatchmakingPad_" .. i, Vector3.new(13, 0.45, 13),
+		Vector3.new(PAD_X, 0.25, z), Color3.fromRGB(27, 29, 38), Enum.Material.Metal)
+	pad:SetAttribute("MatchmakingMode", ({ "cpu", "p2", "p3", "p4" })[i])
 
--- Anillo central
-P(zoneFolder, "RingOuter", Vector3.new(0.1, 20, 20), CFrame.new(ZONE_CENTER + Vector3.new(0, 0.4, 0)) * flat,
-	C.pink, Enum.Material.Neon, CYL)
-P(zoneFolder, "RingInner", Vector3.new(0.1, 17, 17), CFrame.new(ZONE_CENTER + Vector3.new(0, 0.45, 0)) * flat,
-	Color3.fromRGB(24, 24, 32), Enum.Material.Metal, CYL)
+	-- Borde luminoso alrededor de cada plataforma.
+	P(zoneFolder, "PadEdge_" .. i .. "_A", Vector3.new(13.2, 0.16, 0.35),
+		Vector3.new(PAD_X, 0.55, z - 6.4), accent, Enum.Material.Neon)
+	P(zoneFolder, "PadEdge_" .. i .. "_B", Vector3.new(13.2, 0.16, 0.35),
+		Vector3.new(PAD_X, 0.55, z + 6.4), accent, Enum.Material.Neon)
+	P(zoneFolder, "PadEdge_" .. i .. "_C", Vector3.new(0.35, 0.16, 13.2),
+		Vector3.new(PAD_X - 6.4, 0.55, z), accent, Enum.Material.Neon)
+	P(zoneFolder, "PadEdge_" .. i .. "_D", Vector3.new(0.35, 0.16, 13.2),
+		Vector3.new(PAD_X + 6.4, 0.55, z), accent, Enum.Material.Neon)
 
--- Texto en el piso (se lee mirando hacia el norte)
-local floorText = P(zoneFolder, "FloorText", Vector3.new(14, 0.05, 6), ZONE_CENTER + Vector3.new(0, 0.55, 0),
-	C.black, Enum.Material.SmoothPlastic, { Transparency = 1, CanCollide = false })
-sign(floorText, Enum.NormalId.Top, "CARRERA", Color3.fromRGB(255, 255, 255), C.cyan)
+	local labelPart = P(zoneFolder, "PadLabel_" .. i, Vector3.new(10, 0.06, 3),
+		Vector3.new(PAD_X, 0.57, z), Color3.fromRGB(18, 18, 24), Enum.Material.SmoothPlastic,
+		{ CanCollide = false })
+	sign(labelPart, Enum.NormalId.Top, PAD_LABELS[i], accent, nil)
 
--- Postes de esquina con luz de color
-for i, corner in ipairs({ Vector3.new(-14, 4, -14), Vector3.new(14, 4, -14), Vector3.new(-14, 4, 14), Vector3.new(14, 4, 14) }) do
-	local col = (i % 2 == 0) and C.pink or C.cyan
-	local post = P(zoneFolder, "Post", Vector3.new(1, 8, 1), ZONE_CENTER + corner, col, Enum.Material.Neon)
-	local l = Instance.new("PointLight")
-	l.Color = col
-	l.Brightness = 1.5
-	l.Range = 25
-	l.Shadows = false
-	l.Parent = post
+	local number = P(zoneFolder, "PadNumber_" .. i, Vector3.new(2.2, 0.08, 2.2),
+		Vector3.new(PAD_X, 0.58, z - 4.1), accent, Enum.Material.Neon,
+		{ CanCollide = false })
+	sign(number, Enum.NormalId.Top, string.format("%02d", i), Color3.fromRGB(15, 15, 20))
 end
 
--- Letrero colgante "BLOCK KARTS"
-local brand = P(zoneFolder, "BrandSign", Vector3.new(30, 5, 1), Vector3.new(0, 16.5, -15),
-	Color3.fromRGB(14, 14, 22), Enum.Material.Metal)
-sign(brand, Enum.NormalId.Front, "BLOCK KARTS", C.pink, C.cyan)
-sign(brand, Enum.NormalId.Back, "BLOCK KARTS", C.pink, C.cyan)
-P(zoneFolder, "SignTrimTop", Vector3.new(30.4, 0.3, 1.2), Vector3.new(0, 19, -15), C.cyan, Enum.Material.Neon)
-P(zoneFolder, "SignTrimBottom", Vector3.new(30.4, 0.3, 1.2), Vector3.new(0, 14, -15), C.cyan, Enum.Material.Neon)
-for _, sx in ipairs({ -12, 12 }) do
-	P(zoneFolder, "SignRod", Vector3.new(0.3, 1, 0.3), Vector3.new(sx, 19.5, -15), C.black, Enum.Material.Metal)
-end
-
--- Volumen invisible que detecta a los jugadores dentro de la zona
-local zone = P(zoneFolder, "MatchmakingZone", Vector3.new(30, 14, 30), ZONE_CENTER + Vector3.new(0, 7, 0),
-	C.cyan, Enum.Material.SmoothPlastic,
+-- Una única zona invisible cubre las cuatro plataformas para conservar
+-- el popup actual y la lógica de cola sin modificar el cliente ni KartService.
+local zone = P(zoneFolder, "MatchmakingZone", Vector3.new(24, 14, 72),
+	Vector3.new(PAD_X, 7, 0), C.cyan, Enum.Material.SmoothPlastic,
 	{ Transparency = 1, CanCollide = false, CanTouch = false, CanQuery = false })
 CollectionService:AddTag(zone, "MatchmakingZone")
 
