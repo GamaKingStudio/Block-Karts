@@ -16,6 +16,29 @@ local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
+
+-- Oculta el garage solo en la vista local mientras el jugador está en carrera.
+-- El modelo permanece intacto en Workspace y vuelve a mostrarse al regresar al lobby.
+local function updateGarageVisibility()
+	local garage = workspace:FindFirstChild("BlockKartsGarage")
+	if not garage then return end
+	local hideGarage = player:GetAttribute("InGarage") ~= true
+	for _, descendant in ipairs(garage:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			descendant.LocalTransparencyModifier = hideGarage and 1 or 0
+		elseif descendant:IsA("SurfaceGui") or descendant:IsA("BillboardGui") then
+			descendant.Enabled = not hideGarage
+		end
+	end
+end
+
+player:GetAttributeChangedSignal("InGarage"):Connect(updateGarageVisibility)
+workspace.ChildAdded:Connect(function(child)
+	if child.Name == "BlockKartsGarage" then
+		task.defer(updateGarageVisibility)
+	end
+end)
+task.defer(updateGarageVisibility)
 local remotes = ReplicatedStorage:WaitForChild("LobbyRemotes")
 local JoinQueue = remotes:WaitForChild("JoinQueue")
 local LeaveQueue = remotes:WaitForChild("LeaveQueue")
