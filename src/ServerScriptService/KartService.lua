@@ -433,7 +433,7 @@ local function buildOceanAndHorizon(course)
 				course,
 				("OceanHorizon_%d_%d"):format(xIndex, zIndex),
 				Vector3.new(1800, 2, 1800),
-				CFrame.new(50 + xIndex * 1800, -0.85, zIndex * 1800),
+				CFrame.new(50 + xIndex * 1800, -1.45, zIndex * 1800),
 				waterColor,
 				Enum.Material.SmoothPlastic
 			)
@@ -441,7 +441,7 @@ local function buildOceanAndHorizon(course)
 			ocean.CanTouch = false
 			ocean.CanQuery = false
 			ocean.CastShadow = false
-			ocean.Reflectance = 0.12
+			ocean.Reflectance = 0.2
 		end
 	end
 
@@ -1125,7 +1125,7 @@ local function buildTestCourse()
 	local C_ORANGE = Color3.fromRGB(245, 125, 30)
 	local C_TEAL = Color3.fromRGB(30, 185, 160)
 
-	local sandFloor = makePart(course, "IslandSand", Vector3.new(650, 4, 650), CFrame.new(50, yGround - 2, 0), C_SAND, Enum.Material.Sand)
+	local sandFloor = makePart(course, "IslandSand", Vector3.new(4, 940, 940), CFrame.new(50, yGround - 2, 0) * CFrame.Angles(0, 0, math.rad(90)), C_SAND, Enum.Material.Sand, "Cylinder")
 	sandFloor.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.05, 0.05, 10, 1)
 
 	buildOceanAndHorizon(course)
