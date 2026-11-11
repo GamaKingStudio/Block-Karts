@@ -3749,7 +3749,16 @@ local function createCpuOpponent(player)
 end
 
 local function returnPlayerToLobby(player)
- if not roomPlayers[player] or player:GetAttribute("InRaceRoom") ~= true then return end
+ print("[RETURN] fin del contador; jugador=", player and player.Name)
+ local currentLobby = Workspace:FindFirstChild("BlockKartsLobby")
+ local currentSpawn = currentLobby and currentLobby:FindFirstChild("LobbySpawn", true)
+ print("[RETURN] LobbySpawn =", currentSpawn)
+ print("[RETURN] RespawnLocation =", player and player.RespawnLocation)
+ print("[RETURN] InRaceRoom =", player and player:GetAttribute("InRaceRoom"), "roomPlayers =", player and roomPlayers[player] ~= nil)
+ if not roomPlayers[player] or player:GetAttribute("InRaceRoom") ~= true then
+  warn("[RETURN] Se canceló el regreso: jugador no figura en roomPlayers o InRaceRoom no es true.")
+  return
+ end
 
  local kart = activeKarts[player]
  if kart and kart.model then kart.model:Destroy() end
@@ -3827,7 +3836,11 @@ local function returnPlayerToLobby(player)
 end
 
 returnToLobbyRemote.OnServerEvent:Connect(function(player)
- if not raceData[player] or not raceData[player].RaceCompleted then return end
+ print("[RETURN] Remote recibido; jugador=", player.Name, "RaceCompleted =", raceData[player] and raceData[player].RaceCompleted)
+ if not raceData[player] or not raceData[player].RaceCompleted then
+  warn("[RETURN] Remote ignorado: raceData ausente o RaceCompleted no es true para " .. player.Name)
+  return
+ end
  returnPlayerToLobby(player)
 end)
 
