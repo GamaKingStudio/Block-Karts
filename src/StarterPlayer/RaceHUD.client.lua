@@ -6,6 +6,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 print(("[BLOXY-KART][HUD][START] player=%s script=%s"):format(player.Name, script:GetFullName()))
 local config = require(ReplicatedStorage:WaitForChild("KartConfig"))
+local Courses = require(ReplicatedStorage:WaitForChild("Courses"))
 local typography = require(ReplicatedStorage:WaitForChild("BloxyTypography"))
 local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
 local checkpointEvent = raceEvents:WaitForChild("CheckpointPassed")
@@ -312,26 +313,30 @@ local mapCorner = Instance.new("UICorner")
 mapCorner.CornerRadius = UDim.new(0, 7)
 mapCorner.Parent = mapArea
 
--- Debe seguir el mismo trazado y orden de waypoints de KartService.
-local mapPoints = {
- Vector2.new(80, 70), Vector2.new(-65, 70),
- Vector2.new(-115, 40), Vector2.new(-115, -50),
- Vector2.new(-80, -95), Vector2.new(-50, -95),
- Vector2.new(-50, -15), Vector2.new(-25, 10),
- Vector2.new(0, -15), Vector2.new(0, -85),
- Vector2.new(45, -105), Vector2.new(85, -65),
- Vector2.new(125, -10), Vector2.new(125, 35),
- Vector2.new(170, 45), Vector2.new(205, 85),
- Vector2.new(215, 135), Vector2.new(185, 180),
- Vector2.new(135, 205), Vector2.new(75, 205),
- Vector2.new(35, 175), Vector2.new(25, 135),
- Vector2.new(75, 145), Vector2.new(130, 145),
- Vector2.new(155, 100), Vector2.new(150, 75),
- Vector2.new(105, 65), Vector2.new(80, 70)
-}
+-- El minimapa comparte los waypoints reales del circuito activo con el servidor.
+local mapPoints = {}
+local minX, maxX, minZ, maxZ = 0, 1, 0, 1
+local currentTrackWidth = 30
+local currentMapCourse = Courses.Beach
 
--- Límites con margen para incluir el sector ampliado y sus curvas.
-local minX, maxX, minZ, maxZ = -145, 245, -130, 235
+local function loadMapCourse(courseId)
+ currentMapCourse = Courses[courseId] or Courses.Beach
+ table.clear(mapPoints)
+ minX, maxX, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge
+ currentTrackWidth = currentMapCourse.trackWidth or 30
+ for _, waypoint in ipairs(currentMapCourse.waypoints) do
+  local point = Vector2.new(waypoint.X, waypoint.Z)
+  table.insert(mapPoints, point)
+  minX, maxX = math.min(minX, point.X), math.max(maxX, point.X)
+  minZ, maxZ = math.min(minZ, point.Y), math.max(maxZ, point.Y)
+ end
+ local margin = math.max(15, currentTrackWidth / 2 + 8)
+ minX, maxX = minX - margin, maxX + margin
+ minZ, maxZ = minZ - margin, maxZ + margin
+end
+
+loadMapCourse(player:GetAttribute("SelectedCourse") or "Beach")
+
 local mapPadding = 15
 local function mapPosition(point)
  local size = mapArea.AbsoluteSize
@@ -389,7 +394,7 @@ local function drawTrack()
   math.max(1, mapSize.X - mapPadding * 2) / (maxX - minX),
   math.max(1, mapSize.Y - mapPadding * 2) / (maxZ - minZ)
  )
- local roadPixels = 30 * mapScale
+ local roadPixels = currentTrackWidth * mapScale
  local asphaltWidth = math.max(5, roadPixels - 1)
  local borderWidth = asphaltWidth + 4
  local mappedPoints = {}
@@ -440,7 +445,7 @@ local function drawTrack()
  end
 
  -- Meta: la pista cruza la recta principal en X=0, Z=70.
- local finishCenter = mapPosition(Vector2.new(0, 70))
+ local finishCenter = mapPosition(mapPoints[1])
  local finishLine = Instance.new("Frame")
  finishLine.Name = "MiniMapFinishLine"
  finishLine.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -456,6 +461,10 @@ end
 
 drawTrack()
 mapArea:GetPropertyChangedSignal("AbsoluteSize"):Connect(drawTrack)
+player:GetAttributeChangedSignal("SelectedCourse"):Connect(function()
+ loadMapCourse(player:GetAttribute("SelectedCourse") or "Beach")
+ drawTrack()
+end)
 
 local playerMarker = Instance.new("ImageLabel")
 playerMarker.Name = "PlayerMarker"
