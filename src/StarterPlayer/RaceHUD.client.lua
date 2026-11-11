@@ -336,6 +336,10 @@ local function loadMapCourse(courseId)
 end
 
 loadMapCourse(player:GetAttribute("SelectedCourse") or "Beach")
+local function getCourseCheckpointCount()
+ return currentMapCourse.checkpointCount or 26
+end
+checkpointLabel.Text = ("CHECKPOINT 0 / %d"):format(getCourseCheckpointCount())
 
 local mapPadding = 15
 local function mapPosition(point)
@@ -463,6 +467,7 @@ drawTrack()
 mapArea:GetPropertyChangedSignal("AbsoluteSize"):Connect(drawTrack)
 player:GetAttributeChangedSignal("SelectedCourse"):Connect(function()
  loadMapCourse(player:GetAttribute("SelectedCourse") or "Beach")
+ checkpointLabel.Text = ("CHECKPOINT 0 / %d"):format(getCourseCheckpointCount())
  drawTrack()
 end)
 
@@ -691,7 +696,7 @@ local function setDriving(seat)
   finishPanel.Visible = false
   finishCountdownToken += 1
   setLap(1)
-  checkpointLabel.Text = "CHECKPOINT 0 / 26"
+  checkpointLabel.Text = ("CHECKPOINT 0 / %d"):format(getCourseCheckpointCount())
   timerLabel.Text = "00:00.00"
   lapStartedAt = nil
   bestLapTime = nil
