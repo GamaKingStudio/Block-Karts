@@ -2647,7 +2647,7 @@ local function createKart(player, spawnIndex)
 
 	-- Carga el kart original del usuario. El kart procedural solo se oculta
 	-- después de comprobar que el modelo importado quedó montado correctamente.
-	local CUSTOM_KART_ASSET_ID = 122554188649486
+	local CUSTOM_KART_ASSET_ID = 77833935930373
 	local customKartAsset = nil
 	local importedKart = nil
 	local importedParts = 0
@@ -2704,6 +2704,32 @@ local function createKart(player, spawnIndex)
 			)
 			assert(scale > 0 and scale < 20, "La escala calculada no es válida")
 			importedKart:ScaleTo(importedKart:GetScale() * scale)
+
+			-- Alinea el VehicleSeat invisible con el asiento real del modelo nuevo.
+			-- Se rehace su soldadura para que el avatar quede sentado en el cojín,
+			-- independientemente del pivote y las proporciones del asset.
+			local visualSeat = importedKart:FindFirstChild("Equipamiento_Asiento", true)
+			if visualSeat and visualSeat:IsA("BasePart") then
+				if seatWeld and seatWeld.Parent then seatWeld:Destroy() end
+				seat.CFrame = visualSeat.CFrame
+				seat.Size = Vector3.new(
+					math.clamp(visualSeat.Size.X * 0.78, 1.2, 2.1),
+					0.4,
+					math.clamp(visualSeat.Size.Z * 0.78, 1.0, 1.8)
+				)
+				seatWeld = Instance.new("WeldConstraint")
+				seatWeld.Name = "DriverSeatAlignmentWeld"
+				seatWeld.Part0 = chassis
+				seatWeld.Part1 = seat
+				seatWeld.Parent = chassis
+				print(("[CUSTOM-KART-SEAT-ALIGN] source=%s localOffset=%s seatSize=%s"):format(
+					visualSeat:GetFullName(),
+					 tostring(chassis.CFrame:PointToObjectSpace(seat.Position)),
+					 tostring(seat.Size)
+				))
+			else
+				warn("[CUSTOM-KART-SEAT-ALIGN] No se encontró Equipamiento_Asiento; se conserva el asiento base.")
+			end
 
 			-- Centramos la caja geométrica (no el pivote arbitrario del asset)
 			-- sobre el chasis y conservamos la orientación ya corregida.
@@ -2792,12 +2818,13 @@ local function createKart(player, spawnIndex)
 			-- grises en chasis y neumáticos. Se asigna por nombre para no
 			-- alterar la geometría ni las articulaciones del modelo.
 			local kartColors = {
-				red = Color3.fromRGB(190, 28, 35),
-				yellow = Color3.fromRGB(255, 195, 25),
-				chassis = Color3.fromRGB(112, 118, 125),
-				tire = Color3.fromRGB(48, 51, 56),
-				seat = Color3.fromRGB(45, 47, 51),
-				metal = Color3.fromRGB(135, 140, 146),
+				primary = Color3.fromRGB(18, 75, 132), -- azul eléctrico profundo
+				secondary = Color3.fromRGB(35, 205, 218), -- turquesa brillante
+				accent = Color3.fromRGB(255, 126, 35), -- naranja deportivo
+				chassis = Color3.fromRGB(55, 62, 72),
+				tire = Color3.fromRGB(27, 29, 33),
+				seat = Color3.fromRGB(24, 29, 36),
+				metal = Color3.fromRGB(145, 158, 172),
 			}
 			local kartWheelNames = {
 				Rueda_Delantera_Der = true,
@@ -2811,34 +2838,42 @@ local function createKart(player, spawnIndex)
 					part.LocalTransparencyModifier = 0
 					part.Reflectance = 0
 
-					local name = part.Name
-					if kartWheelNames[name] then
-						-- La rueda importada es una sola MeshPart; por ahora se
-						-- pinta completa de gris oscuro. El centro requiere una
-						-- pieza de tapa independiente o una textura UV específica.
+					local name = string.lower(part.Name)
+					if kartWheelNames[part.Name] or name:find("wheel", 1, true)
+						or name:find("rueda", 1, true) or name:find("tire", 1, true)
+						or name:find("neumatic", 1, true) then
 						part.Color = kartColors.tire
 						part.Material = Enum.Material.Rubber
-					elseif name == "Carroceria_Frontal" or name == "Carroceria_Pontones" then
-						part.Color = kartColors.red
-						part.Material = Enum.Material.SmoothPlastic
-					elseif name == "Carroceria_Columna_Trompa" or name == "Carroceria_Piso_Azul" then
-						part.Color = kartColors.yellow
-						part.Material = Enum.Material.SmoothPlastic
-					elseif name:find("Chasis_", 1, true) then
-						part.Color = kartColors.chassis
-						part.Material = Enum.Material.Metal
-					elseif name == "Equipamiento_Asiento" then
+					elseif name:find("asiento", 1, true) or name:find("seat", 1, true)
+						or name:find("cushion", 1, true) then
 						part.Color = kartColors.seat
 						part.Material = Enum.Material.SmoothPlastic
-					elseif name == "Equipamiento_Motor_Escapes" then
+					elseif name:find("chasis", 1, true) or name:find("chassis", 1, true)
+						or name:find("eje", 1, true) or name:find("axle", 1, true)
+						or name:find("motor", 1, true) or name:find("escape", 1, true) then
+						part.Color = kartColors.chassis
+						part.Material = Enum.Material.Metal
+					elseif name:find("volante", 1, true) or name:find("steer", 1, true)
+						or name:find("trompa", 1, true) or name:find("nose", 1, true)
+						or name:find("frontal", 1, true) or name:find("front", 1, true) then
+						part.Color = kartColors.secondary
+						part.Material = Enum.Material.SmoothPlastic
+					elseif name:find("pont", 1, true) or name:find("aleron", 1, true)
+						or name:find("wing", 1, true) or name:find("side", 1, true)
+						or name:find("accent", 1, true) or name:find("stripe", 1, true) then
+						part.Color = kartColors.accent
+						part.Material = Enum.Material.SmoothPlastic
+					elseif name:find("carroceria", 1, true) or name:find("body", 1, true)
+						or name:find("fairing", 1, true) or name:find("panel", 1, true)
+						or name:find("piso", 1, true) or name:find("floor", 1, true) then
+						part.Color = kartColors.primary
+						part.Material = Enum.Material.SmoothPlastic
+					elseif name:find("metal", 1, true) or name:find("hub", 1, true)
+						or name:find("bracket", 1, true) then
 						part.Color = kartColors.metal
 						part.Material = Enum.Material.Metal
-					elseif name == "Equipamiento_Volante" then
-						part.Color = kartColors.yellow
-						part.Material = Enum.Material.SmoothPlastic
 					else
-						-- Cualquier pieza adicional conserva un acabado neutro.
-						part.Color = kartColors.chassis
+						part.Color = kartColors.primary
 						part.Material = Enum.Material.SmoothPlastic
 					end
 					if part:IsA("MeshPart") then
