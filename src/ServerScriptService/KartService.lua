@@ -3832,7 +3832,7 @@ local function returnPlayerToLobby(player)
    root.CFrame = targetCFrame
    pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Running) end)
    print(("[GARAGE][RETURN] %s teletransportado a garage: target=%s actual=%s locator=%s"):format(
-    player.Name, tostring(targetCFrame.Position), tostring(root.Position), tostring(locator ~= nil)
+    player.Name, tostring(targetCFrame.Position), tostring(root.Position), tostring(targetSpawn ~= nil)
    ))
   else
    warn(("[GARAGE][RETURN] No se pudo confirmar el personaje de %s después del traslado."):format(player.Name))
