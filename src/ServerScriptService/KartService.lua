@@ -3858,11 +3858,11 @@ if RunService:IsStudio() then
  testCommand.Triggered:Connect(function(textSource)
   local player = textSource and Players:GetPlayerByUserId(textSource.UserId)
   if not player then return end
-  if player:GetAttribute("InRaceRoom") == true then
-   warn("[RETURN][TEST] No se ejecutó: el jugador ya figura dentro de una sala.")
-   return
-  end
-  print("[RETURN][TEST] Comando moderno recibido para", player.Name)
+  print("[RETURN][TEST] Comando moderno recibido para", player.Name,
+   "InRaceRoom =", player:GetAttribute("InRaceRoom"),
+   "roomPlayers =", roomPlayers[player] ~= nil)
+  -- La prueba fuerza la condición interna que exige returnPlayerToLobby.
+  -- Si el atributo quedó activo por una sesión anterior, no bloquea la prueba.
   roomPlayers[player] = true
   player:SetAttribute("InRaceRoom", true)
   returnPlayerToLobby(player)
