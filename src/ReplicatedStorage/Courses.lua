@@ -33,7 +33,7 @@ local Courses = {
 		trackWidth = 30,
 		checkpointCount = 32,
 		finish = Vector3.new(89.9, Y, 140.2),
-		start = { x = -150, z = 140.2, headingX = 1, headingZ = 0 },
+		start = { x = -141.6, z = 140.2, headingX = 1, headingZ = 0, rowOffset = 7, rowSpacing = 12 },
 		waypoints = {
 			Vector3.new(89.9, Y, 140.2),
 			Vector3.new(157.0, Y, 140.2),
