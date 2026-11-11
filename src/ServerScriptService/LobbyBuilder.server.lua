@@ -26,7 +26,7 @@ local Leaderboards = require(ServerScriptService:WaitForChild("Leaderboards"))
 -- ---------------------------------------------------------------------------
 -- CONFIGURACIÓN
 -- ---------------------------------------------------------------------------
-local ORIGIN = Vector3.new(520, 1, 0) -- centro del piso (misma zona del garage anterior)
+local ORIGIN = Vector3.new(650, 1, 0) -- desplazado fuera del borde de IslandSand (termina en X=520)
 local W, D, H = 180, 160, 20          -- garage ampliado: 180 studs de ancho, 160 de largo, 20 de alto
 local REMOVE_OLD_GARAGE = true        -- borra Workspace.BlockKartsGarage si existe
 local MODEL_NAME = "BlockKartsGarage"
