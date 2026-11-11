@@ -2576,8 +2576,8 @@ local function buildJungleCourse()
 				if distanceSincePost >= 8 then
 					railIndex += 1
 					local post = makePart(course, ("ForestRailPost_%d_%d"):format(sideIndex, railIndex),
-						Vector3.new(0.42, 1.9, 0.42),
-						CFrame.new(midpoint.X, yGround + 0.95, midpoint.Z),
+						Vector3.new(0.42, 2.3, 0.42),
+						CFrame.new(midpoint.X, yGround + 1.15, midpoint.Z),
 						Color3.fromRGB(73, 78, 67), Enum.Material.Wood)
 					post.CanCollide = true
 					distanceSincePost = 0
