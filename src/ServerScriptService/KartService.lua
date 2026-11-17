@@ -419,8 +419,8 @@ local function configureBeachLighting()
 			clouds.Parent = terrain
 		end
 		-- Nubes más visibles y voluminosas, estilo circuito de competición.
-		clouds.Cover = 0.58
-		clouds.Density = 0.52
+		clouds.Cover = 0.78
+		clouds.Density = 0.68
 		clouds.Color = Color3.fromRGB(250, 252, 255)
 	end
 end
@@ -2379,11 +2379,11 @@ local function buildTestCourse()
 		local z = startGrid.z + (row == 0 and -startGrid.rowOffset or startGrid.rowOffset)
 		for side = -1, 1, 2 do
 			local cross = makePart(course, ("BeachGridCross_%d_%d"):format(slot, side),
-				Vector3.new(0.18, 0.025, 7.2), CFrame.new(x + side * 4, yGround + 0.035, z),
+				Vector3.new(0.18, 0.025, 11.2), CFrame.new(x + side * 5.5, yGround + 0.035, z),
 				C_WHITE, Enum.Material.SmoothPlastic)
 			cross.CanCollide = false
 			local edge = makePart(course, ("BeachGridEdge_%d_%d"):format(slot, side),
-				Vector3.new(8.2, 0.025, 0.18), CFrame.new(x, yGround + 0.035, z + side * 3.6),
+				Vector3.new(11.2, 0.025, 0.18), CFrame.new(x, yGround + 0.035, z + side * 5.5),
 				C_WHITE, Enum.Material.SmoothPlastic)
 			edge.CanCollide = false
 		end
@@ -2517,7 +2517,7 @@ local function buildJungleCourse()
 		colorCorrection.Contrast = 0.04
 	end
 
-	makePart(course, "ForestGround", Vector3.new(3, 3, 680),
+	makePart(course, "ForestGround", Vector3.new(3, 680, 680),
 		CFrame.new(0, yGround - 1.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
 		Color3.fromRGB(64, 105, 61), Enum.Material.Grass, "Cylinder")
 
@@ -2553,7 +2553,7 @@ local function buildJungleCourse()
 		local z = grid.z + (row == 0 and -grid.rowOffset or grid.rowOffset)
 		for side = -1, 1, 2 do
 			local cross = makePart(course, ("ForestGridCross_%d_%d"):format(slot, side),
-				Vector3.new(0.18, 0.025, 7.2), CFrame.new(x + side * 4, yGround + 0.035, z),
+				Vector3.new(0.18, 0.025, 11.2), CFrame.new(x + side * 5.5, yGround + 0.035, z),
 				Color3.fromRGB(235, 238, 232), Enum.Material.SmoothPlastic)
 			cross.CanCollide = false
 			local edge = makePart(course, ("ForestGridEdge_%d_%d"):format(slot, side),
