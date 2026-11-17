@@ -331,34 +331,8 @@ for i = 1, 4 do
 		Vector3.new(x, 0.85, z - 3.6), accent, Enum.Material.Neon, { CanCollide = false })
 	sign(number, Enum.NormalId.Top, string.format("%02d", i), Color3.fromRGB(14, 18, 24), nil)
 
-	-- Marcador de cola que KartService actualiza en tiempo real.
-	local queueGui = Instance.new("BillboardGui")
-	queueGui.Name = "QueueStatus"
-	queueGui.Size = UDim2.fromOffset(150, 42)
-	queueGui.StudsOffset = Vector3.new(0, 3.2, 0)
-	queueGui.AlwaysOnTop = true
-	queueGui.LightInfluence = 0
-	queueGui.Parent = pad
-	local stencil = Instance.new("Frame")
-	stencil.Name = "StencilPanel"
-	stencil.Size = UDim2.fromScale(1, 1)
-	stencil.BackgroundColor3 = Color3.fromRGB(12, 17, 24)
-	stencil.BackgroundTransparency = 0.12
-	stencil.BorderSizePixel = 0
-	stencil.Parent = queueGui
-	local count = Instance.new("TextLabel")
-	count.Name = "QueueCount"
-	count.Size = UDim2.fromScale(1, 1)
-	count.BackgroundTransparency = 1
-	count.Text = "0/" .. tostring(i)
-	count.TextColor3 = accent
-	count.TextScaled = true
-	count.Font = Enum.Font.GothamBold
-	count.Parent = stencil
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = accent
-	stroke.Thickness = 1.5
-	stroke.Parent = stencil
+	-- Sin contador flotante sobre el matchmaking.
+
 end
 
 local zone = P(zoneFolder, "MatchmakingZone", Vector3.new(43, 14, 49),
