@@ -282,7 +282,7 @@ sign(exitSign, Enum.NormalId.Front, "SALIDA CERRADA", Color3.fromRGB(255, 255, 2
 -- ---------------------------------------------------------------------------
 local PAD_X = { -10, 10, -10, 10 }
 local PAD_Z = { -17, -17, 1, 1 }
-local PAD_LABELS = { "SOLO  /  CPU", "DUO  /  2 PILOTOS", "TRÍO  /  3 PILOTOS", "SQUAD  /  4 PILOTOS" }
+local PAD_LABELS = { "SELECCIONAR", "SELECCIONAR", "SELECCIONAR", "SELECCIONAR" }
 local PAD_COLORS = { C.cyan, Color3.fromRGB(255, 166, 55), C.pink, Color3.fromRGB(105, 235, 145) }
 local PAD_NAMES = { "RoomEntryPad_1vCPU", "MatchmakingPad_2", "MatchmakingPad_3", "MatchmakingPad_4" }
 
