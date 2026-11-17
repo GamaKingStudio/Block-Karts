@@ -2756,24 +2756,71 @@ local function buildJungleCourse()
 					local x = a.x + (b.x - a.x) * alpha + jungleRng:NextNumber(-4, 4)
 					local z = a.z + (b.z - a.z) * alpha + jungleRng:NextNumber(-4, 4)
 					local targetHeight = jungleRng:NextNumber(17, 23)
-					if placeJungleModel(junglePalmTemplate,
-						("JungleImportedPalm_%02d_%02d"):format(side, tree),
+					local palmName = ("JungleImportedPalm_%02d_%02d"):format(side, tree)
+					if placeJungleModel(junglePalmTemplate, palmName,
 						Vector3.new(x, yGround, z), targetHeight, jungleRng:NextInteger(0, 359)) then
 						palmCount += 1
+						local palm = course:FindFirstChild(palmName)
+						local palmTints = {
+							Color3.fromRGB(54, 143, 66), Color3.fromRGB(91, 158, 62),
+							Color3.fromRGB(37, 119, 76), Color3.fromRGB(124, 163, 66),
+						}
+						local tint = palmTints[(palmCount - 1) % #palmTints + 1]
+						if palm then
+							for _, part in ipairs(palm:GetDescendants()) do
+								if part:IsA("BasePart") then
+									part.Color = part.Color:Lerp(tint, 0.32)
+								end
+							end
+						end
 					end
 				end
 			end
 		end
 	end
-	-- El pack mixto se usa como un solo conjunto decorativo en el borde exterior,
-	-- manteniendo sus mallas originales y retirando cualquier script antes de clonarlo.
+	-- Cinturón de follaje profundo en el perímetro: varios grupos solapados,
+	-- con tamaños y tintes sutiles para crear capas y ocultar el horizonte vacío.
 	if jungleFoliageTemplate then
-		local firstChain = computeGuardrailChains(centerlineForFoliage, railOffset + 72, 1)[1]
-		if firstChain and #firstChain > 1 then
-			local mid = firstChain[math.max(1, math.floor(#firstChain / 2))]
-			if placeJungleModel(jungleFoliageTemplate, "JungleTropicalFoliageGrove",
-				Vector3.new(mid.x, yGround, mid.z), 30, 90) then
-				foliagePackCount = 1
+		local groveIndex = 0
+		for side = -1, 1, 2 do
+			for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, railOffset + 78, side)) do
+				local cumulative = { 0 }
+				for i = 2, #chain do
+					local dx, dz = chain[i].x - chain[i - 1].x, chain[i].z - chain[i - 1].z
+					cumulative[i] = cumulative[i - 1] + math.sqrt(dx * dx + dz * dz)
+				end
+				local total = cumulative[#chain]
+				local count = math.max(1, math.floor(total / 72))
+				for grove = 1, count do
+					local distance = (grove - 0.5) * total / count
+					local seg = 1
+					while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
+					local a, b = chain[seg], chain[seg + 1]
+					local span = cumulative[seg + 1] - cumulative[seg]
+					local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
+					local x = a.x + (b.x - a.x) * alpha + jungleRng:NextNumber(-7, 7)
+					local z = a.z + (b.z - a.z) * alpha + jungleRng:NextNumber(-7, 7)
+					groveIndex += 1
+					local height = jungleRng:NextNumber(34, 48)
+					if placeJungleModel(jungleFoliageTemplate,
+						("JungleDeepFoliage_%03d"):format(groveIndex),
+						Vector3.new(x, yGround, z), height, jungleRng:NextInteger(0, 359)) then
+						foliagePackCount += 1
+						local tint = {
+							Color3.fromRGB(42, 105, 55), Color3.fromRGB(65, 126, 58),
+							Color3.fromRGB(35, 91, 67), Color3.fromRGB(88, 132, 53),
+						}
+						local shade = tint[(groveIndex - 1) % #tint + 1]
+						local placed = course:FindFirstChild(("JungleDeepFoliage_%03d"):format(groveIndex))
+						if placed then
+							for _, part in ipairs(placed:GetDescendants()) do
+								if part:IsA("BasePart") then
+									part.Color = part.Color:Lerp(shade, 0.24)
+								end
+							end
+						end
+					end
+				end
 			end
 		end
 	end
