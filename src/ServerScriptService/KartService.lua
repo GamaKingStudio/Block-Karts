@@ -2694,7 +2694,7 @@ local function buildJungleCourse()
 	local function addJunglePalm(x, z, index, scale)
 		scale = scale or 1
 		local height = jungleRng:NextNumber(17, 24) * scale
-		local lean = Vector3.new(jungleRng:NextNumber(-2, 2), 0, jungleRng:NextNumber(-2, 2))
+		local lean = Vector3.zero
 		local trunkBase = Vector3.new(x, yGround, z)
 		local trunkTop = trunkBase + Vector3.new(lean.X, height, lean.Z)
 		local trunkMid = (trunkBase + trunkTop) * 0.5
@@ -2750,7 +2750,7 @@ local function buildJungleCourse()
 	for i = 1, #waypoints - 1 do
 		centerlineForFoliage[i] = { x = waypoints[i].X, z = waypoints[i].Z }
 	end
-	local foliageOffset = railOffset + 10
+	local foliageOffset = railOffset + 18
 	for side = -1, 1, 2 do
 		for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, foliageOffset, side)) do
 			local cumulative = { 0 }
