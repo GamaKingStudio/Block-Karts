@@ -25,15 +25,15 @@ local Courses = {
 			Vector3.new(165, Y, 100), Vector3.new(160, Y, 10),
 			Vector3.new(80, Y, 0), Vector3.new(80, Y, 70),
 		},
-		start = { x = 45, z = 70, headingX = -1, headingZ = 0 },
+		start = { x = 45, z = 70, headingX = -1, headingZ = 0, rowOffset = 7, rowSpacing = 12 },
 	},
 	Forest = {
 		id = "Forest",
 		displayName = "Jungle Deep",
-		trackWidth = 30,
+		trackWidth = 36,
 		checkpointCount = 32,
 		finish = Vector3.new(89.9, Y, 140.2),
-		start = { x = -141.6, z = 140.2, headingX = 1, headingZ = 0, rowOffset = 7, rowSpacing = 12 },
+		start = { x = 65, z = 140.2, headingX = 1, headingZ = 0, rowOffset = 7, rowSpacing = 12 },
 		waypoints = {
 			Vector3.new(89.9, Y, 140.2),
 			Vector3.new(157.0, Y, 140.2),
