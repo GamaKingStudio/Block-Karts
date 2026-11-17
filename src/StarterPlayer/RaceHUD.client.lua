@@ -135,7 +135,7 @@ local entryDetail = label(entryGui, "EntryDetail", UDim2.new(1, -40, 0, 38),
  UDim2.new(0, 20, 0.48, 0), "MANTENTE EN LA PLATAFORMA", 18, Color3.fromRGB(255, 255, 255), "Light")
 for _, textLabel in ipairs({entryTitle, entryNumber, entryDetail}) do
  textLabel.TextStrokeColor3 = Color3.fromRGB(12, 18, 25)
- textLabel.TextStrokeTransparency = 0.12
+ textLabel.TextStrokeTransparency = 1
 end
 local entryDisplayToken = 0
 
@@ -172,7 +172,7 @@ local bestLapTime = nil
 
 local countdownEvent = raceEvents:WaitForChild("RaceCountdown")
 local countdownLabel = label(hud, "RaceCountdown", UDim2.fromOffset(360, 150), UDim2.new(0.5, -180, 0.34, 0), "", 76, Color3.fromRGB(255, 205, 75), "Bold")
-countdownLabel.TextStrokeTransparency = 0.06
+countdownLabel.TextStrokeTransparency = 1
 countdownLabel.Visible = false
 countdownEvent.OnClientEvent:Connect(function(value)
  if value > 3 then
@@ -212,7 +212,7 @@ local finishTotalTime = label(finishPanel, "FinishTotalTime", UDim2.new(1, -24, 
 local finishCountdown = label(finishPanel, "FinishCountdown", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 184), "Volviendo al lobby en 5...", 17, Color3.fromRGB(255, 220, 145), "Light")
 finishCountdown.ZIndex = 51
 finishCountdown.TextStrokeColor3 = Color3.fromRGB(12, 16, 24)
-finishCountdown.TextStrokeTransparency = 0.04
+finishCountdown.TextStrokeTransparency = 1
 finishCountdown.TextSize = 22
 local function finishActionButton(name, text, position, width)
  local button = Instance.new("TextButton")
@@ -226,7 +226,7 @@ local function finishActionButton(name, text, position, width)
  button.TextSize = 19
  button.FontFace = typography.getFont("Title")
  button.TextStrokeColor3 = Color3.fromRGB(12, 16, 24)
- button.TextStrokeTransparency = 0.05
+ button.TextStrokeTransparency = 1
  button.ZIndex = 52
  button.AutoButtonColor = true
  button.Parent = finishPanel
@@ -237,7 +237,7 @@ local anotherRaceButton = finishActionButton("AnotherRaceButton", "OTRA CARRERA"
 for _, item in ipairs({ finishTitle, finishPosition, finishBestLap, finishTotalTime, finishCountdown }) do
  item.ZIndex = 51
  item.TextStrokeColor3 = Color3.fromRGB(12, 16, 24)
- item.TextStrokeTransparency = 0.06
+ item.TextStrokeTransparency = 1
 end
 
 local speedPanel = panel("SpeedPanel", UDim2.fromOffset(180, 66), UDim2.new(1, -202, 1, -88))
@@ -258,7 +258,7 @@ local wrongWayLabel = label(
  "Title"
 )
 wrongWayLabel.TextStrokeColor3 = Color3.fromRGB(35, 12, 12)
-wrongWayLabel.TextStrokeTransparency = 0.25
+wrongWayLabel.TextStrokeTransparency = 1
 wrongWayLabel.Visible = false
 
 
@@ -286,7 +286,7 @@ end
 
 local function addTextOutline(textObject, color)
  textObject.TextStrokeColor3 = color or Color3.fromRGB(12, 16, 24)
- textObject.TextStrokeTransparency = 0.06
+ textObject.TextStrokeTransparency = 1
 end
 
 makeTextOnly(racePanel)
