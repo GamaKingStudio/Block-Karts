@@ -2660,7 +2660,142 @@ local function buildJungleCourse()
 	end
 
 
-	-- Decoración vegetal retirada: evita los árboles flotantes y las copas con aspecto de bolas.
+
+	-- JUNGLE DEEP: vegetación tropical en capas, con siluetas angulares y hojas reales.
+	-- Se distribuye por fuera de las barandas usando el mismo cálculo de márgenes de la pista.
+	local jungleRng = Random.new(20261117)
+	local jungleGreens = {
+		Color3.fromRGB(24, 83, 48), Color3.fromRGB(34, 112, 57),
+		Color3.fromRGB(48, 132, 65), Color3.fromRGB(69, 145, 72),
+		Color3.fromRGB(18, 69, 43),
+	}
+	local jungleLeafMaterial = Enum.Material.Grass
+	local jungleBark = {
+		Color3.fromRGB(86, 62, 42), Color3.fromRGB(105, 76, 48),
+		Color3.fromRGB(66, 53, 39),
+	}
+	local function junglePart(name, size, cf, color, material, shape)
+		local part = makePart(course, name, size, cf, color, material, shape)
+		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
+		part.CastShadow = false
+		return part
+	end
+	local function addBroadLeaf(name, origin, direction, length, width, color, tilt)
+		local unit = direction.Unit
+		local midpoint = origin + unit * (length * 0.5)
+		local cf = CFrame.lookAt(midpoint, midpoint + unit)
+			* CFrame.Angles(math.rad(tilt or 0), 0, 0)
+		local leaf = junglePart(name, Vector3.new(width, 0.22, length), cf,
+			color, jungleLeafMaterial, "WedgePart")
+		return leaf
+	end
+	local function addJunglePalm(x, z, index, scale)
+		scale = scale or 1
+		local height = jungleRng:NextNumber(17, 24) * scale
+		local lean = Vector3.new(jungleRng:NextNumber(-2, 2), 0, jungleRng:NextNumber(-2, 2))
+		local trunkBase = Vector3.new(x, yGround, z)
+		local trunkTop = trunkBase + Vector3.new(lean.X, height, lean.Z)
+		local trunkMid = (trunkBase + trunkTop) * 0.5
+		local trunkVector = trunkTop - trunkBase
+		junglePart(("JunglePalmTrunk_%03d"):format(index),
+			Vector3.new(1.35 * scale, trunkVector.Magnitude, 1.35 * scale),
+			CFrame.lookAt(trunkMid, trunkTop) * CFrame.Angles(math.rad(90), 0, 0),
+			jungleBark[(index % #jungleBark) + 1], Enum.Material.Wood, "Cylinder")
+		local crown = trunkTop
+		for frond = 1, 9 do
+			local angle = (math.pi * 2 * frond / 9) + jungleRng:NextNumber(-0.16, 0.16)
+			local horizontal = Vector3.new(math.cos(angle), 0, math.sin(angle))
+			local direction = (horizontal * jungleRng:NextNumber(0.78, 1)
+				+ Vector3.new(0, jungleRng:NextNumber(-0.48, -0.22), 0)).Unit
+			local length = jungleRng:NextNumber(8, 12) * scale
+			addBroadLeaf(("JunglePalmFrond_%03d_%02d"):format(index, frond),
+				crown, direction, length, jungleRng:NextNumber(1.8, 2.6) * scale,
+				jungleGreens[(frond + index) % #jungleGreens + 1], jungleRng:NextNumber(-8, 8))
+		end
+	end
+	local function addBroadleafTree(x, z, index, scale)
+		scale = scale or 1
+		local height = jungleRng:NextNumber(13, 19) * scale
+		local trunkWidth = jungleRng:NextNumber(1.1, 1.7) * scale
+		junglePart(("JungleBroadTrunk_%03d"):format(index),
+			Vector3.new(trunkWidth, height, trunkWidth),
+			CFrame.new(x, yGround + height * 0.5, z)
+				* CFrame.Angles(math.rad(jungleRng:NextNumber(-5, 5)), 0, math.rad(jungleRng:NextNumber(-5, 5))),
+			jungleBark[(index % #jungleBark) + 1], Enum.Material.Wood, "Cylinder")
+		local crown = Vector3.new(x, yGround + height * 0.78, z)
+		for leaf = 1, 7 do
+			local angle = math.pi * 2 * leaf / 7 + jungleRng:NextNumber(-0.2, 0.2)
+			local dir = Vector3.new(math.cos(angle), jungleRng:NextNumber(0.08, 0.42), math.sin(angle))
+			addBroadLeaf(("JungleCanopyLeaf_%03d_%02d"):format(index, leaf),
+				crown, dir, jungleRng:NextNumber(6, 9) * scale,
+				jungleRng:NextNumber(3.5, 5) * scale,
+				jungleGreens[(leaf + index) % #jungleGreens + 1], jungleRng:NextNumber(-10, 10))
+		end
+	end
+	local function addFernCluster(x, z, index, scale)
+		scale = scale or 1
+		local base = Vector3.new(x, yGround + 0.35 * scale, z)
+		for leaf = 1, 7 do
+			local angle = math.pi * 2 * leaf / 7 + jungleRng:NextNumber(-0.18, 0.18)
+			local dir = Vector3.new(math.cos(angle), jungleRng:NextNumber(0.35, 0.7), math.sin(angle))
+			addBroadLeaf(("JungleFernLeaf_%03d_%02d"):format(index, leaf),
+				base, dir, jungleRng:NextNumber(3.5, 5.5) * scale,
+				jungleRng:NextNumber(0.8, 1.25) * scale,
+				jungleGreens[(leaf + index + 2) % #jungleGreens + 1], jungleRng:NextNumber(-4, 4))
+		end
+	end
+	local treeIndex, fernIndex, rockIndex = 0, 0, 0
+	local centerlineForFoliage = {}
+	for i = 1, #waypoints - 1 do
+		centerlineForFoliage[i] = { x = waypoints[i].X, z = waypoints[i].Z }
+	end
+	local foliageOffset = railOffset + 10
+	for side = -1, 1, 2 do
+		for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, foliageOffset, side)) do
+			local cumulative = { 0 }
+			for i = 2, #chain do
+				local dx, dz = chain[i].x - chain[i - 1].x, chain[i].z - chain[i - 1].z
+				cumulative[i] = cumulative[i - 1] + math.sqrt(dx * dx + dz * dz)
+			end
+			local total = cumulative[#chain]
+			if total > 24 then
+				local treeCount = math.floor(total / 38)
+				for tree = 1, treeCount do
+					local distance = (tree - 0.5) * total / treeCount
+					local seg = 1
+					while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
+					local a, b = chain[seg], chain[seg + 1]
+					local span = cumulative[seg + 1] - cumulative[seg]
+					local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
+					local x = a.x + (b.x - a.x) * alpha + jungleRng:NextNumber(-3, 3)
+					local z = a.z + (b.z - a.z) * alpha + jungleRng:NextNumber(-3, 3)
+					treeIndex += 1
+					if treeIndex % 3 == 0 then
+						addJunglePalm(x, z, treeIndex, jungleRng:NextNumber(0.82, 1.08))
+					else
+						addBroadleafTree(x, z, treeIndex, jungleRng:NextNumber(0.85, 1.15))
+					end
+				end
+				local fernCount = math.floor(total / 12)
+				for fern = 1, fernCount do
+					local distance = (fern - 0.5) * total / fernCount
+					local seg = 1
+					while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
+					local a, b = chain[seg], chain[seg + 1]
+					local span = cumulative[seg + 1] - cumulative[seg]
+					local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
+					local x = a.x + (b.x - a.x) * alpha + jungleRng:NextNumber(-2, 2)
+					local z = a.z + (b.z - a.z) * alpha + jungleRng:NextNumber(-2, 2)
+					fernIndex += 1
+					addFernCluster(x, z, fernIndex, jungleRng:NextNumber(0.7, 1.15))
+				end
+			end
+		end
+	end
+	print(("[COURSE][FOREST] Vegetación tropical: %d árboles, %d helechos."):format(treeIndex, fernIndex))
+
 
 	-- Meta en el waypoint 1 y checkpoints equidistantes a lo largo de la vuelta.
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
