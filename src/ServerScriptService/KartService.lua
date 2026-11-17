@@ -2701,7 +2701,7 @@ local function buildJungleCourse()
 		local trunkVector = trunkTop - trunkBase
 		junglePart(("JunglePalmTrunk_%03d"):format(index),
 			Vector3.new(1.35 * scale, trunkVector.Magnitude, 1.35 * scale),
-			CFrame.lookAt(trunkMid, trunkTop) * CFrame.Angles(math.rad(90), 0, 0),
+			CFrame.new(trunkMid) * CFrame.Angles(0, 0, math.rad(90)),
 			jungleBark[(index % #jungleBark) + 1], Enum.Material.Wood, "Cylinder")
 		local crown = trunkTop
 		for frond = 1, 9 do
@@ -2721,8 +2721,7 @@ local function buildJungleCourse()
 		local trunkWidth = jungleRng:NextNumber(1.1, 1.7) * scale
 		junglePart(("JungleBroadTrunk_%03d"):format(index),
 			Vector3.new(trunkWidth, height, trunkWidth),
-			CFrame.new(x, yGround + height * 0.5, z)
-				* CFrame.Angles(math.rad(jungleRng:NextNumber(-5, 5)), 0, math.rad(jungleRng:NextNumber(-5, 5))),
+			CFrame.new(x, yGround + height * 0.5, z) * CFrame.Angles(0, 0, math.rad(90)),
 			jungleBark[(index % #jungleBark) + 1], Enum.Material.Wood, "Cylinder")
 		local crown = Vector3.new(x, yGround + height * 0.78, z)
 		for leaf = 1, 7 do
@@ -2737,8 +2736,8 @@ local function buildJungleCourse()
 	local function addFernCluster(x, z, index, scale)
 		scale = scale or 1
 		local base = Vector3.new(x, yGround + 0.35 * scale, z)
-		for leaf = 1, 7 do
-			local angle = math.pi * 2 * leaf / 7 + jungleRng:NextNumber(-0.18, 0.18)
+		for leaf = 1, 5 do
+			local angle = math.pi * 2 * leaf / 5 + jungleRng:NextNumber(-0.18, 0.18)
 			local dir = Vector3.new(math.cos(angle), jungleRng:NextNumber(0.35, 0.7), math.sin(angle))
 			addBroadLeaf(("JungleFernLeaf_%03d_%02d"):format(index, leaf),
 				base, dir, jungleRng:NextNumber(3.5, 5.5) * scale,
@@ -2778,7 +2777,7 @@ local function buildJungleCourse()
 						addBroadleafTree(x, z, treeIndex, jungleRng:NextNumber(0.85, 1.15))
 					end
 				end
-				local fernCount = math.floor(total / 12)
+				local fernCount = math.floor(total / 26)
 				for fern = 1, fernCount do
 					local distance = (fern - 0.5) * total / fernCount
 					local seg = 1
