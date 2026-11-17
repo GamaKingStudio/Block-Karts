@@ -2370,6 +2370,25 @@ local function buildTestCourse()
 		if not isCoreTrackElement(child) then child:Destroy() end
 	end
 
+	-- Cuatro cajones de parrilla alineados con las posiciones reales de salida.
+	local startGrid = Courses.Beach.start
+	for slot = 1, 4 do
+		local row = (slot - 1) % 2
+		local column = math.floor((slot - 1) / 2)
+		local x = startGrid.x - startGrid.rowSpacing / 2 + column * startGrid.rowSpacing
+		local z = startGrid.z + (row == 0 and -startGrid.rowOffset or startGrid.rowOffset)
+		for side = -1, 1, 2 do
+			local cross = makePart(course, ("BeachGridCross_%d_%d"):format(slot, side),
+				Vector3.new(0.18, 0.025, 7.2), CFrame.new(x + side * 4, yGround + 0.035, z),
+				C_WHITE, Enum.Material.SmoothPlastic)
+			cross.CanCollide = false
+			local edge = makePart(course, ("BeachGridEdge_%d_%d"):format(slot, side),
+				Vector3.new(8.2, 0.025, 0.18), CFrame.new(x, yGround + 0.035, z + side * 3.6),
+				C_WHITE, Enum.Material.SmoothPlastic)
+			edge.CanCollide = false
+		end
+	end
+
 	-- Checkpoints
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
 	checkpointsFolder.Name = "CourseCheckpoints"
@@ -2498,8 +2517,9 @@ local function buildJungleCourse()
 		colorCorrection.Contrast = 0.04
 	end
 
-	makePart(course, "ForestGround", Vector3.new(640, 3, 390),
-		CFrame.new(0, yGround - 1.5, 0), Color3.fromRGB(64, 105, 61), Enum.Material.Grass)
+	makePart(course, "ForestGround", Vector3.new(3, 3, 680),
+		CFrame.new(0, yGround - 1.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		Color3.fromRGB(64, 105, 61), Enum.Material.Grass, "Cylinder")
 
 	local centerline = {}
 	for i = 1, #waypoints - 1 do
@@ -2583,7 +2603,7 @@ local function buildJungleCourse()
 	-- Barandas con la misma construcción robusta de Beach Resort:
 	-- postes frecuentes, dos vigas visibles y colisión invisible continua.
 	-- Jungle Deep no necesita divisoria central; solo sus dos bordes exteriores.
-	local railOffset = 20
+	local railOffset = trackWidth / 2 + 5
 	local forestPostSpacing = 4.5
 	local forestPostWidth = 0.42
 	local forestPostHeight = 2.3
@@ -2821,11 +2841,17 @@ local function createKart(player, spawnIndex)
 				startZ + heading.headingZ * 10)
 		)
 	else
-		local startX = 45 + (spawnIndex - 1) * 12
-		local startZ = 70
+		local grid = Courses.Beach.start
+		local slot = math.clamp(math.floor(tonumber(spawnIndex) or 1), 1, 4)
+		local row = (slot - 1) % 2
+		local column = math.floor((slot - 1) / 2)
+		local startX = grid.x - grid.rowSpacing / 2 + column * grid.rowSpacing
+		local startZ = grid.z + (row == 0 and -grid.rowOffset or grid.rowOffset)
+		local heading = Courses.Beach.start
 		spawnCFrame = CFrame.lookAt(
 			Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
-			Vector3.new(startX - 10, COURSE_SURFACE_Y + 1.8, startZ)
+			Vector3.new(startX + heading.headingX * 10, COURSE_SURFACE_Y + 1.8,
+				startZ + heading.headingZ * 10)
 		)
 	end
 
