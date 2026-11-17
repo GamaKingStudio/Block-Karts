@@ -33,9 +33,37 @@ lobbyMusic.Looped = true
 lobbyMusic.Volume = 0.28
 lobbyMusic.RollOffMode = Enum.RollOffMode.InverseTapered
 lobbyMusic.Parent = SoundService
-if not lobbyMusic.IsPlaying then
-	lobbyMusic:Play()
+-- El servidor habilita la música solo cuando todos los jugadores conectados
+-- están en el lobby. Al entrar cualquiera a una carrera, se detiene globalmente.
+local function refreshLobbyMusic()
+	local anyoneInLobby = false
+	local anyoneRacing = false
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player:GetAttribute("InGarage") == true then anyoneInLobby = true end
+		if player:GetAttribute("InRaceRoom") == true or player:GetAttribute("RaceStarted") == true then
+			anyoneRacing = true
+		end
+	end
+	if anyoneInLobby and not anyoneRacing then
+		if not lobbyMusic.IsPlaying then lobbyMusic:Play() end
+	else
+		if lobbyMusic.IsPlaying then lobbyMusic:Stop() end
+	end
 end
+
+local function watchLobbyMusicState(player)
+	for _, attribute in ipairs({ "InGarage", "InRaceRoom", "RaceStarted" }) do
+		player:GetAttributeChangedSignal(attribute):Connect(refreshLobbyMusic)
+	end
+	task.defer(refreshLobbyMusic)
+end
+
+Players.PlayerAdded:Connect(watchLobbyMusicState)
+Players.PlayerRemoving:Connect(function()
+	task.defer(refreshLobbyMusic)
+end)
+for _, player in ipairs(Players:GetPlayers()) do watchLobbyMusicState(player) end
+task.defer(refreshLobbyMusic)
 
 
 local Leaderboards = require(ServerScriptService:WaitForChild("Leaderboards"))
