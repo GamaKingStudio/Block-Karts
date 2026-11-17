@@ -2369,20 +2369,7 @@ local function buildTestCourse()
 		if not isCoreTrackElement(child) then child:Destroy() end
 	end
 
-	-- Cajones orientados igual que cada kart: mismo CFrame, misma posición.
-	for slot = 1, 4 do
-		local slotCF = getStartGridCFrame(Courses.Beach.start, slot, yGround + 0.035)
-		for side = -1, 1, 2 do
-			local sideLine = makePart(course, ("BeachGridSide_%d_%d"):format(slot, side),
-				Vector3.new(0.18, 0.025, 13), slotCF * CFrame.new(side * 5.25, 0, 0),
-				C_WHITE, Enum.Material.SmoothPlastic)
-			sideLine.CanCollide = false
-			local endLine = makePart(course, ("BeachGridEnd_%d_%d"):format(slot, side),
-				Vector3.new(10.5, 0.025, 0.18), slotCF * CFrame.new(0, 0, side * 6.5),
-				C_WHITE, Enum.Material.SmoothPlastic)
-			endLine.CanCollide = false
-		end
-	end
+	-- Sin rectángulos de salida: se retiran porque no coinciden visualmente con el kart.
 
 	-- Checkpoints
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
@@ -2539,20 +2526,7 @@ local function buildJungleCourse()
 		hub.CanTouch = false
 	end
 
-	-- Cajones orientados igual que cada kart, con separación moderadamente mayor.
-	for slot = 1, 4 do
-		local slotCF = getStartGridCFrame(definition.start, slot, yGround + 0.035)
-		for side = -1, 1, 2 do
-			local sideLine = makePart(course, ("ForestGridSide_%d_%d"):format(slot, side),
-				Vector3.new(0.18, 0.025, 13), slotCF * CFrame.new(side * 5.25, 0, 0),
-				Color3.fromRGB(235, 238, 232), Enum.Material.SmoothPlastic)
-			sideLine.CanCollide = false
-			local endLine = makePart(course, ("ForestGridEnd_%d_%d"):format(slot, side),
-				Vector3.new(10.5, 0.025, 0.18), slotCF * CFrame.new(0, 0, side * 6.5),
-				Color3.fromRGB(235, 238, 232), Enum.Material.SmoothPlastic)
-			endLine.CanCollide = false
-		end
-	end
+	-- Sin rectángulos de salida en Jungle Deep.
 
 	-- Bordillos rojo/blanco siguiendo el mismo offset seguro de la pista.
 	local curbWidth, curbHeight, curbOffset = 1.4, 0.14, trackWidth / 2 + 0.7
@@ -2686,83 +2660,7 @@ local function buildJungleCourse()
 	end
 
 
-	-- AMBIENTACIÓN JUNGLE DEEP: bosque perimetral, rocas, helechos y troncos.
-	-- Las posiciones se mantienen en el anillo exterior, lejos de la calzada y barandas.
-	local forestDecorRng = Random.new(62026)
-	local forestTreeSpots = {
-		{300, 0}, {310, 62}, {277, 115}, {263, 176}, {212, 212}, {176, 263},
-		{115, 277}, {62, 310}, {0, 300}, {-62, 310}, {-115, 277}, {-176, 263},
-		{-212, 212}, {-263, 176}, {-277, 115}, {-310, 62}, {-300, 0}, {-310, -62},
-		{-277, -115}, {-263, -176}, {-212, -212}, {-176, -263}, {-115, -277},
-		{-62, -310}, {0, -300}, {62, -310}, {115, -277}, {176, -263},
-		{212, -212}, {263, -176}, {286, -153}, {310, -62},
-	}
-	local foliageColors = {
-		Color3.fromRGB(38, 105, 54), Color3.fromRGB(49, 125, 61),
-		Color3.fromRGB(61, 139, 68), Color3.fromRGB(33, 88, 48),
-	}
-	local barkColors = {
-		Color3.fromRGB(83, 61, 43), Color3.fromRGB(103, 72, 48),
-		Color3.fromRGB(69, 55, 43),
-	}
-	local function forestDecorationPart(name, size, cf, color, material, shape)
-		local part = makePart(course, name, size, cf, color, material, shape)
-		part.CanCollide = false
-		part.CanTouch = false
-		part.CanQuery = false
-		part.CastShadow = true
-		return part
-	end
-	for index, spot in ipairs(forestTreeSpots) do
-		local x, z = spot[1], spot[2]
-		local height = forestDecorRng:NextNumber(15, 21)
-		local yaw = math.rad(forestDecorRng:NextInteger(0, 359))
-		local trunkColor = barkColors[forestDecorRng:NextInteger(1, #barkColors)]
-		local leafColor = foliageColors[forestDecorRng:NextInteger(1, #foliageColors)]
-		forestDecorationPart(("JungleTreeTrunk_%02d"):format(index),
-			Vector3.new(2.6, height, 2.6),
-			CFrame.new(x, yGround + height / 2, z) * CFrame.Angles(0, 0, math.rad(90)),
-			trunkColor, Enum.Material.Wood, "Cylinder")
-		local crownY = yGround + height - 1.5
-		forestDecorationPart(("JungleTreeCrown_%02d_A"):format(index),
-			Vector3.new(11, 10, 11), CFrame.new(x, crownY, z) * CFrame.Angles(0, yaw, 0),
-			leafColor, Enum.Material.Grass, "Ball")
-		forestDecorationPart(("JungleTreeCrown_%02d_B"):format(index),
-			Vector3.new(8, 8, 8), CFrame.new(x - 4, crownY - 1, z + 2),
-			foliageColors[(index % #foliageColors) + 1], Enum.Material.Grass, "Ball")
-		forestDecorationPart(("JungleTreeCrown_%02d_C"):format(index),
-			Vector3.new(8, 8, 8), CFrame.new(x + 4, crownY - 1, z - 2),
-			foliageColors[((index + 1) % #foliageColors) + 1], Enum.Material.Grass, "Ball")
-		-- Helechos bajos en la base de cada árbol.
-		for fern = 1, 3 do
-			local angle = yaw + fern * (math.pi * 2 / 3)
-			local fx, fz = x + math.cos(angle) * 4, z + math.sin(angle) * 4
-			forestDecorationPart(("JungleFern_%02d_%d"):format(index, fern),
-				Vector3.new(3.2, 2.2, 3.2), CFrame.new(fx, yGround + 1, fz),
-				foliageColors[((index + fern) % #foliageColors) + 1],
-				Enum.Material.Grass, "Ball")
-		end
-		if index % 4 == 0 then
-			local rockSize = forestDecorRng:NextNumber(3.5, 5.5)
-			forestDecorationPart(("JungleBoulder_%02d"):format(index),
-				Vector3.new(rockSize, rockSize * 0.7, rockSize * 1.2),
-				CFrame.new(x + 8, yGround + rockSize * 0.28, z - 5)
-					* CFrame.Angles(0, yaw, math.rad(8)),
-				Color3.fromRGB(91, 101, 83), Enum.Material.Rock, "Ball")
-		end
-	end
-	-- Troncos caídos y señales de sendero dan variedad al borde del bosque.
-	for index = 1, 8 do
-		local spot = forestTreeSpots[index * 4]
-		local x, z = spot[1] - 7, spot[2] + 5
-		local log = forestDecorationPart(("JungleFallenLog_%02d"):format(index),
-			Vector3.new(2.2, 2.2, 10),
-			CFrame.new(x, yGround + 1.1, z)
-				* CFrame.Angles(math.rad(8), math.rad(index * 31), math.rad(90)),
-			Color3.fromRGB(91, 67, 45), Enum.Material.Wood, "Cylinder")
-		log.CastShadow = true
-	end
-	print(("[COURSE][FOREST] Ambientación generada: %d árboles, helechos y rocas."):format(#forestTreeSpots))
+	-- Decoración vegetal retirada: evita los árboles flotantes y las copas con aspecto de bolas.
 
 	-- Meta en el waypoint 1 y checkpoints equidistantes a lo largo de la vuelta.
 	local checkpointsFolder = Workspace:FindFirstChild("CourseCheckpoints") or Instance.new("Folder")
