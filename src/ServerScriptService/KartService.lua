@@ -2761,15 +2761,24 @@ local function buildJungleCourse()
 						Vector3.new(x, yGround, z), targetHeight, jungleRng:NextInteger(0, 359)) then
 						palmCount += 1
 						local palm = course:FindFirstChild(palmName)
+						-- Variar solo la copa: conservar el tronco y los tonos originales de la base.
 						local palmTints = {
-							Color3.fromRGB(54, 143, 66), Color3.fromRGB(91, 158, 62),
-							Color3.fromRGB(37, 119, 76), Color3.fromRGB(124, 163, 66),
+							Color3.fromRGB(42, 119, 54), Color3.fromRGB(83, 151, 58),
+							Color3.fromRGB(35, 103, 70), Color3.fromRGB(127, 164, 66),
+							Color3.fromRGB(62, 135, 83), Color3.fromRGB(104, 143, 45),
 						}
-						local tint = palmTints[(palmCount - 1) % #palmTints + 1]
 						if palm then
+							local boxCF, boxSize = palm:GetBoundingBox()
+							local tint = palmTints[(palmCount - 1) % #palmTints + 1]
+							local partIndex = 0
 							for _, part in ipairs(palm:GetDescendants()) do
 								if part:IsA("BasePart") then
-									part.Color = part.Color:Lerp(tint, 0.32)
+									local localY = boxCF:PointToObjectSpace(part.Position).Y
+									if localY > -boxSize.Y * 0.08 then
+										partIndex += 1
+										local variation = palmTints[((palmCount + partIndex - 2) % #palmTints) + 1]
+										part.Color = part.Color:Lerp(variation:Lerp(tint, 0.45), 0.48)
+									end
 								end
 							end
 						end
@@ -2778,44 +2787,59 @@ local function buildJungleCourse()
 			end
 		end
 	end
-	-- Cinturón de follaje profundo en el perímetro: varios grupos solapados,
-	-- con tamaños y tintes sutiles para crear capas y ocultar el horizonte vacío.
+	-- Horizonte selvático en tres cinturones amplios, independientes de la orilla inmediata.
+	-- Las filas exteriores cierran la vista del vacío desde cámaras altas y curvas abiertas.
 	if jungleFoliageTemplate then
 		local groveIndex = 0
-		for side = -1, 1, 2 do
-			for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, railOffset + 78, side)) do
-				local cumulative = { 0 }
-				for i = 2, #chain do
-					local dx, dz = chain[i].x - chain[i - 1].x, chain[i].z - chain[i - 1].z
-					cumulative[i] = cumulative[i - 1] + math.sqrt(dx * dx + dz * dz)
-				end
-				local total = cumulative[#chain]
-				local count = math.max(1, math.floor(total / 72))
-				for grove = 1, count do
-					local distance = (grove - 0.5) * total / count
-					local seg = 1
-					while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
-					local a, b = chain[seg], chain[seg + 1]
-					local span = cumulative[seg + 1] - cumulative[seg]
-					local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
-					local x = a.x + (b.x - a.x) * alpha + jungleRng:NextNumber(-7, 7)
-					local z = a.z + (b.z - a.z) * alpha + jungleRng:NextNumber(-7, 7)
-					groveIndex += 1
-					local height = jungleRng:NextNumber(34, 48)
-					if placeJungleModel(jungleFoliageTemplate,
-						("JungleDeepFoliage_%03d"):format(groveIndex),
-						Vector3.new(x, yGround, z), height, jungleRng:NextInteger(0, 359)) then
-						foliagePackCount += 1
-						local tint = {
-							Color3.fromRGB(42, 105, 55), Color3.fromRGB(65, 126, 58),
-							Color3.fromRGB(35, 91, 67), Color3.fromRGB(88, 132, 53),
-						}
-						local shade = tint[(groveIndex - 1) % #tint + 1]
-						local placed = course:FindFirstChild(("JungleDeepFoliage_%03d"):format(groveIndex))
-						if placed then
-							for _, part in ipairs(placed:GetDescendants()) do
-								if part:IsA("BasePart") then
-									part.Color = part.Color:Lerp(shade, 0.24)
+		local perimeterRows = {
+			{ offset = railOffset + 115, spacing = 48, minHeight = 42, maxHeight = 58 },
+			{ offset = railOffset + 205, spacing = 43, minHeight = 48, maxHeight = 66 },
+			{ offset = railOffset + 305, spacing = 40, minHeight = 52, maxHeight = 74 },
+		}
+		local canopyPalette = {
+			Color3.fromRGB(31, 91, 48), Color3.fromRGB(47, 116, 55),
+			Color3.fromRGB(72, 133, 58), Color3.fromRGB(35, 104, 75),
+			Color3.fromRGB(103, 145, 63), Color3.fromRGB(24, 78, 51),
+			Color3.fromRGB(82, 119, 45),
+		}
+		for rowIndex, row in ipairs(perimeterRows) do
+			for side = -1, 1, 2 do
+				for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, row.offset, side)) do
+					local cumulative = { 0 }
+					for i = 2, #chain do
+						local dx, dz = chain[i].x - chain[i - 1].x, chain[i].z - chain[i - 1].z
+						cumulative[i] = cumulative[i - 1] + math.sqrt(dx * dx + dz * dz)
+					end
+					local total = cumulative[#chain]
+					local count = math.max(1, math.ceil(total / row.spacing))
+					for grove = 1, count do
+						local distance = (grove - 0.5) * total / count
+						local seg = 1
+						while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
+						local a, b = chain[seg], chain[seg + 1]
+						local span = cumulative[seg + 1] - cumulative[seg]
+						local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
+						local x = a.x + (b.x - a.x) * alpha + jungleRng:NextNumber(-10, 10)
+						local z = a.z + (b.z - a.z) * alpha + jungleRng:NextNumber(-10, 10)
+						groveIndex += 1
+						local height = jungleRng:NextNumber(row.minHeight, row.maxHeight)
+						local name = ("JungleHorizon_R%d_%03d"):format(rowIndex, groveIndex)
+						if placeJungleModel(jungleFoliageTemplate, name,
+							Vector3.new(x, yGround, z), height, jungleRng:NextInteger(0, 359)) then
+							foliagePackCount += 1
+							local placed = course:FindFirstChild(name)
+							if placed then
+								local boxCF, boxSize = placed:GetBoundingBox()
+								for partIndex, part in ipairs(placed:GetDescendants()) do
+									if part:IsA("BasePart") then
+										local localY = boxCF:PointToObjectSpace(part.Position).Y
+										-- Dejar sin teñir las piezas bajas para no convertir troncos en hojas.
+										if localY > -boxSize.Y * 0.12 then
+											local shadeIndex = ((groveIndex + partIndex + rowIndex - 2) % #canopyPalette) + 1
+											local shade = canopyPalette[shadeIndex]
+											part.Color = part.Color:Lerp(shade, 0.38)
+										end
+									end
 								end
 							end
 						end
