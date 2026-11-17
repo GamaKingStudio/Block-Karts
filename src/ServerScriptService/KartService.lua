@@ -357,6 +357,19 @@ local function makePart(parent, name, size, cframe, color, material, shapeOrClas
 end
 
 
+-- Una sola referencia de parrilla para los cajones y el kart.
+local function getStartGridCFrame(startConfig, slotIndex, y)
+	local slot = math.clamp(math.floor(tonumber(slotIndex) or 1), 1, 4)
+	local row = (slot - 1) % 2
+	local column = math.floor((slot - 1) / 2)
+	local x = startConfig.x - startConfig.rowSpacing / 2 + column * startConfig.rowSpacing
+	local z = startConfig.z + (row == 0 and -startConfig.rowOffset or startConfig.rowOffset)
+	local position = Vector3.new(x, y, z)
+	local forward = Vector3.new(startConfig.headingX, 0, startConfig.headingZ)
+	return CFrame.lookAt(position, position + forward)
+end
+
+
 -- ==========================================================
 -- AMBIENTACIÓN BEACH RESORT: iluminación, océano y horizonte
 -- ==========================================================
@@ -1343,19 +1356,6 @@ local function buildTestCourse()
 		road.CanCollide = false
 		road.CanTouch = false
 
-		for dist = 8, length - 8, 14 do
-			local linePos = roadCF * CFrame.new(0, 0.025, -length / 2 + dist)
-			local worldPos = linePos.Position
-			-- Deja libre el rectángulo de salida: la línea discontinua no debe
-			-- atravesar ni quedar coplanar con los cuadros de la bandera.
-			local insideStartGrid = math.abs(worldPos.X - gantryX) < 4
-				and math.abs(worldPos.Z - 70) < trackWidth / 2 + 1
-			if not insideStartGrid then
-				local line = makePart(course, "DashLine", Vector3.new(0.7, 0.02, 6), linePos, C_WHITE)
-				line.CanCollide = false
-				line.CanTouch = false
-			end
-		end
 	end
 
 
@@ -2354,7 +2354,6 @@ local function buildTestCourse()
 		return name == "IslandSand"
 			or name:match("^RoadSeg_%d+$") ~= nil
 			or name:match("^CornerHub_%d+$") ~= nil
-			or name == "DashLine"
 			or name:match("^Kerb_%d+_%d+$") ~= nil
 			or name:match("^Guardrail") ~= nil
 			or name == "ImportedFinishStructure"
@@ -2370,22 +2369,18 @@ local function buildTestCourse()
 		if not isCoreTrackElement(child) then child:Destroy() end
 	end
 
-	-- Cuatro cajones de parrilla alineados con las posiciones reales de salida.
-	local startGrid = Courses.Beach.start
+	-- Cajones orientados igual que cada kart: mismo CFrame, misma posición.
 	for slot = 1, 4 do
-		local row = (slot - 1) % 2
-		local column = math.floor((slot - 1) / 2)
-		local x = startGrid.x - startGrid.rowSpacing / 2 + column * startGrid.rowSpacing
-		local z = startGrid.z + (row == 0 and -startGrid.rowOffset or startGrid.rowOffset)
+		local slotCF = getStartGridCFrame(Courses.Beach.start, slot, yGround + 0.035)
 		for side = -1, 1, 2 do
-			local cross = makePart(course, ("BeachGridCross_%d_%d"):format(slot, side),
-				Vector3.new(0.18, 0.025, 11.2), CFrame.new(x + side * 5.5, yGround + 0.035, z),
+			local sideLine = makePart(course, ("BeachGridSide_%d_%d"):format(slot, side),
+				Vector3.new(0.18, 0.025, 13), slotCF * CFrame.new(side * 5.25, 0, 0),
 				C_WHITE, Enum.Material.SmoothPlastic)
-			cross.CanCollide = false
-			local edge = makePart(course, ("BeachGridEdge_%d_%d"):format(slot, side),
-				Vector3.new(11.2, 0.025, 0.18), CFrame.new(x, yGround + 0.035, z + side * 5.5),
+			sideLine.CanCollide = false
+			local endLine = makePart(course, ("BeachGridEnd_%d_%d"):format(slot, side),
+				Vector3.new(10.5, 0.025, 0.18), slotCF * CFrame.new(0, 0, side * 6.5),
 				C_WHITE, Enum.Material.SmoothPlastic)
-			edge.CanCollide = false
+			endLine.CanCollide = false
 		end
 	end
 
@@ -2544,22 +2539,18 @@ local function buildJungleCourse()
 		hub.CanTouch = false
 	end
 
-	-- Cuatro cajones de parrilla en dos filas escalonadas sobre la recta inferior.
-	local grid = definition.start
+	-- Cajones orientados igual que cada kart, con separación moderadamente mayor.
 	for slot = 1, 4 do
-		local row = (slot - 1) % 2
-		local column = math.floor((slot - 1) / 2)
-		local x = grid.x - grid.rowSpacing / 2 + column * grid.rowSpacing
-		local z = grid.z + (row == 0 and -grid.rowOffset or grid.rowOffset)
+		local slotCF = getStartGridCFrame(definition.start, slot, yGround + 0.035)
 		for side = -1, 1, 2 do
-			local cross = makePart(course, ("ForestGridCross_%d_%d"):format(slot, side),
-				Vector3.new(0.18, 0.025, 11.2), CFrame.new(x + side * 5.5, yGround + 0.035, z),
+			local sideLine = makePart(course, ("ForestGridSide_%d_%d"):format(slot, side),
+				Vector3.new(0.18, 0.025, 13), slotCF * CFrame.new(side * 5.25, 0, 0),
 				Color3.fromRGB(235, 238, 232), Enum.Material.SmoothPlastic)
-			cross.CanCollide = false
-			local edge = makePart(course, ("ForestGridEdge_%d_%d"):format(slot, side),
-				Vector3.new(8.2, 0.025, 0.18), CFrame.new(x, yGround + 0.035, z + side * 3.6),
+			sideLine.CanCollide = false
+			local endLine = makePart(course, ("ForestGridEnd_%d_%d"):format(slot, side),
+				Vector3.new(10.5, 0.025, 0.18), slotCF * CFrame.new(0, 0, side * 6.5),
 				Color3.fromRGB(235, 238, 232), Enum.Material.SmoothPlastic)
-			edge.CanCollide = false
+			endLine.CanCollide = false
 		end
 	end
 
@@ -2823,36 +2814,9 @@ local function createKart(player, spawnIndex)
 
 	local spawnCFrame
 	if activeCourseId == "Forest" then
-		local slot = tonumber(spawnIndex) or 1
-		local startX, startZ
-		if slot <= 0 then
-			startX, startZ = -190, 140.2
-		else
-			local row = (slot - 1) % 2
-			local column = math.floor((slot - 1) / 2)
-			local grid = Courses.Forest.start
-			startX = grid.x - grid.rowSpacing / 2 + column * grid.rowSpacing
-			startZ = grid.z + (row == 0 and -grid.rowOffset or grid.rowOffset)
-		end
-		local heading = Courses.Forest.start
-		spawnCFrame = CFrame.lookAt(
-			Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
-			Vector3.new(startX + heading.headingX * 10, COURSE_SURFACE_Y + 1.8,
-				startZ + heading.headingZ * 10)
-		)
+		spawnCFrame = getStartGridCFrame(Courses.Forest.start, spawnIndex, COURSE_SURFACE_Y + 1.8)
 	else
-		local grid = Courses.Beach.start
-		local slot = math.clamp(math.floor(tonumber(spawnIndex) or 1), 1, 4)
-		local row = (slot - 1) % 2
-		local column = math.floor((slot - 1) / 2)
-		local startX = grid.x - grid.rowSpacing / 2 + column * grid.rowSpacing
-		local startZ = grid.z + (row == 0 and -grid.rowOffset or grid.rowOffset)
-		local heading = Courses.Beach.start
-		spawnCFrame = CFrame.lookAt(
-			Vector3.new(startX, COURSE_SURFACE_Y + 1.8, startZ),
-			Vector3.new(startX + heading.headingX * 10, COURSE_SURFACE_Y + 1.8,
-				startZ + heading.headingZ * 10)
-		)
+		spawnCFrame = getStartGridCFrame(Courses.Beach.start, spawnIndex, COURSE_SURFACE_Y + 1.8)
 	end
 
 	local chassis = makePart(model, "Chassis", Vector3.new(4.8, 0.4, 6.4), spawnCFrame, Color3.fromRGB(25, 27, 30), Enum.Material.Metal)
