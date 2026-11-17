@@ -2703,6 +2703,10 @@ local function buildJungleCourse()
 	end
 	local junglePalmTemplate = loadCleanJungleModel(135644677713727, "JunglePalmTemplate")
 	local jungleFoliageTemplate = loadCleanJungleModel(12157426374, "JungleFoliageTemplate")
+	-- Modelos solicitados para el nuevo borde selvático y los troncos del suelo.
+	local jungleBorderTreeA = loadCleanJungleModel(563810465, "JungleBorderTreeA")
+	local jungleBorderTreeB = loadCleanJungleModel(9731248486, "JungleBorderTreeB")
+	local jungleLogTemplate = jungleBorderTreeB
 	local jungleRng = Random.new(20261117)
 	local function placeJungleModel(template, name, groundPosition, targetHeight, yaw)
 		if not template then return false end
@@ -2787,69 +2791,83 @@ local function buildJungleCourse()
 			end
 		end
 	end
-	-- Horizonte selvático en tres cinturones amplios, independientes de la orilla inmediata.
-	-- Las filas exteriores cierran la vista del vacío desde cámaras altas y curvas abiertas.
-	if jungleFoliageTemplate then
-		local groveIndex = 0
-		local perimeterRows = {
-			{ offset = railOffset + 115, spacing = 48, minHeight = 42, maxHeight = 58 },
-			{ offset = railOffset + 205, spacing = 43, minHeight = 48, maxHeight = 66 },
-			{ offset = railOffset + 305, spacing = 40, minHeight = 52, maxHeight = 74 },
-		}
-		local canopyPalette = {
-			Color3.fromRGB(31, 91, 48), Color3.fromRGB(47, 116, 55),
-			Color3.fromRGB(72, 133, 58), Color3.fromRGB(35, 104, 75),
-			Color3.fromRGB(103, 145, 63), Color3.fromRGB(24, 78, 51),
-			Color3.fromRGB(82, 119, 45),
-		}
-		for rowIndex, row in ipairs(perimeterRows) do
-			for side = -1, 1, 2 do
-				for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, row.offset, side)) do
-					local cumulative = { 0 }
-					for i = 2, #chain do
-						local dx, dz = chain[i].x - chain[i - 1].x, chain[i].z - chain[i - 1].z
-						cumulative[i] = cumulative[i - 1] + math.sqrt(dx * dx + dz * dz)
-					end
-					local total = cumulative[#chain]
-					local count = math.max(1, math.ceil(total / row.spacing))
-					for grove = 1, count do
-						local distance = (grove - 0.5) * total / count
-						local seg = 1
-						while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
-						local a, b = chain[seg], chain[seg + 1]
-						local span = cumulative[seg + 1] - cumulative[seg]
-						local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
-						local x = a.x + (b.x - a.x) * alpha + jungleRng:NextNumber(-10, 10)
-						local z = a.z + (b.z - a.z) * alpha + jungleRng:NextNumber(-10, 10)
-						groveIndex += 1
-						local height = jungleRng:NextNumber(row.minHeight, row.maxHeight)
-						local name = ("JungleHorizon_R%d_%03d"):format(rowIndex, groveIndex)
-						if placeJungleModel(jungleFoliageTemplate, name,
-							Vector3.new(x, yGround, z), height, jungleRng:NextInteger(0, 359)) then
-							foliagePackCount += 1
-							local placed = course:FindFirstChild(name)
-							if placed then
-								local boxCF, boxSize = placed:GetBoundingBox()
-								for partIndex, part in ipairs(placed:GetDescendants()) do
-									if part:IsA("BasePart") then
-										local localY = boxCF:PointToObjectSpace(part.Position).Y
-										-- Dejar sin teñir las piezas bajas para no convertir troncos en hojas.
-										if localY > -boxSize.Y * 0.12 then
-											local shadeIndex = ((groveIndex + partIndex + rowIndex - 2) % #canopyPalette) + 1
-											local shade = canopyPalette[shadeIndex]
-											part.Color = part.Color:Lerp(shade, 0.38)
-										end
-									end
-								end
-							end
-						end
+	-- Borde exterior: alterna los dos modelos solicitados para crear un horizonte
+	-- denso y continuo, en tres profundidades alrededor del circuito.
+	local groveIndex = 0
+	local perimeterRows = {
+		{ offset = railOffset + 125, spacing = 34, minHeight = 48, maxHeight = 65 },
+		{ offset = railOffset + 220, spacing = 31, minHeight = 54, maxHeight = 74 },
+		{ offset = railOffset + 320, spacing = 29, minHeight = 58, maxHeight = 82 },
+	}
+	for rowIndex, row in ipairs(perimeterRows) do
+		for side = -1, 1, 2 do
+			for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, row.offset, side)) do
+				local cumulative = { 0 }
+				for i = 2, #chain do
+					local dx, dz = chain[i].x - chain[i - 1].x, chain[i].z - chain[i - 1].z
+					cumulative[i] = cumulative[i - 1] + math.sqrt(dx * dx + dz * dz)
+				end
+				local total = cumulative[#chain]
+				local count = math.max(1, math.ceil(total / row.spacing))
+				for tree = 1, count do
+					local distance = (tree - 0.5) * total / count
+					local seg = 1
+					while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
+					local p1, p2 = chain[seg], chain[seg + 1]
+					local span = cumulative[seg + 1] - cumulative[seg]
+					local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
+					local x = p1.x + (p2.x - p1.x) * alpha + jungleRng:NextNumber(-9, 9)
+					local z = p1.z + (p2.z - p1.z) * alpha + jungleRng:NextNumber(-9, 9)
+					groveIndex += 1
+					local template = (groveIndex % 2 == 0) and jungleBorderTreeA or jungleBorderTreeB
+					if not template then template = jungleBorderTreeA or jungleBorderTreeB end
+					local height = jungleRng:NextNumber(row.minHeight, row.maxHeight)
+					local name = ("JungleBorder_R%d_%03d"):format(rowIndex, groveIndex)
+					if placeJungleModel(template, name, Vector3.new(x, yGround, z), height,
+						jungleRng:NextInteger(0, 359)) then
+						foliagePackCount += 1
 					end
 				end
 			end
 		end
 	end
+
+	-- Tronquitos decorativos dentro del terreno, fuera de la superficie de carrera.
+	local logCount = 0
+	if jungleLogTemplate then
+		for side = -1, 1, 2 do
+			for _, chain in ipairs(computeGuardrailChains(centerlineForFoliage, trackWidth / 2 + 20, side)) do
+				local cumulative = { 0 }
+				for i = 2, #chain do
+					local dx, dz = chain[i].x - chain[i - 1].x, chain[i].z - chain[i - 1].z
+					cumulative[i] = cumulative[i - 1] + math.sqrt(dx * dx + dz * dz)
+				end
+				local total = cumulative[#chain]
+				local count = math.floor(total / 95)
+				for logIndex = 1, count do
+					local distance = (logIndex - 0.5) * total / math.max(1, count)
+					local seg = 1
+					while seg < #chain - 1 and cumulative[seg + 1] < distance do seg += 1 end
+					local p1, p2 = chain[seg], chain[seg + 1]
+					local span = cumulative[seg + 1] - cumulative[seg]
+					local alpha = span > 0.001 and (distance - cumulative[seg]) / span or 0
+					local x = p1.x + (p2.x - p1.x) * alpha + jungleRng:NextNumber(-7, 7)
+					local z = p1.z + (p2.z - p1.z) * alpha + jungleRng:NextNumber(-7, 7)
+					local name = ("JungleGroundLog_%03d"):format(logCount + 1)
+					if placeJungleModel(jungleLogTemplate, name, Vector3.new(x, yGround + 0.15, z),
+						jungleRng:NextNumber(2.8, 4.2), jungleRng:NextInteger(0, 359)) then
+						logCount += 1
+					end
+				end
+			end
+		end
+	end
+	print(("[COURSE][FOREST] Borde: %d árboles nuevos; tronquitos interiores: %d."):format(
+		foliagePackCount, logCount))
 	if junglePalmTemplate then junglePalmTemplate:Destroy() end
 	if jungleFoliageTemplate then jungleFoliageTemplate:Destroy() end
+	if jungleBorderTreeA then jungleBorderTreeA:Destroy() end
+	if jungleBorderTreeB then jungleBorderTreeB:Destroy() end
 	print(("[COURSE][FOREST] Modelos tropicales importados: %d palmeras, %d conjunto de follaje."):format(
 		palmCount, foliagePackCount))
 
