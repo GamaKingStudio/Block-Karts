@@ -2664,10 +2664,10 @@ local function buildJungleCourse()
 
 	-- JUNGLE DEEP: vegetación de modelos 3D del Creator Store (no geometría procedural).
 	-- Asset de palmera ya utilizado en Beach Resort + pack tropical sin scripts.
-	local InsertService = game:GetService("InsertService")
+	local AssetService = game:GetService("AssetService")
 	local function loadCleanJungleModel(assetId, label)
 		local ok, loadedOrError = pcall(function()
-			return InsertService:LoadAsset(assetId)
+			return AssetService:LoadAssetAsync(assetId)
 		end)
 		if not ok or not loadedOrError then
 			warn(("[JUNGLE][ASSET] No se pudo cargar %s (%d): %s"):format(label, assetId, tostring(loadedOrError)))
