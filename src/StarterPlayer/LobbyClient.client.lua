@@ -279,13 +279,13 @@ local countdownTitle = text(countdown, {
 	Size = UDim2.new(1, 0, 0, 34), Text = "LA CARRERA EMPIEZA EN",
 	TextSize = 24, Font = Enum.Font.GothamBlack,
 })
-stroke(countdownTitle, BG, 3)
+-- Sin contorno de texto: mantiene las letras limpias y legibles.
 
 local countdownNumber = text(countdown, {
 	Position = UDim2.fromOffset(0, 40), Size = UDim2.new(1, 0, 0, 180),
 	Text = "5", TextScaled = true, Font = Enum.Font.GothamBlack, TextColor3 = WHITE,
 })
-stroke(countdownNumber, PINK, 6)
+-- Sin contorno de texto en el número de cuenta regresiva.
 local numberScale = Instance.new("UIScale")
 numberScale.Parent = countdownNumber
 
