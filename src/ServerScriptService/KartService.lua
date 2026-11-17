@@ -427,6 +427,16 @@ end
 
 local function buildOceanAndHorizon(course)
 	local waterColor = Color3.fromRGB(32, 142, 205)
+	-- IslandSand ya es un cilindro circular. Oculta la Baseplate cuadrada
+	-- predeterminada para que sus esquinas no aparezcan fuera de la isla.
+	local defaultBaseplate = Workspace:FindFirstChild("Baseplate")
+	if defaultBaseplate and defaultBaseplate:IsA("BasePart") then
+		defaultBaseplate.Transparency = 1
+		defaultBaseplate.CanCollide = false
+		defaultBaseplate.CanTouch = false
+		defaultBaseplate.CanQuery = false
+		defaultBaseplate.CastShadow = false
+	end
 	-- Cuadrícula de piezas para evitar superar el tamaño máximo de una Part.
 	-- El agua queda bajo la isla y se extiende varios kilómetros alrededor.
 	for xIndex = -2, 2 do
@@ -933,9 +943,9 @@ local function buildBeachLife(course, centerline, yGround)
 		local base = CFrame.new(x, yGround, z)
 			* CFrame.Angles(0, yaw, 0)
 			* CFrame.Angles(math.rad(rng:NextNumber(-14, 14)), 0, math.rad(rng:NextNumber(-5, 5)))
-		part("Surfboard", Vector3.new(1.7, 7.6, 0.28), base * CFrame.new(0, 3.3, 0), c1, Enum.Material.SmoothPlastic)
-		part("SurfboardStripe", Vector3.new(0.5, 7.62, 0.3), base * CFrame.new(0, 3.3, 0), c2, Enum.Material.SmoothPlastic)
-		part("SurfboardFin", Vector3.new(0.12, 1.3, 0.9), base * CFrame.new(0, 0.2, 0.55), Color3.fromRGB(40, 44, 50), Enum.Material.SmoothPlastic)
+		part("Surfboard", Vector3.new(1.7, 7.6, 0.28), base * CFrame.new(0, 2.45, 0), c1, Enum.Material.SmoothPlastic)
+		part("SurfboardStripe", Vector3.new(0.5, 7.62, 0.3), base * CFrame.new(0, 2.45, 0), c2, Enum.Material.SmoothPlastic)
+		part("SurfboardFin", Vector3.new(0.12, 1.3, 0.9), base * CFrame.new(0, -0.65, 0.55), Color3.fromRGB(40, 44, 50), Enum.Material.SmoothPlastic)
 	end
 
 	local function towel(x, z, yaw)
@@ -2149,7 +2159,7 @@ local function buildTestCourse()
 		local targetBox = CFrame.new(pos)
 			* CFrame.Angles(0, math.rad(rotY or 0), 0)
 			* CFrame.Angles(0, 0, math.rad(leanDeg or 12))
-			* CFrame.new(0, boxSize.Y / 2, 0)
+			* CFrame.new(0, boxSize.Y / 2 - 1.1, 0)
 		board:PivotTo(targetBox * pivotToBox:Inverse())
 		return true
 	end
@@ -3209,7 +3219,7 @@ local function createKart(player, spawnIndex)
 
 					local isFrontWheel = frontWheelNames[part.Name] == true
 
-					if kartWheelNames[name] then
+					if kartWheelNames[part.Name] then
 						-- Cada rueda cuelga de un "cubo" invisible con los ejes del chasis:
 						--   chasis -> cubo : direccion (ruedas delanteras) o soldadura (traseras)
 						--   cubo   -> rueda: Motor6D "WheelSpin_*" que gira la rueda sobre su eje
@@ -4026,7 +4036,7 @@ end
 
 local function returnPlayerToLobby(player)
  print("[RETURN] fin del contador; jugador=", player and player.Name)
- local currentLobby = Workspace:FindFirstChild("BlockKartsLobby")
+ local currentLobby = Workspace:FindFirstChild("BlockKartsGarage")
  local currentSpawn = currentLobby and currentLobby:FindFirstChild("LobbySpawn", true)
  print("[RETURN] LobbySpawn =", currentSpawn)
  print("[RETURN] RespawnLocation =", player and player.RespawnLocation)
@@ -4083,7 +4093,7 @@ local function returnPlayerToLobby(player)
  if character and humanoid and root then
   humanoid.Sit = false
   pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
-  local lobby = Workspace:FindFirstChild("BlockKartsLobby")
+  local lobby = Workspace:FindFirstChild("BlockKartsGarage")
   local lobbySpawn = lobby and lobby:FindFirstChild("LobbySpawn", true)
   local respawnLocation = player.RespawnLocation
   local targetSpawn = lobbySpawn or respawnLocation

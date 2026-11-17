@@ -12,6 +12,37 @@ print(("[BLOXY-KART][CLIENT][LOCAL-SCRIPT-ENTER] script=%s parent=%s player=%s")
 local KartConfig = require(ReplicatedStorage:WaitForChild("KartConfig"))
 local typography = require(ReplicatedStorage:WaitForChild("BloxyTypography"))
 local raceEvents = ReplicatedStorage:WaitForChild("RaceEvents")
+
+-- El garage está físicamente fuera de la isla de carrera. Se oculta solo en
+-- este cliente mientras corre, y reaparece al volver al lobby.
+local garageVisibilityState = nil
+local function refreshGarageVisibility()
+	local garage = Workspace:FindFirstChild("BlockKartsGarage")
+	if not garage then return end
+	local shouldShow = player:GetAttribute("InGarage") == true
+	if garageVisibilityState == shouldShow then return end
+	garageVisibilityState = shouldShow
+	for _, descendant in ipairs(garage:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			descendant.LocalTransparencyModifier = shouldShow and 0 or 1
+		elseif descendant:IsA("SurfaceGui") or descendant:IsA("BillboardGui")
+			or descendant:IsA("PointLight") or descendant:IsA("SpotLight")
+			or descendant:IsA("SurfaceLight") then
+			descendant.Enabled = shouldShow
+		end
+	end
+end
+player:GetAttributeChangedSignal("InGarage"):Connect(function()
+	garageVisibilityState = nil
+	refreshGarageVisibility()
+end)
+Workspace.ChildAdded:Connect(function(child)
+	if child.Name == "BlockKartsGarage" then
+		garageVisibilityState = nil
+		task.defer(refreshGarageVisibility)
+	end
+end)
+task.defer(refreshGarageVisibility)
 local checkpointPassedRemote = raceEvents:WaitForChild("CheckpointPassed")
 local lapCompletedRemote = raceEvents:WaitForChild("LapCompleted")
 local wrongWayRemote = raceEvents:WaitForChild("WrongWayStateChanged")
