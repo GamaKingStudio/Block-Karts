@@ -20,6 +20,23 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local ServerScriptService = game:GetService("ServerScriptService")
+-- Música ambiental del lobby (audio proporcionado por el usuario).
+local SoundService = game:GetService("SoundService")
+local LOBBY_MUSIC_ID = "rbxassetid://116999864362346"
+local lobbyMusic = SoundService:FindFirstChild("BlockKartsLobbyMusic")
+if not lobbyMusic then
+	lobbyMusic = Instance.new("Sound")
+	lobbyMusic.Name = "BlockKartsLobbyMusic"
+end
+lobbyMusic.SoundId = LOBBY_MUSIC_ID
+lobbyMusic.Looped = true
+lobbyMusic.Volume = 0.28
+lobbyMusic.RollOffMode = Enum.RollOffMode.InverseTapered
+lobbyMusic.Parent = SoundService
+if not lobbyMusic.IsPlaying then
+	lobbyMusic:Play()
+end
+
 
 local Leaderboards = require(ServerScriptService:WaitForChild("Leaderboards"))
 
