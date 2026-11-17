@@ -19,7 +19,7 @@ local garageVisibilityState = nil
 local function refreshGarageVisibility()
 	local garage = Workspace:FindFirstChild("BlockKartsGarage")
 	if not garage then return end
-	local shouldShow = player:GetAttribute("InGarage") == true
+	local shouldShow = player:GetAttribute("InGarage") ~= false
 	if garageVisibilityState == shouldShow then return end
 	garageVisibilityState = shouldShow
 	for _, descendant in ipairs(garage:GetDescendants()) do
